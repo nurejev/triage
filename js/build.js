@@ -12,9 +12,18 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 4;
+window.TRIAGE_BUILD = 5;
 window.TRIAGE_BUILD_DATE = "2026-07-23";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 5, date: "2026-07-23", title: "Full extraction guide + output import",
+    items: [
+      { kind: "new", tool: "Full extraction", text: "Step-by-step guide to run the Microsoft-Extractor-Suite locally in PowerShell, with the exact install, connect and collection commands." },
+      { kind: "new", tool: "Import", text: "Load Extractor-Suite output (Unified Audit Log CSV/JSON, Entra sign-in JSON, OAuth grants) or a saved Triage Evidence JSON and read it as a findings report - parsed entirely in your browser." },
+      { kind: "improved", tool: "Sign in", text: "A hard refresh now returns to the login screen instead of silently restoring the session." },
+      { kind: "new", tool: "Demo", text: "Deep link /?demo=1 opens the simulated tenant directly, so the demo can be shared on its own." },
+    ],
+  },
   {
     build: 4, date: "2026-07-23", title: "24-hour scan",
     items: [

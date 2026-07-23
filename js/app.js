@@ -81,9 +81,15 @@
   $("helpBtn").addEventListener("click", openHelp);
   $("helpLink").addEventListener("click", openHelp);
   $("helpBack").addEventListener("click", function () { showScreen(lastScreen); });
-  $("logoHome").addEventListener("click", function () {
-    showScreen(G.account || demoMode ? "screen-search" : "screen-login");
-  });
+  function homeScreen() { return G.account || demoMode ? "screen-search" : "screen-login"; }
+  $("logoHome").addEventListener("click", function () { showScreen(homeScreen()); });
+  // Full-extraction guide + Extractor-Suite output importer (reachable signed-in or not).
+  $("extractBtn").addEventListener("click", function () { showScreen("screen-extract"); });
+  $("importOpen").addEventListener("click", function (e) { e.preventDefault(); showScreen("screen-import"); });
+  $("extractImportCta").addEventListener("click", function () { showScreen("screen-import"); });
+  $("extractImportInline").addEventListener("click", function (e) { e.preventDefault(); showScreen("screen-import"); });
+  $("extractBack").addEventListener("click", function () { showScreen(homeScreen()); });
+  $("importBack").addEventListener("click", function () { showScreen(homeScreen()); });
   $("consentLink").addEventListener("click", function (e) {
     e.preventDefault();
     window.open(A.adminConsentUrl(), "_blank");
@@ -321,6 +327,11 @@
     } else {
       ev = await collect(upn, days, withUal);
     }
+    showEvidence(ev);
+  }
+  // Analyze an evidence object and render the report. Shared by live triage,
+  // the demo, and the imported-evidence viewer (js/import.js).
+  function showEvidence(ev) {
     const findings = window.TriageDetections.analyze(ev);
     window.TriageReport.show(ev, findings);
     showScreen("screen-report");
@@ -332,13 +343,34 @@
     upnInput.focus();
   });
 
+  // ---------- public API (used by js/import.js) ----------
+  window.TriageApp = {
+    showEvidence: showEvidence,
+    showScreen: showScreen,
+    home: function () { showScreen(homeScreen()); }
+  };
+
   // ---------- boot ----------
   (async function () {
+    const params = new URLSearchParams(window.location.search);
+
+    // Deep link: /?demo=1 jumps straight into the simulated tenant, so the demo
+    // can be linked or targeted on its own (survives refresh while the flag stays).
+    if (params.get("demo") === "1") {
+      demoMode = true;
+      afterSignIn("Demo analyst", "contoso-demo.com");
+      return;
+    }
+
+    // Forensic hygiene: a hard refresh always returns to the login screen. We
+    // still initialise MSAL (so the next sign-in works) but drop any cached
+    // session instead of silently restoring it.
     if (A.clientId.indexOf("00000000") !== 0) {
       try {
-        const acc = await G.init();
-        if (acc) afterSignIn(acc.name || acc.username, acc.username.split("@")[1]);
+        await G.init();
+        await G.forgetSession();
       } catch (e) { /* stay on login */ }
     }
+    showScreen("screen-login");
   })();
 })();

@@ -257,3 +257,35 @@ footer { border-top: 1px solid var(--border); background: var(--surface); }
   box-shadow: var(--shadow); padding: 20px 22px; max-width: 680px; width: 100%; }
 .modal h3 { margin: 0 0 6px; font-size: 16px; }
 .modal-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+
+/* ---- full-extraction guide: code blocks ---- */
+pre.code {
+  background: var(--soft); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; margin: 10px 0 4px; overflow-x: auto;
+  font: 12.5px/1.5 "SFMono-Regular", "Consolas", "Liberation Mono", Menlo, monospace;
+  color: var(--ink); white-space: pre;
+}
+pre.code code { background: none; padding: 0; font: inherit; color: inherit; }
+:not(pre) > code {
+  background: var(--soft); border: 1px solid var(--border); border-radius: 6px;
+  padding: 1px 5px; font: 12px/1 "SFMono-Regular", "Consolas", Menlo, monospace;
+}
+
+/* ---- import / dropzone ---- */
+.dropzone {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 26px 18px; text-align: center; background: var(--surface);
+  transition: border-color .15s, background .15s;
+}
+.dropzone.drag { border-color: var(--lemon-deep); background: var(--soft); }
+.dropzone p { margin: 6px 0; }
+.import-summary:empty { display: none; }
+.import-summary {
+  margin-top: 14px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--soft); padding: 12px 14px;
+}
+.import-summary ul { margin: 8px 0 0; padding-left: 18px; }
+.import-summary li { padding: 2px 0; }
+.import-summary .ok { color: var(--good); font-weight: 600; }
+.import-summary .ignore { color: var(--muted); }
+.import-summary .err { color: var(--sev-critical); font-weight: 600; }

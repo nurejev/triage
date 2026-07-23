@@ -6,7 +6,7 @@
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 triage tool. Investigate a suspected account compromise or BEC directly from your browser. Nothing leaves your machine.">
 <link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=4">
+<link rel="stylesheet" href="css/app.css?v=5">
 </head>
 <body>
 <header>
@@ -18,6 +18,7 @@
     <span class="app-tag">Limon-<span class="accent">IT</span> <span class="muted">·</span> TRIAGE</span>
     <span class="mini muted" id="brandHost">triage.limon-it.nl</span>
     <span class="hspacer"></span>
+    <button class="btn small noprint" id="extractBtn">Full extraction</button>
     <button class="btn small noprint" id="helpBtn">Help</button>
     <button class="btn small noprint" id="whatsNewBtn">What's new</button>
     <button class="btn small noprint" id="themeBtn" title="Theme">🌗</button>
@@ -47,7 +48,8 @@
       </div>
       <p class="mini muted">First time in your tenant? An administrator must
         <a href="#" id="consentLink">grant consent once</a> (read-only permissions).
-        New here? Read the <a href="#" id="helpLink">help &amp; data overview</a>.</p>
+        New here? Read the <a href="#" id="helpLink">help &amp; data overview</a>.<br>
+        Already ran a full extraction? <a href="#" id="importOpen">View the output here</a> - no sign-in needed.</p>
       <div class="trustrow">
         <span>Runs entirely in your browser</span>
         <span>Read-only permissions</span>
@@ -140,6 +142,116 @@
   </section>
 
 
+  <!-- ============ FULL EXTRACTION GUIDE ============ -->
+  <section class="screen" id="screen-extract">
+    <div class="card">
+      <h1>Run a full extraction locally</h1>
+      <p class="muted">This browser tool answers the fast "is this account compromised?" question.
+        When you need a complete forensic acquisition - every mailbox rule, message trace, mailbox
+        audit log and the full retention window - run the open-source
+        <a href="https://github.com/invictus-ir/Microsoft-Extractor-Suite" target="_blank" rel="noopener">Microsoft-Extractor-Suite</a>
+        by Invictus IR on your own machine in PowerShell. It writes CSV/JSON evidence you can then
+        <a href="#" id="extractImportInline">load back into this tool</a> to read.</p>
+      <p class="mini muted">See <a href="https://github.com/invictus-ir/Microsoft-Extractor-Suite/blob/main/COVERAGE.md" target="_blank" rel="noopener">nothing here</a>?
+        The mapping of what this Triage tool covers versus the full Suite lives in the repo's COVERAGE.md.</p>
+    </div>
+
+    <div class="card">
+      <h2>1 · Requirements</h2>
+      <p>Windows PowerShell 5.1 or PowerShell 7 on any OS. You need a Microsoft 365 account with the
+        <em>Security Reader</em>/<em>Global Reader</em> role (and a mailbox-enabled admin for the
+        Exchange-only sources). Install the Microsoft modules the Suite depends on, then the Suite itself:</p>
+      <pre class="code"><code># Run once, in an elevated PowerShell prompt
+Install-Module -Name ExchangeOnlineManagement -Scope CurrentUser
+Install-Module -Name Microsoft.Graph          -Scope CurrentUser
+Install-Module -Name Az                        -Scope CurrentUser   # only for Azure activity logs
+
+# The suite itself (PowerShell Gallery)
+Install-Module -Name Microsoft-Extractor-Suite -Scope CurrentUser</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>2 · Import &amp; connect</h2>
+      <p>Load the module, then sign in to the services you need. Exchange Online covers the Unified
+        Audit Log, mailbox rules and message traces; Microsoft Graph covers sign-in logs, OAuth
+        grants, MFA and risky users.</p>
+      <pre class="code"><code>Import-Module Microsoft-Extractor-Suite
+
+# Exchange Online (UAL, mailbox &amp; transport rules, message trace, mailbox audit)
+Connect-M365            # wraps Connect-ExchangeOnline
+
+# Microsoft Graph (sign-in logs, OAuth apps, MFA, risky users/detections)
+Connect-MgGraph -Scopes "AuditLog.Read.All","Directory.Read.All"
+
+# Optional - Azure resource activity logs
+Connect-AzureAZ</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>3 · Collect the evidence</h2>
+      <p>Collect everything, or target the sources this Triage tool understands on import. Narrow the
+        window with <code>-StartDate</code>/<code>-EndDate</code> (UAL retention is 180 days on
+        Standard, 365 on Premium auditing).</p>
+      <pre class="code"><code># --- one user, the two sources this tool reads back in ---
+Get-UAL -UserIds jan@contoso.com -StartDate 2026-04-01 -EndDate 2026-07-01
+#   -> .\Output\UnifiedAuditLog\UAL-*.csv
+Get-GraphEntraSignInLogs -UserIds jan@contoso.com
+#   -> .\Output\EntraID\SignInLogsGraph.json
+
+# --- other high-value sources for the full picture ---
+Get-MailboxRules                 # live inbox-rule inventory (all mailboxes)
+Get-TransportRules               # tenant-wide transport rules
+Get-OAuthPermissionsGraph        # registered OAuth apps + granted scopes
+Get-AdminAuditLog                # admin cmdlet history
+Get-MailboxAuditLog -UserIds jan@contoso.com
+Get-MessageTraceLog -UserIds jan@contoso.com
+Get-MFA ; Get-RiskyUsers ; Get-RiskyDetections
+
+# --- or collect (almost) everything in one go ---
+Get-AllEvidence                  # automated collection across sources
+Start-MESTriage                  # quick per-user triage template</code></pre>
+      <p class="mini muted">Every function writes to an <code>Output\</code> folder in your current
+        directory, one subfolder per source. UAL defaults to CSV, sign-in logs to JSON - both are
+        what the importer below expects. Nothing is sent anywhere; it is your local evidence archive.</p>
+    </div>
+
+    <div class="card">
+      <h2>4 · View the output here</h2>
+      <p>Bring the <code>UAL-*.csv</code> and <code>SignInLogsGraph.json</code> files back into this
+        tool to get the same severity-ranked findings report - parsed entirely in your browser.</p>
+      <div class="exportrow">
+        <button class="btn primary" id="extractImportCta">Import output &rarr;</button>
+        <button class="btn" id="extractBack">&larr; Back</button>
+      </div>
+      <p class="mini muted">Microsoft-Extractor-Suite is &copy; Invictus Incident Response (GPL-2.0).
+        This tool shares no code with it - it reads the files the Suite produces.</p>
+    </div>
+  </section>
+
+  <!-- ============ IMPORT / VIEW EXTRACTION OUTPUT ============ -->
+  <section class="screen" id="screen-import">
+    <div class="card">
+      <h1>View extraction output</h1>
+      <p class="muted">Drop the CSV/JSON files the Microsoft-Extractor-Suite produced - or a Triage
+        <em>Evidence JSON</em> you exported earlier - and read them as a findings report. Everything
+        is parsed in this browser tab; nothing is uploaded.</p>
+      <div class="dropzone" id="dropZone">
+        <input type="file" id="importFiles" accept=".json,.jsonl,.csv" multiple hidden>
+        <p><strong>Drop files here</strong> &nbsp;or&nbsp;
+          <button class="btn small" id="browseBtn">browse&hellip;</button></p>
+        <p class="mini muted">Recognized: Unified Audit Log (<code>Get-UAL</code>, CSV/JSON),
+          Entra sign-in logs (<code>Get-GraphEntraSignInLogs</code>, JSON), OAuth grants, and a
+          Triage <code>Evidence JSON</code>. Select several at once to combine them.</p>
+      </div>
+      <div class="import-summary" id="importSummary"></div>
+      <div class="exportrow" style="margin-top:14px">
+        <button class="btn primary" id="viewImportBtn" disabled>View report &rarr;</button>
+        <button class="btn" id="importClearBtn" style="display:none">Clear</button>
+        <button class="btn" id="importBack">&larr; Back</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ HELP ============ -->
   <section class="screen" id="screen-help">
     <div class="card">
@@ -213,9 +325,29 @@
     </div>
 
     <div class="card">
+      <h2>Going deeper: full extraction &amp; import</h2>
+      <p>Triage answers the fast per-user question. When you need a complete forensic acquisition -
+        every mailbox's live rules and delegations, message traces, mailbox audit logs and the full
+        retention window - use the <strong>Full extraction</strong> page (button in the top bar). It
+        walks you through running the open-source
+        <a href="https://github.com/invictus-ir/Microsoft-Extractor-Suite" target="_blank" rel="noopener">Microsoft-Extractor-Suite</a>
+        locally in PowerShell, with the exact install, connect and collection commands.</p>
+      <p>Already have Suite output? Use <strong>View the output here</strong> on the start page (or the
+        import button on the extraction page) to load it - no sign-in needed. The importer reads the
+        Unified Audit Log (<code>Get-UAL</code>, CSV or JSON), Entra sign-in logs
+        (<code>Get-GraphEntraSignInLogs</code>, JSON) and OAuth grants, plus any
+        <strong>Evidence JSON</strong> you exported from Triage, and runs the same severity-ranked
+        findings report. Everything is parsed in your browser tab - nothing is uploaded.</p>
+      <p class="mini muted">Sign-in logs import best from the Suite's JSON output (its default); a
+        flattened CSV export loses the nested location/status fields. The Unified Audit Log imports
+        from either CSV or JSON.</p>
+    </div>
+
+    <div class="card">
       <h2>Removing access</h2>
       <p>The tool holds no standing access: tokens expire after about an hour and nothing runs when the tab
-        is closed. To remove it entirely, delete the enterprise application <em>"Limon-IT M365 Triage"</em>
+        is closed. A page reload also returns you to the sign-in screen rather than restoring the session.
+        To remove it entirely, delete the enterprise application <em>"Limon-IT M365 Triage"</em>
         in your Entra portal (Enterprise applications → select it → Properties → Delete). That revokes the
         consent for the whole tenant.</p>
       <button class="btn" id="helpBack">← Back</button>
@@ -259,12 +391,13 @@
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/authConfig.js?v=4"></script>
-<script src="js/build.js?v=4"></script>
-<script src="js/graph.js?v=4"></script>
-<script src="js/demo.js?v=4"></script>
-<script src="js/detections.js?v=4"></script>
-<script src="js/report.js?v=4"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/authConfig.js?v=5"></script>
+<script src="js/build.js?v=5"></script>
+<script src="js/graph.js?v=5"></script>
+<script src="js/demo.js?v=5"></script>
+<script src="js/detections.js?v=5"></script>
+<script src="js/report.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
+<script src="js/import.js?v=5"></script>
 </body>
 </html>

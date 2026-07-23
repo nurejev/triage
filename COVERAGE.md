@@ -55,11 +55,36 @@ evidence JSON as your first snapshot).
 | `Get-Devices`, `Get-Groups`, `Get-ProductLicenses`, `Get-SecurityAlerts`, `Get-SecureScore` | Tenant-inventory functions — candidates for a future tenant-wide health screen, not needed for the per-user question |
 | Evidence collection / SOF-ELK output | Triage exports findings + raw evidence as CSV/JSON per user; bulk SIEM-format export stays Suite territory |
 
+## Run a full extraction, then read it here
+
+The tool ships an in-app **Full extraction** guide (top-bar button) that walks
+through installing and running the Extractor Suite locally in PowerShell — the
+exact `Install-Module`, `Connect-M365` / `Connect-MgGraph` and collection
+commands, plus where each source is written under `Output\`.
+
+You do **not** have to leave the browser to read the result. The **View the
+output here** importer (start page, or the extraction guide) ingests Suite
+output and renders the same severity-ranked findings report — parsed entirely
+in the tab, nothing uploaded, no sign-in required.
+
+| Import source | Suite function | Format read |
+|---|---|---|
+| Unified Audit Log | `Get-UAL` | CSV or JSON (wrapper columns with embedded `AuditData`, or `-AuditDataOnly` objects) |
+| Entra sign-in logs | `Get-GraphEntraSignInLogs` | JSON (native Graph shape; flattened CSV is best-effort) |
+| OAuth grants | `Get-OAuthPermissionsGraph` | CSV or JSON (best-effort scope/app mapping) |
+| Triage evidence | *exported by this tool* | Evidence JSON (full round-trip) |
+
+Drop several files at once to combine them (e.g. UAL + sign-in logs for one
+user); unrecognized files are listed and skipped rather than failing the load.
+This lets an analyst collect with the full Suite and still get Triage's built-in
+detections and recommended actions over the raw evidence.
+
 ## Escalation path
 
 1. **Triage** (browser, minutes): confirm or dismiss the suspicion, export the evidence JSON.
-2. **Full acquisition** (PowerShell, hours): Microsoft-Extractor-Suite across the tenant and full retention window — message traces, mailbox audit, message content, all mailboxes' current rules and delegations.
-3. **Deep analysis**: your DFIR workflow — Limon-IT can assist with incident response.
+2. **Full acquisition** (PowerShell, hours): Microsoft-Extractor-Suite across the tenant and full retention window — message traces, mailbox audit, message content, all mailboxes' current rules and delegations. Follow the in-app **Full extraction** guide.
+3. **Read it back** (browser, minutes): import the Suite's UAL / sign-in / OAuth output into Triage to run the same detections over the deeper evidence.
+4. **Deep analysis**: your DFIR workflow — Limon-IT can assist with incident response.
 
 *Microsoft-Extractor-Suite is © Invictus Incident Response, GPL-2.0. M365 Triage
 shares no code with it — it consumes the same Microsoft APIs from the browser and

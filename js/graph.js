@@ -41,6 +41,25 @@
     try { await app().logoutPopup({ account: acc }); } catch (e) { /* user closed popup */ }
   }
 
+  // Drop any cached MSAL session WITHOUT a network round-trip, so a page
+  // reload returns to the login screen (forensic hygiene: no silent restore).
+  // MSAL keeps its tokens/accounts in sessionStorage; we clear the app's cache
+  // if the SDK exposes it, then sweep any leftover keys as a version-proof
+  // fallback. Nothing here revokes tenant consent - it only forgets this tab.
+  async function forgetSession() {
+    try { if (msalApp && typeof msalApp.clearCache === "function") await msalApp.clearCache(); }
+    catch (e) { /* older SDK - fall through to the manual sweep */ }
+    try {
+      const cid = A.clientId;
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const k = sessionStorage.key(i);
+        if (k && (/msal|login\.(windows|microsoftonline)/i.test(k) || (cid && k.indexOf(cid) !== -1)))
+          sessionStorage.removeItem(k);
+      }
+    } catch (e) { /* private mode / storage disabled */ }
+    account = null;
+  }
+
   async function token(scopes) {
     const req = { scopes: scopes || A.scopes, account: account };
     try {
@@ -112,7 +131,7 @@
   }
 
   window.TriageGraph = {
-    init: init, signIn: signIn, signOut: signOut,
+    init: init, signIn: signIn, signOut: signOut, forgetSession: forgetSession,
     get account() { return account; },
     gfetch: gfetch, gall: gall, ualQuery: ualQuery
   };
