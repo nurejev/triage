@@ -22,7 +22,7 @@
     evidence = ev; findings = F;
     document.getElementById("repUpn").textContent = ev.upn;
     document.getElementById("repMeta").textContent =
-      "Last " + ev.days + " days · " + (ev.signIns || []).length + " sign-ins · " +
+      (ev.days === 1 ? "Last 24 hours" : "Last " + ev.days + " days") + " · " + (ev.signIns || []).length + " sign-ins · " +
       (ev.ualRecords || []).length + " audit events" +
       (ev.skipped && ev.skipped.length ? " · skipped: " + ev.skipped.join(", ") : "") +
       (ev.demo ? " · DEMO DATA" : "");

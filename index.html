@@ -6,7 +6,7 @@
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 triage tool. Investigate a suspected account compromise or BEC directly from your browser. Nothing leaves your machine.">
 <link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=3">
+<link rel="stylesheet" href="css/app.css?v=4">
 </head>
 <body>
 <header>
@@ -69,6 +69,7 @@
       <div class="optrow">
         <label>Look back
           <select id="daysSel">
+            <option value="1">24 hours</option>
             <option value="7">7 days</option>
             <option value="30" selected>30 days</option>
             <option value="90">90 days</option>
@@ -150,7 +151,7 @@
           (the link on the start page opens the consent screen). All permissions are read-only - this tool cannot
           change anything in your tenant.</li>
         <li><strong>Search the user.</strong> Type a name or UPN and pick the account you suspect is compromised.</li>
-        <li><strong>Choose the window.</strong> 7, 30 or 90 days back. Leave "Unified Audit Log" enabled for the most
+        <li><strong>Choose the window.</strong> 24 hours, 7, 30 or 90 days back. Use 24 hours for a fast "what just happened" check during an active incident. Leave "Unified Audit Log" enabled for the most
           complete picture - it uses an asynchronous Microsoft query that can take a few minutes on busy mailboxes.</li>
         <li><strong>Read the report.</strong> Findings are ranked by severity; click one for details and the
           recommended action. Export everything as CSV/JSON for your ticket or forensic archive.</li>
@@ -258,12 +259,12 @@
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/authConfig.js?v=3"></script>
-<script src="js/build.js?v=3"></script>
-<script src="js/graph.js?v=3"></script>
-<script src="js/demo.js?v=3"></script>
-<script src="js/detections.js?v=3"></script>
-<script src="js/report.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/authConfig.js?v=4"></script>
+<script src="js/build.js?v=4"></script>
+<script src="js/graph.js?v=4"></script>
+<script src="js/demo.js?v=4"></script>
+<script src="js/detections.js?v=4"></script>
+<script src="js/report.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>

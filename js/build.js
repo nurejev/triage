@@ -12,9 +12,15 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 3;
+window.TRIAGE_BUILD = 4;
 window.TRIAGE_BUILD_DATE = "2026-07-23";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 4, date: "2026-07-23", title: "24-hour scan",
+    items: [
+      { kind: "new", tool: "User triage", text: "Look-back window of 24 hours for a fast check during an active incident, next to 7/30/90 days." },
+    ],
+  },
   {
     build: 3, date: "2026-07-23", title: "Coverage documented",
     items: [
