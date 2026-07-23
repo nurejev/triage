@@ -12,9 +12,15 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 2;
+window.TRIAGE_BUILD = 3;
 window.TRIAGE_BUILD_DATE = "2026-07-23";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 3, date: "2026-07-23", title: "Coverage documented",
+    items: [
+      { kind: "new", tool: "Docs", text: "COVERAGE.md maps every Extractor Suite function to what Triage covers, partially covers via the audit log, or deliberately leaves out." },
+    ],
+  },
   {
     build: 2, date: "2026-07-23", title: "Sign in with Microsoft enabled",
     items: [

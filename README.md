@@ -24,6 +24,8 @@ risk detections, directory audit events, and account hygiene (password age).
 Each finding comes with a severity and a recommended action; findings and raw
 evidence export as CSV/JSON.
 
+See [COVERAGE.md](COVERAGE.md) for exactly what is checked versus the Microsoft-Extractor-Suite.
+
 ## Deploy your own instance
 
 1. **App registration** - run `create-appreg.ps1` (or create manually: single
