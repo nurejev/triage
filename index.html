@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
+<meta name="description" content="Free browser-based Microsoft 365 triage tool. Investigate a suspected account compromise or BEC directly from your browser. Nothing leaves your machine.">
+<link rel="icon" href="assets/favicon.svg">
+<link rel="stylesheet" href="css/app.css?v=1">
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <span id="logoHome" class="logowrap" title="Home">
+      <img class="logo-img only-light" src="assets/logo-mark-light.svg" alt="Limon-IT">
+      <img class="logo-img only-dark" src="assets/logo-mark-dark.svg" alt="Limon-IT">
+    </span>
+    <span class="app-tag">Limon-<span class="accent">IT</span> <span class="muted">·</span> TRIAGE</span>
+    <span class="mini muted" id="brandHost">triage.limon-it.nl</span>
+    <span class="hspacer"></span>
+    <button class="btn small noprint" id="helpBtn">Help</button>
+    <button class="btn small noprint" id="whatsNewBtn">What's new</button>
+    <button class="btn small noprint" id="themeBtn" title="Theme">🌗</button>
+    <span class="who mini" id="whoBox" style="display:none">
+      <span id="whoName" style="font-weight:600"></span><br>
+      <span class="muted" id="whoTenant"></span>
+    </span>
+    <button class="btn small noprint" id="signOutBtn" style="display:none">Sign out</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ LOGIN ============ -->
+  <section class="screen active" id="screen-login">
+    <div class="hero">
+      <span class="logowrap">
+        <img class="logo-big-img only-light" src="assets/logo-mark-light.svg" alt="Limon-IT">
+        <img class="logo-big-img only-dark" src="assets/logo-mark-dark.svg" alt="Limon-IT">
+      </span>
+      <h1>Microsoft 365 Triage</h1>
+      <p class="lead">Suspect a hacked mailbox or account? Investigate it right now, from your
+        browser. Sign-in history, audit trail, inbox-rule and OAuth abuse - analyzed in seconds,
+        with clear recommended actions.</p>
+      <div class="actions">
+        <button class="btn primary" id="signInBtn">Sign in with Microsoft</button>
+        <button class="btn" id="demoBtn">Try the demo</button>
+      </div>
+      <p class="mini muted">First time in your tenant? An administrator must
+        <a href="#" id="consentLink">grant consent once</a> (read-only permissions).
+        New here? Read the <a href="#" id="helpLink">help &amp; data overview</a>.</p>
+      <div class="trustrow">
+        <span>Runs entirely in your browser</span>
+        <span>Read-only permissions</span>
+        <span>Nothing stored on our servers</span>
+        <span>Free, by Limon-IT</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ UPN SEARCH (home after sign-in) ============ -->
+  <section class="screen" id="screen-search">
+    <div class="card">
+      <h1>Who do we investigate?</h1>
+      <p class="muted">Start typing a name or UPN. Pick the account you suspect is compromised.</p>
+      <div class="searchbox">
+        <input type="search" id="upnInput" placeholder="jan@yourcompany.nl" autocomplete="off" spellcheck="false">
+        <div class="sugg" id="upnSugg" style="display:none"></div>
+      </div>
+      <div class="optrow">
+        <label>Look back
+          <select id="daysSel">
+            <option value="7">7 days</option>
+            <option value="30" selected>30 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="ualChk" checked> Include Unified Audit Log (slower, more complete)</label>
+        <button class="btn primary" id="startBtn" disabled>Start triage</button>
+      </div>
+    </div>
+    <div class="card" id="demoBanner" style="display:none">
+      <span class="mini">🍋 <strong>Demo mode.</strong> You are looking at a simulated tenant with a
+      staged BEC incident. Try <strong>jan.devries@contoso-demo.com</strong>.</span>
+    </div>
+  </section>
+
+  <!-- ============ PROGRESS ============ -->
+  <section class="screen" id="screen-progress">
+    <div class="card">
+      <h1 id="progTitle">Collecting evidence…</h1>
+      <p class="muted mini">Everything is fetched straight from Microsoft Graph into this browser tab.</p>
+      <ul class="steps" id="stepList"></ul>
+    </div>
+  </section>
+
+  <!-- ============ REPORT ============ -->
+  <section class="screen" id="screen-report">
+    <div class="card noprint" id="subjectCard">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+        <div>
+          <h1 id="repUpn"></h1>
+          <span class="mini muted" id="repMeta"></span>
+        </div>
+        <span class="hspacer" style="margin-left:auto"></span>
+        <div class="exportrow">
+          <button class="btn small" id="newSearchBtn">← New search</button>
+          <button class="btn small" id="printBtn">Print / PDF</button>
+          <button class="btn small lemon" id="dlFindingsBtn">Findings CSV</button>
+          <button class="btn small lemon" id="dlEvidenceBtn">Evidence JSON</button>
+        </div>
+      </div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <div class="card">
+      <h2>Findings by severity</h2>
+      <div class="sevbar" id="sevbar" role="img" aria-label="Findings by severity"></div>
+      <div class="mini" id="sevlegend"></div>
+    </div>
+    <div class="card">
+      <h2>Findings</h2>
+      <div class="filters">
+        <span id="sevchips"></span>
+        <select id="catsel"><option value="">All categories</option></select>
+        <input type="search" id="fq" placeholder="Search findings…" style="flex:1;min-width:150px">
+      </div>
+      <table class="ftable">
+        <thead><tr>
+          <th style="width:105px">Severity</th><th>Finding</th>
+          <th style="width:120px">Time (UTC)</th>
+        </tr></thead>
+        <tbody id="frows"></tbody>
+      </table>
+      <div class="empty" id="fempty" style="display:none">No findings match the filter.</div>
+    </div>
+    <div class="card" id="profileCard" style="display:none">
+      <h2>Account profile</h2>
+      <dl class="kv" id="profileKv"></dl>
+    </div>
+  </section>
+
+
+  <!-- ============ HELP ============ -->
+  <section class="screen" id="screen-help">
+    <div class="card">
+      <h1>Help</h1>
+      <h2>How to use the tool</h2>
+      <ol class="helplist">
+        <li><strong>Sign in with Microsoft.</strong> Use an account with at least the <em>Security Reader</em> or
+          <em>Global Reader</em> role. The very first time in a tenant, an administrator must grant consent once
+          (the link on the start page opens the consent screen). All permissions are read-only - this tool cannot
+          change anything in your tenant.</li>
+        <li><strong>Search the user.</strong> Type a name or UPN and pick the account you suspect is compromised.</li>
+        <li><strong>Choose the window.</strong> 7, 30 or 90 days back. Leave "Unified Audit Log" enabled for the most
+          complete picture - it uses an asynchronous Microsoft query that can take a few minutes on busy mailboxes.</li>
+        <li><strong>Read the report.</strong> Findings are ranked by severity; click one for details and the
+          recommended action. Export everything as CSV/JSON for your ticket or forensic archive.</li>
+      </ol>
+      <p class="mini muted">Just looking around? The <strong>demo</strong> on the start page runs a staged
+        BEC incident without signing in.</p>
+    </div>
+
+    <div class="card">
+      <h2>What data is pulled (and why)</h2>
+      <p class="mini muted">Everything is fetched from Microsoft Graph straight into this browser tab.
+        Nothing is sent to Limon-IT or any other server, and nothing is stored after you close the tab.</p>
+      <table class="ftable">
+        <thead><tr><th>Source</th><th>Graph API</th><th>What we look for</th></tr></thead>
+        <tbody>
+          <tr><td>User profile</td><td class="mini">/users/{upn}</td>
+            <td>Account state, creation date, password age.</td></tr>
+          <tr><td>Sign-in logs</td><td class="mini">/auditLogs/signIns</td>
+            <td>Unexpected countries, brute force followed by a success, impossible travel, legacy
+                authentication (bypasses MFA), Conditional Access outcome, risk level per sign-in.</td></tr>
+          <tr><td>Directory audits</td><td class="mini">/auditLogs/directoryAudits</td>
+            <td>Directory changes initiated by the account.</td></tr>
+          <tr><td>Identity Protection</td><td class="mini">/identityProtection/riskyUsers, /riskDetections</td>
+            <td>Microsoft's own risk verdicts: anonymous IPs, unfamiliar sign-in properties, leaked
+                credentials. Needs Entra ID P2.</td></tr>
+          <tr><td>MFA methods</td><td class="mini">/users/{id}/authentication/methods</td>
+            <td>Whether strong methods are registered - and whether the user recognizes each one
+                (attackers register their own authenticator).</td></tr>
+          <tr><td>OAuth grants</td><td class="mini">/users/{id}/oauth2PermissionGrants</td>
+            <td>Apps with access to the account, scored against risky scopes (mail read/send, mailbox
+                settings, directory write). Malicious app consents survive password resets.</td></tr>
+          <tr><td>Unified Audit Log</td><td class="mini">/security/auditLog/queries</td>
+            <td>Inbox rules created or changed, mailbox-level forwarding, OAuth consents, admin role
+                changes, mailbox searches ("invoice", "IBAN"...), mass file downloads, eDiscovery.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>What the report shows</h2>
+      <ul class="helplist">
+        <li><span class="sev"><span class="dot" style="background:var(--sev-critical)"></span>Critical</span> -
+          strong indicators of active compromise (forwarding to an external mailbox, password attack followed
+          by a successful sign-in, MFA disabled). Act immediately.</li>
+        <li><span class="sev"><span class="dot" style="background:var(--sev-high)"></span>High</span> -
+          serious signals that usually accompany a real incident. Investigate the same day.</li>
+        <li><span class="sev"><span class="dot" style="background:var(--sev-medium)"></span>Medium</span> /
+          <span class="sev"><span class="dot" style="background:var(--sev-low)"></span>Low</span> -
+          worth reviewing; often explainable but attackers hide in "explainable".</li>
+        <li><span class="sev"><span class="dot" style="background:var(--sev-info)"></span>Info</span> -
+          context, no action implied.</li>
+      </ul>
+      <p>Every finding includes a <strong>recommended action</strong>. A step shown as
+        <em>skipped</em> during collection means that source was not available in your tenant (licensing,
+        permissions or auditing not enabled) - the report simply covers what could be read.</p>
+      <p class="mini muted">Findings are indicators, not verdicts - verify before acting. Suspect a real
+        breach? Preserve the evidence exports and contact <a href="https://limon-it.nl">Limon-IT</a> for
+        incident response support.</p>
+    </div>
+
+    <div class="card">
+      <h2>Removing access</h2>
+      <p>The tool holds no standing access: tokens expire after about an hour and nothing runs when the tab
+        is closed. To remove it entirely, delete the enterprise application <em>"Limon-IT M365 Triage"</em>
+        in your Entra portal (Enterprise applications → select it → Properties → Delete). That revokes the
+        consent for the whole tenant.</p>
+      <button class="btn" id="helpBack">← Back</button>
+    </div>
+  </section>
+
+  <!-- ============ WHAT'S NEW ============ -->
+  <section class="screen" id="screen-whatsnew">
+    <div class="card">
+      <h1>What's new</h1>
+      <div id="wnList"></div>
+      <button class="btn" id="wnBack">← Back</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="fwrap">
+    <span>© 2026 <a href="https://limon-it.nl">Limon-IT</a> · M365 Triage</span>
+    <span id="buildStampFoot"></span>
+    <span class="fspacer"></span>
+    <span>Inspired by the open-source
+      <a href="https://github.com/invictus-ir/Microsoft-Extractor-Suite" target="_blank" rel="noopener">Microsoft-Extractor-Suite</a>.
+      Indicators, not verdicts - verify before acting.</span>
+  </div>
+</footer>
+
+<script src="vendor/msal-browser.min.js"></script>
+<script src="js/authConfig.js?v=1"></script>
+<script src="js/build.js?v=1"></script>
+<script src="js/graph.js?v=1"></script>
+<script src="js/demo.js?v=1"></script>
+<script src="js/detections.js?v=1"></script>
+<script src="js/report.js?v=1"></script>
+<script src="js/app.js?v=1"></script>
+</body>
+</html>
