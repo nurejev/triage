@@ -6,7 +6,7 @@
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 triage tool. Investigate a suspected account compromise or BEC directly from your browser. Nothing leaves your machine.">
 <link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=1">
+<link rel="stylesheet" href="css/app.css?v=2">
 </head>
 <body>
 <header>
@@ -224,12 +224,27 @@
   <!-- ============ WHAT'S NEW ============ -->
   <section class="screen" id="screen-whatsnew">
     <div class="card">
-      <h1>What's new</h1>
+      <h1>&#128203; What's new</h1>
+      <p class="mini muted" style="margin:0 0 16px">Everything added or changed in M365 Triage,
+        newest first. The overlay after sign-in shows you only what landed since your last visit -
+        this is the full record.</p>
       <div id="wnList"></div>
-      <button class="btn" id="wnBack">← Back</button>
+      <button class="btn" id="wnBack">&#8592; Back</button>
     </div>
   </section>
 </main>
+
+<div class="modal-bg" id="newModal">
+  <div class="modal">
+    <h3 id="newTitle">&#10024; What's new in M365 Triage</h3>
+    <p class="mini muted" id="newSub" style="margin:0 0 12px"></p>
+    <div id="newBody" style="max-height:52vh;overflow:auto"></div>
+    <div class="modal-row">
+      <button class="btn" id="newFull">Full changelog</button>
+      <button class="btn primary" id="newClose">Got it</button>
+    </div>
+  </div>
+</div>
 
 <footer>
   <div class="fwrap">
@@ -243,12 +258,12 @@
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/authConfig.js?v=1"></script>
-<script src="js/build.js?v=1"></script>
-<script src="js/graph.js?v=1"></script>
-<script src="js/demo.js?v=1"></script>
-<script src="js/detections.js?v=1"></script>
-<script src="js/report.js?v=1"></script>
-<script src="js/app.js?v=1"></script>
+<script src="js/authConfig.js?v=2"></script>
+<script src="js/build.js?v=2"></script>
+<script src="js/graph.js?v=2"></script>
+<script src="js/demo.js?v=2"></script>
+<script src="js/detections.js?v=2"></script>
+<script src="js/report.js?v=2"></script>
+<script src="js/app.js?v=2"></script>
 </body>
 </html>

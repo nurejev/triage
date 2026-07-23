@@ -234,3 +234,26 @@ footer { border-top: 1px solid var(--border); background: var(--surface); }
 }
 .helplist li { margin: 7px 0; }
 .helplist .sev { margin-right: 2px; }
+
+/* ---------- changelog (ENCA-style) ---------- */
+.cl-rel { margin-bottom: 20px; }
+.cl-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-bottom: 6px;
+  border-bottom: 2px solid var(--green); margin-bottom: 8px; }
+.cl-list { list-style: none; margin: 0; padding: 0; }
+.cl-i { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.6; }
+.cl-i:last-child { border-bottom: 0; }
+.cl-k { font-size: 11px; font-weight: 700; padding: 1px 9px; border-radius: 999px;
+  white-space: nowrap; flex: none; margin-top: 2px; }
+.cl-k.new { background: var(--soft); color: var(--accent2); }
+.cl-k.improved { background: rgba(223, 179, 43, .18); color: var(--lemon-deep); }
+.cl-k.fixed { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+/* ---------- modal ---------- */
+.modal-bg { position: fixed; inset: 0; background: rgba(18, 51, 31, .45); z-index: 100;
+  display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal-bg.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px 22px; max-width: 680px; width: 100%; }
+.modal h3 { margin: 0 0 6px; font-size: 16px; }
+.modal-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }

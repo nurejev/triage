@@ -28,13 +28,54 @@
       (!r.getAttribute("data-theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
     r.setAttribute("data-theme", dark ? "light" : "dark");
   });
-  $("whatsNewBtn").addEventListener("click", function () {
-    $("wnList").innerHTML = window.TRIAGE_CHANGELOG.map(function (b) {
-      return '<div class="wn-build"><h3>Build ' + b.build + ' <span class="muted mini">' + esc(b.date) + "</span></h3><ul>" +
-        b.changes.map(function (c) { return "<li>" + esc(c) + "</li>"; }).join("") + "</ul></div>";
-    }).join("");
+  // ---------- What's new / changelog (ENCA-style) ----------
+  // The overlay appears once per release: we remember the build the person
+  // acknowledged and show everything newer than that. First-time visitors
+  // just get the newest release, not the whole history.
+  const CL_KEY = "triage-seen-build";
+  const CL_LATEST = window.TRIAGE_CHANGELOG_LATEST || 0;
+  function clSeen() { try { return +localStorage.getItem(CL_KEY) || 0; } catch (e) { return 0; } }
+  function clMarkSeen() { try { localStorage.setItem(CL_KEY, String(CL_LATEST)); } catch (e) { /* private mode */ } }
+  const CL_KIND = { new: "New", improved: "Improved", fixed: "Fixed" };
+  function clEntries(rel) {
+    const order = { new: 0, improved: 1, fixed: 2 };
+    const items = rel.items || (rel.changes || []).map(function (c) { return { kind: "new", tool: "", text: c }; });
+    return items.slice().sort(function (a, b) { return (order[a.kind] || 0) - (order[b.kind] || 0); })
+      .map(function (i) {
+        return '<li class="cl-i"><span class="cl-k ' + i.kind + '">' + (CL_KIND[i.kind] || i.kind) + "</span>" +
+          "<span>" + (i.tool ? "<b>" + esc(i.tool) + "</b> — " : "") + esc(i.text) + "</span></li>";
+      }).join("");
+  }
+  function clRelease(rel) {
+    return '<div class="cl-rel"><div class="cl-h"><b>' + esc(rel.title || ("Build " + rel.build)) + "</b>" +
+      '<span class="mini muted">build ' + rel.build + " · " + esc(rel.date) + "</span></div>" +
+      '<ul class="cl-list">' + clEntries(rel) + "</ul></div>";
+  }
+  function openChangelog() {
+    $("wnList").innerHTML = window.TRIAGE_CHANGELOG.map(clRelease).join("") ||
+      '<p class="mini">No changelog entries yet.</p>';
     showScreen("screen-whatsnew");
-  });
+    clMarkSeen();
+  }
+  $("whatsNewBtn").addEventListener("click", openChangelog);
+  // Called once signed in (or demo entered), so it never covers the sign-in screen.
+  function maybeShowWhatsNew() {
+    if (!window.TRIAGE_CHANGELOG || !window.TRIAGE_CHANGELOG.length) return;
+    const seen = clSeen();
+    if (seen >= CL_LATEST) return;
+    const fresh = seen ? window.TRIAGE_CHANGELOG.filter(function (r) { return r.build > seen; }) : [];
+    const rels = fresh.length ? fresh : [window.TRIAGE_CHANGELOG[0]];
+    const n = rels.reduce(function (s2, r) { return s2 + (r.items ? r.items.length : (r.changes || []).length); }, 0);
+    $("newSub").innerHTML = seen
+      ? n + " change" + (n === 1 ? "" : "s") + " since you were last here (build " + seen + " → " + CL_LATEST + ")."
+      : "Here's what the tool can do as of build " + CL_LATEST + ".";
+    $("newBody").innerHTML = rels.map(clRelease).join("");
+    $("newModal").classList.add("open");
+  }
+  function closeWhatsNew() { clMarkSeen(); $("newModal").classList.remove("open"); }
+  $("newClose").addEventListener("click", closeWhatsNew);
+  $("newModal").addEventListener("click", function (e) { if (e.target.id === "newModal") closeWhatsNew(); });
+  $("newFull").addEventListener("click", function () { closeWhatsNew(); openChangelog(); });
   $("wnBack").addEventListener("click", function () { showScreen(lastScreen); });
   function openHelp(e) { if (e) e.preventDefault(); showScreen("screen-help"); }
   $("helpBtn").addEventListener("click", openHelp);
@@ -57,6 +98,7 @@
     $("demoBanner").style.display = demoMode ? "" : "none";
     showScreen("screen-search");
     $("upnInput").focus();
+    maybeShowWhatsNew();
   }
   $("signInBtn").addEventListener("click", async function () {
     if (A.clientId.indexOf("00000000") === 0) {
