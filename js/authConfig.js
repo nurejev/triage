@@ -4,7 +4,7 @@
 //  2. Paste its Application (client) ID below
 // ============================================================
 window.TRIAGE_AUTH = {
-  clientId: "db61028c-dc4f-4783-aee3-a0a814d3d02d", // REPLACE
+  clientId: "8f1b5185-e782-4dc3-8aee-92ba4616c8d0", // REPLACE
   authority: "https://login.microsoftonline.com/organizations", // multi-tenant
   graphBase: "https://graph.microsoft.com/beta", // beta = richest sign-in log fields
   graphV1: "https://graph.microsoft.com/v1.0",
