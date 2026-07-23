@@ -5,7 +5,7 @@
     Run once as an Application Administrator.
 #>
 param(
-    [string]$DisplayName = "Limon-IT M365 Triage",
+    [string]$DisplayName = "M365 Triage (Limon-IT)",
     [string]$SpaRedirect = "https://triage.limon-it.nl",
     [string[]]$ExtraRedirects = @("http://localhost:8080")
 )
