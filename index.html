@@ -6,7 +6,7 @@
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 triage tool. Investigate a suspected account compromise or BEC directly from your browser. Nothing leaves your machine.">
 <link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=5">
+<link rel="stylesheet" href="css/app.css?v=6">
 </head>
 <body>
 <header>
@@ -40,8 +40,8 @@
       </span>
       <h1>Microsoft 365 Triage</h1>
       <p class="lead">Suspect a hacked mailbox or account? Investigate it right now, from your
-        browser. Sign-in history, audit trail, inbox-rule and OAuth abuse - analyzed in seconds,
-        with clear recommended actions.</p>
+        browser. Sign-in history, audit trail, inbox-rule and OAuth abuse - analyzed in seconds -
+        and when it is real, walk the first-60-minutes containment runbook on the same account.</p>
       <div class="actions">
         <button class="btn primary" id="signInBtn">Sign in with Microsoft</button>
         <button class="btn" id="demoBtn">Try the demo</button>
@@ -52,38 +52,76 @@
         Already ran a full extraction? <a href="#" id="importOpen">View the output here</a> - no sign-in needed.</p>
       <div class="trustrow">
         <span>Runs entirely in your browser</span>
-        <span>Read-only permissions</span>
+        <span>Triage is read-only</span>
+        <span>Containment only when you arm it</span>
         <span>Nothing stored on our servers</span>
-        <span>Free, by Limon-IT</span>
       </div>
     </div>
   </section>
 
-  <!-- ============ UPN SEARCH (home after sign-in) ============ -->
+  <!-- ============ MODE CHOICE (home after sign-in) ============ -->
+  <section class="screen" id="screen-mode">
+    <div class="card">
+      <h1>What do you need right now?</h1>
+      <p class="muted">Triage answers <em>"is this account actually compromised?"</em>. Containment
+        stops the attacker. In a live incident you normally run triage first and then contain the
+        same account - the containment screen picks up the account and the findings from your
+        search, so you do not type the UPN twice.</p>
+    </div>
+    <div class="modegrid">
+      <button class="modecard" id="modeTriageBtn">
+        <span class="mc-ico">&#128269;</span>
+        <span class="mc-t">Triage <span class="mc-tag ro">read-only</span></span>
+        <span class="mc-d">Pull sign-in logs, the Unified Audit Log, directory audits, MFA methods,
+          OAuth grants and Identity Protection risk for one user, and read a severity-ranked findings
+          report with recommended actions.</span>
+        <span class="mc-go">Investigate an account &rarr;</span>
+      </button>
+      <button class="modecard danger" id="modeContainBtn">
+        <span class="mc-ico">&#128737;</span>
+        <span class="mc-t">Containment <span class="mc-tag rw">changes your tenant</span></span>
+        <span class="mc-d">The first-60-minutes runbook, in the order that does not leak: revoke
+          sessions, disable, reset the password, strip attacker-added authentication methods, clear
+          inbox rules, revoke OAuth grants - plus blast-radius, evidence and communication
+          checklists and a timestamped action log.</span>
+        <span class="mc-go">Contain an account &rarr;</span>
+      </button>
+    </div>
+    <div class="card" id="demoBanner" style="display:none">
+      <span class="mini">&#127819; <strong>Demo mode.</strong> You are looking at a simulated tenant with a
+      staged BEC incident. Try <strong>jan.devries@contoso-demo.com</strong>. Containment runs the
+      full runbook against that fake account - no real permissions, nothing changed.</span>
+    </div>
+  </section>
+
+  <!-- ============ UPN SEARCH (shared by triage + containment) ============ -->
   <section class="screen" id="screen-search">
     <div class="card">
-      <h1>Who do we investigate?</h1>
-      <p class="muted">Start typing a name or UPN. Pick the account you suspect is compromised.</p>
+      <h1 id="searchTitle">Who do we investigate?</h1>
+      <p class="muted" id="searchLead">Start typing a name or UPN. Pick the account you suspect is compromised.</p>
       <div class="searchbox">
         <input type="search" id="upnInput" placeholder="jan@yourcompany.nl" autocomplete="off" spellcheck="false">
         <div class="sugg" id="upnSugg" style="display:none"></div>
       </div>
       <div class="optrow">
-        <label>Look back
-          <select id="daysSel">
-            <option value="1">24 hours</option>
-            <option value="7">7 days</option>
-            <option value="30" selected>30 days</option>
-            <option value="90">90 days</option>
-          </select>
-        </label>
-        <label><input type="checkbox" id="ualChk" checked> Include Unified Audit Log (slower, more complete)</label>
+        <span id="triageOpts" class="optgroup">
+          <label>Look back
+            <select id="daysSel">
+              <option value="1">24 hours</option>
+              <option value="7">7 days</option>
+              <option value="30" selected>30 days</option>
+              <option value="90">90 days</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="ualChk" checked> Include Unified Audit Log (slower, more complete)</label>
+        </span>
         <button class="btn primary" id="startBtn" disabled>Start triage</button>
+        <button class="btn small" id="searchBackBtn">&larr; Back</button>
       </div>
-    </div>
-    <div class="card" id="demoBanner" style="display:none">
-      <span class="mini">🍋 <strong>Demo mode.</strong> You are looking at a simulated tenant with a
-      staged BEC incident. Try <strong>jan.devries@contoso-demo.com</strong>.</span>
+      <p class="mini muted" id="searchHint" style="display:none;margin-top:12px">
+        Containment makes real changes. The steps are ordered so nothing leaks, every action is
+        confirmed before it runs, and everything you do lands in an exportable action log.
+        Run triage on this account first if you have not already - remediation destroys evidence.</p>
     </div>
   </section>
 
@@ -110,6 +148,7 @@
           <button class="btn small" id="printBtn">Print / PDF</button>
           <button class="btn small lemon" id="dlFindingsBtn">Findings CSV</button>
           <button class="btn small lemon" id="dlEvidenceBtn">Evidence JSON</button>
+          <button class="btn small danger" id="containFromReportBtn">Contain this account →</button>
         </div>
       </div>
     </div>
@@ -141,6 +180,12 @@
     </div>
   </section>
 
+
+  <!-- ============ CONTAINMENT ============ -->
+  <section class="screen" id="screen-contain">
+    <div class="card noprint" id="containHead"></div>
+    <div id="containBody"></div>
+  </section>
 
   <!-- ============ FULL EXTRACTION GUIDE ============ -->
   <section class="screen" id="screen-extract">
@@ -260,9 +305,13 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
       <ol class="helplist">
         <li><strong>Sign in with Microsoft.</strong> Use an account with at least the <em>Security Reader</em> or
           <em>Global Reader</em> role. The very first time in a tenant, an administrator must grant consent once
-          (the link on the start page opens the consent screen). All permissions are read-only - this tool cannot
-          change anything in your tenant.</li>
-        <li><strong>Search the user.</strong> Type a name or UPN and pick the account you suspect is compromised.</li>
+          (the link on the start page opens the consent screen). The permissions requested at sign-in are
+          read-only - signing in cannot change anything in your tenant.</li>
+        <li><strong>Pick triage or containment.</strong> <em>Triage</em> investigates and stays read-only.
+          <em>Containment</em> walks the first-60-minutes runbook and does make changes - it asks for its
+          write permissions separately, at the moment you arm it.</li>
+        <li><strong>Search the user.</strong> Type a name or UPN and pick the account you suspect is compromised.
+          Both triage and containment use this same search.</li>
         <li><strong>Choose the window.</strong> 24 hours, 7, 30 or 90 days back. Use 24 hours for a fast "what just happened" check during an active incident. Leave "Unified Audit Log" enabled for the most
           complete picture - it uses an asynchronous Microsoft query that can take a few minutes on busy mailboxes.</li>
         <li><strong>Read the report.</strong> Findings are ranked by severity; click one for details and the
@@ -325,6 +374,44 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
     </div>
 
     <div class="card">
+      <h2>Containment - the first 60 minutes</h2>
+      <p>The second option after sign-in. Where triage answers <em>"is this account compromised?"</em>,
+        containment is the runbook for the hour after the answer is yes. It opens on the account you
+        searched for, carries the triage findings across, and works through the steps in the order that
+        does not leak:</p>
+      <ol class="helplist">
+        <li><strong>Preserve the evidence first.</strong> Remediation destroys artefacts - export the triage
+          evidence JSON before changing anything.</li>
+        <li><strong>Revoke sign-in sessions.</strong> Refresh tokens are invalidated. Most compromises are
+          token theft, so this comes before the password reset - not after.</li>
+        <li><strong>Disable the account</strong> (never delete - deletion destroys the audit trail).</li>
+        <li><strong>Reset the password</strong> to a throwaway generated in your browser and shown once.</li>
+        <li><strong>Strip attacker-added authentication methods</strong> - the step most people skip, and the
+          reason accounts come back eight hours after a "successful" reset.</li>
+        <li><strong>Inbox rules, forwarding and delegates</strong> - copy-ready Exchange Online PowerShell,
+          because delegated Graph permissions cannot reach another user's mailbox.</li>
+        <li><strong>Revoke OAuth consent grants</strong> - the persistence that survives both the password
+          reset and the session revocation.</li>
+      </ol>
+      <p>After the steps come the <strong>fifteen blast-radius checks</strong>, the
+        <strong>evidence-preservation list</strong> and the <strong>communication pattern</strong> (never
+        notify the user on the channel you suspect is compromised). Everything you run or tick is written to
+        a timestamped <strong>action log</strong> that exports as CSV or as a Markdown handover report for
+        the ticket.</p>
+      <p class="mini muted">Containment needs delegated <em>write</em> permissions
+        (<code>User.RevokeSessions.All</code>, <code>User.ReadWrite.All</code>,
+        <code>UserAuthenticationMethod.ReadWrite.All</code>, <code>DelegatedPermissionGrant.ReadWrite.All</code>)
+        and an Entra role that can use them - typically some combination of User Administrator,
+        Authentication Administrator or Privileged Authentication Administrator, and Application or Cloud
+        Application Administrator. They are requested only when you press <strong>Arm containment</strong>,
+        never at sign-in, so a tenant that only wants triage never consents to them. Every action is confirmed
+        in a dialog first. Structure and ordering follow Tiago S. Carvalho's
+        <a href="https://www.tiagoscarvalho.com/security-compliance/microsoft-365-incident-response-first-60-minutes-compromised-account-2026" target="_blank" rel="noopener">Microsoft 365 IR runbook: first 60 minutes</a>;
+        validate the commands and least-privilege roles against Microsoft Learn before adopting them as a
+        formal procedure.</p>
+    </div>
+
+    <div class="card">
       <h2>Going deeper: full extraction &amp; import</h2>
       <p>Triage answers the fast per-user question. When you need a complete forensic acquisition -
         every mailbox's live rules and delegations, message traces, mailbox audit logs and the full
@@ -346,7 +433,8 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
     <div class="card">
       <h2>Removing access</h2>
       <p>The tool holds no standing access: tokens expire after about an hour and nothing runs when the tab
-        is closed. A page reload also returns you to the sign-in screen rather than restoring the session.
+        is closed - including any containment permissions, which are dropped with the rest of the session.
+        A page reload also returns you to the sign-in screen rather than restoring the session.
         To remove it entirely, delete the enterprise application <em>"Limon-IT M365 Triage"</em>
         in your Entra portal (Enterprise applications → select it → Properties → Delete). That revokes the
         consent for the whole tenant.</p>
@@ -379,6 +467,17 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
   </div>
 </div>
 
+<div class="modal-bg" id="confirmModal">
+  <div class="modal">
+    <h3 id="cfTitle"></h3>
+    <div id="cfBody"></div>
+    <div class="modal-row">
+      <button class="btn" id="cfCancel">Cancel</button>
+      <button class="btn danger" id="cfOk">Run</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   <div class="fwrap">
     <span>© 2026 <a href="https://limon-it.nl">Limon-IT</a> · M365 Triage</span>
@@ -391,13 +490,14 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/authConfig.js?v=5"></script>
-<script src="js/build.js?v=5"></script>
-<script src="js/graph.js?v=5"></script>
-<script src="js/demo.js?v=5"></script>
-<script src="js/detections.js?v=5"></script>
-<script src="js/report.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
-<script src="js/import.js?v=5"></script>
+<script src="js/authConfig.js?v=6"></script>
+<script src="js/build.js?v=6"></script>
+<script src="js/graph.js?v=6"></script>
+<script src="js/demo.js?v=6"></script>
+<script src="js/detections.js?v=6"></script>
+<script src="js/report.js?v=6"></script>
+<script src="js/contain.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
+<script src="js/import.js?v=6"></script>
 </body>
 </html>

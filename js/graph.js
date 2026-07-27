@@ -1,8 +1,10 @@
-// Graph + MSAL plumbing. Everything read-only; everything stays in this tab.
+// Graph + MSAL plumbing. Read-only by default; the containment screen has to
+// ask for write scopes explicitly (elevate()). Everything stays in this tab.
 (function () {
   const A = window.TRIAGE_AUTH;
   let msalApp = null;
   let account = null;
+  let elevated = false;   // true once the containment (write) scopes are held
 
   function app() {
     if (!msalApp) {
@@ -38,6 +40,7 @@
   async function signOut() {
     const acc = account;
     account = null;
+    elevated = false;
     try { await app().logoutPopup({ account: acc }); } catch (e) { /* user closed popup */ }
   }
 
@@ -58,6 +61,7 @@
       }
     } catch (e) { /* private mode / storage disabled */ }
     account = null;
+    elevated = false;
   }
 
   async function token(scopes) {
@@ -69,8 +73,17 @@
     }
   }
 
+  // Step up to the containment (write) scopes. Silent if the tenant already
+  // consented, otherwise a popup - which is the deliberate "I am about to
+  // change something" moment. Read-only triage never calls this.
+  async function elevate() {
+    await token(A.containScopes);
+    elevated = true;
+    return true;
+  }
+
   async function gfetch(url, opts) {
-    const t = await token();
+    const t = await token(opts && opts.scopes);
     const r = await fetch(url, Object.assign({
       headers: Object.assign({ Authorization: "Bearer " + t, "Content-Type": "application/json" },
         (opts && opts.headers) || {})
@@ -130,9 +143,21 @@
     return gall(base + "/" + id + "/records?$top=500", 60);
   }
 
+  // Write helper: every containment call goes through here so the write scopes
+  // are requested in one place and nothing can mutate the tenant by accident.
+  function gwrite(url, method, body) {
+    return gfetch(url, {
+      method: method,
+      scopes: A.containScopes,
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+  }
+
   window.TriageGraph = {
     init: init, signIn: signIn, signOut: signOut, forgetSession: forgetSession,
     get account() { return account; },
-    gfetch: gfetch, gall: gall, ualQuery: ualQuery
+    get elevated() { return elevated; },
+    elevate: elevate, token: token,
+    gfetch: gfetch, gall: gall, gwrite: gwrite, ualQuery: ualQuery
   };
 })();

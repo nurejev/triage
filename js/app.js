@@ -4,6 +4,9 @@
   let demoMode = false;
   let selectedUser = null;   // {id, userPrincipalName, displayName}
   let lastScreen = "screen-login";
+  let mode = "triage";       // "triage" | "contain" - what the shared search screen starts
+  let lastEvidence = null;   // evidence + findings of the most recent report, for containment context
+  let lastFindings = null;
 
   // ---------- helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -81,7 +84,7 @@
   $("helpBtn").addEventListener("click", openHelp);
   $("helpLink").addEventListener("click", openHelp);
   $("helpBack").addEventListener("click", function () { showScreen(lastScreen); });
-  function homeScreen() { return G.account || demoMode ? "screen-search" : "screen-login"; }
+  function homeScreen() { return G.account || demoMode ? "screen-mode" : "screen-login"; }
   $("logoHome").addEventListener("click", function () { showScreen(homeScreen()); });
   // Full-extraction guide + Extractor-Suite output importer (reachable signed-in or not).
   $("extractBtn").addEventListener("click", function () { showScreen("screen-extract"); });
@@ -102,10 +105,33 @@
     $("whoTenant").textContent = tenant || "";
     $("signOutBtn").style.display = "";
     $("demoBanner").style.display = demoMode ? "" : "none";
-    showScreen("screen-search");
-    $("upnInput").focus();
+    showScreen("screen-mode");
     maybeShowWhatsNew();
   }
+
+  // ---------- mode choice: triage (read-only) vs containment (writes) ----------
+  // Both funnel into the same UPN search, so containment always works off the
+  // account the analyst already looked up.
+  function setMode(m) {
+    mode = m;
+    const contain = m === "contain";
+    $("searchTitle").textContent = contain ? "Which account do we contain?" : "Who do we investigate?";
+    $("searchLead").textContent = contain
+      ? "The same search as triage. Pick the account you are containing - the runbook opens with that account, and with the triage findings if you already ran them."
+      : "Start typing a name or UPN. Pick the account you suspect is compromised.";
+    $("triageOpts").style.display = contain ? "none" : "";
+    $("searchHint").style.display = contain ? "" : "none";
+    $("startBtn").textContent = contain ? "Open containment runbook" : "Start triage";
+    $("startBtn").className = "btn " + (contain ? "danger" : "primary");
+  }
+  function openSearch(m) {
+    setMode(m);
+    showScreen("screen-search");
+    $("upnInput").focus();
+  }
+  $("modeTriageBtn").addEventListener("click", function () { openSearch("triage"); });
+  $("modeContainBtn").addEventListener("click", function () { openSearch("contain"); });
+  $("searchBackBtn").addEventListener("click", function () { showScreen("screen-mode"); });
   $("signInBtn").addEventListener("click", async function () {
     if (A.clientId.indexOf("00000000") === 0) {
       alert("This instance is not configured yet: set the app registration client ID in js/authConfig.js (see README).");
@@ -188,10 +214,11 @@
     else if (e.key === "Enter") {
       if (suggSel >= 0 && suggestions[suggSel]) pick(suggestions[suggSel]);
       else if (suggestions.length === 1) pick(suggestions[0]);
-      else if (!$("startBtn").disabled) startTriage();
+      else if (!$("startBtn").disabled) startSelected();
       e.preventDefault();
     } else if (e.key === "Escape") { suggestions = []; renderSugg(); }
   });
+  function startSelected() { return mode === "contain" ? startContain() : startTriage(); }
   upnInput.addEventListener("blur", function () { setTimeout(function () { suggestions = []; renderSugg(); }, 150); });
 
   // ---------- collection pipeline ----------
@@ -329,25 +356,73 @@
     }
     showEvidence(ev);
   }
+  // ---------- containment ----------
+  // Runs off exactly the same search as triage: whatever account is selected
+  // here is the account the runbook opens on, together with its findings when
+  // triage has already run in this session.
+  async function startContain() {
+    const upn = (selectedUser && selectedUser.userPrincipalName) || upnInput.value.trim();
+    if (!upn) return;
+    let user = (selectedUser && selectedUser.userPrincipalName.toLowerCase() === upn.toLowerCase())
+      ? selectedUser : { userPrincipalName: upn };
+    if (!demoMode && !user.id) {
+      try {
+        user = await G.gfetch(A.graphV1 + "/users/" + encodeURIComponent(upn) +
+          "?$select=id,displayName,userPrincipalName,accountEnabled");
+      } catch (e) { /* UPN alone is a valid Graph key - carry on */ }
+    }
+    openContain(user);
+  }
+  function openContain(user) {
+    const same = lastEvidence && lastEvidence.upn &&
+      lastEvidence.upn.toLowerCase() === String(user.userPrincipalName || "").toLowerCase();
+    window.TriageContain.start(user, {
+      demo: demoMode,
+      context: same ? { evidence: lastEvidence, findings: lastFindings } : null
+    });
+    showScreen("screen-contain");
+  }
+  $("containFromReportBtn").addEventListener("click", function () {
+    const u = (selectedUser && lastEvidence && selectedUser.userPrincipalName === lastEvidence.upn)
+      ? selectedUser : { userPrincipalName: (lastEvidence && lastEvidence.upn) || "" };
+    if (!u.userPrincipalName) return;
+    openContain(u);
+  });
+
   // Analyze an evidence object and render the report. Shared by live triage,
   // the demo, and the imported-evidence viewer (js/import.js).
   function showEvidence(ev) {
     const findings = window.TriageDetections.analyze(ev);
+    lastEvidence = ev; lastFindings = findings;
     window.TriageReport.show(ev, findings);
+    // Imported evidence has no live tenant behind it - containment would have
+    // nothing to act on, so the hand-off button only shows for a live/demo run.
+    $("containFromReportBtn").style.display = ev.imported ? "none" : "";
     showScreen("screen-report");
   }
-  $("startBtn").addEventListener("click", startTriage);
+  $("startBtn").addEventListener("click", startSelected);
   $("newSearchBtn").addEventListener("click", function () {
     upnInput.value = ""; selectedUser = null; $("startBtn").disabled = true;
-    showScreen("screen-search");
-    upnInput.focus();
+    openSearch("triage");
   });
 
-  // ---------- public API (used by js/import.js) ----------
+  // ---------- public API (used by js/import.js and js/contain.js) ----------
   window.TriageApp = {
     showEvidence: showEvidence,
     showScreen: showScreen,
-    home: function () { showScreen(homeScreen()); }
+    home: function () { showScreen(homeScreen()); },
+    containSearch: function () {
+      upnInput.value = ""; selectedUser = null; $("startBtn").disabled = true;
+      openSearch("contain");
+    },
+    // "Run triage on this account first", from inside the containment runbook.
+    triageFor: function (user) {
+      selectedUser = user;
+      upnInput.value = user.userPrincipalName;
+      $("startBtn").disabled = false;
+      setMode("triage");
+      startTriage();
+    }
   };
 
   // ---------- boot ----------

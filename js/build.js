@@ -12,9 +12,22 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 5;
-window.TRIAGE_BUILD_DATE = "2026-07-23";
+window.TRIAGE_BUILD = 6;
+window.TRIAGE_BUILD_DATE = "2026-07-27";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 6, date: "2026-07-27", title: "Containment - the first 60 minutes",
+    items: [
+      { kind: "new", tool: "Home", text: "After sign-in you now choose what you need: Triage (read-only investigation) or Containment (the response runbook). Both run off the same user search." },
+      { kind: "new", tool: "Containment", text: "First-60-minutes runbook executed live against your tenant, in the order that does not leak: revoke sessions, disable the account, reset the password, strip attacker-added authentication methods, clear inbox rules and forwarding, revoke OAuth consent grants. Every action is confirmed before it runs." },
+      { kind: "new", tool: "Containment", text: "Write permissions are requested only when you press Arm containment - never at sign-in, so a tenant that only wants triage never consents to them." },
+      { kind: "new", tool: "Containment", text: "Authentication methods and OAuth grants load inline with per-item Remove/Revoke buttons, risky-scope highlighting and a tenant-wide-consent warning." },
+      { kind: "new", tool: "Containment", text: "The fifteen blast-radius checks, the evidence-preservation list and the communication pattern as working checklists." },
+      { kind: "new", tool: "Containment", text: "Timestamped action log of everything executed and ticked, exportable as CSV or as a Markdown handover report for the ticket." },
+      { kind: "improved", tool: "Report", text: "\"Contain this account\" hands the investigated user - and its findings - straight to the runbook, which marks the steps your triage flagged." },
+      { kind: "improved", tool: "Demo", text: "Demo mode walks the whole containment runbook against the staged BEC account with simulated results - no permissions, nothing changed." },
+    ],
+  },
   {
     build: 5, date: "2026-07-23", title: "Full extraction guide + output import",
     items: [

@@ -93,6 +93,9 @@ header {
 .btn.lemon { background: var(--lemon); border-color: var(--lemon-deep); color: #12331f; font-weight: 600; }
 .btn.lemon:hover { background: var(--lemon-deep); }
 .btn.small { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+.btn.danger { background: var(--sev-critical); border-color: var(--sev-critical); color: #fff; font-weight: 600; }
+.btn.danger:hover { background: #b32f2f; border-color: #b32f2f; }
+.btn.danger:disabled:hover { background: var(--sev-critical); }
 input[type="text"], input[type="search"], select {
   border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px;
   background: var(--surface); color: var(--ink); font: inherit;
@@ -140,6 +143,27 @@ h3 { font-size: 14px; margin: 0 0 8px; }
 .sugg div:hover, .sugg div.sel { background: var(--soft); }
 .sugg .u { font-weight: 600; }
 .optrow { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+.optgroup { display: contents; }
+
+/* ---------- mode choice (triage vs containment) ---------- */
+.modegrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.modecard {
+  display: flex; flex-direction: column; gap: 8px; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px 22px; color: var(--ink); font: inherit;
+  border-top: 4px solid var(--green); transition: transform .12s, border-color .12s;
+}
+.modecard:hover { transform: translateY(-2px); border-color: var(--accent2); }
+.modecard.danger { border-top-color: var(--sev-critical); }
+.modecard.danger:hover { border-color: var(--sev-critical); }
+.modecard .mc-ico { font-size: 26px; line-height: 1; }
+.modecard .mc-t { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.modecard .mc-d { color: var(--muted); font-size: 13px; line-height: 1.55; }
+.modecard .mc-go { margin-top: auto; padding-top: 6px; font-weight: 600; color: var(--accent2); font-size: 13px; }
+.modecard.danger .mc-go { color: var(--sev-critical); }
+.mc-tag { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 10px; letter-spacing: .02em; }
+.mc-tag.ro { background: var(--soft); color: var(--accent2); }
+.mc-tag.rw { background: rgba(208, 59, 59, .12); color: var(--sev-critical); }
 
 /* ---------- progress ---------- */
 .steps { list-style: none; padding: 0; margin: 0; }
@@ -270,6 +294,73 @@ pre.code code { background: none; padding: 0; font: inherit; color: inherit; }
   background: var(--soft); border: 1px solid var(--border); border-radius: 6px;
   padding: 1px 5px; font: 12px/1 "SFMono-Regular", "Consolas", Menlo, monospace;
 }
+
+/* ---------- containment ---------- */
+.arm { border-left: 4px solid var(--sev-critical); }
+.arm.on { border-left-color: var(--good); background: var(--soft); }
+
+.cstep { border-left: 4px solid var(--border); }
+.cstep.done { border-left-color: var(--good); }
+.cstep.running { border-left-color: var(--lemon-deep); }
+.cstep.failed { border-left-color: var(--sev-critical); }
+.cstep.skipped { border-left-color: var(--muted); opacity: .75; }
+.cs-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.cs-head h2 { margin: 0; }
+.cs-n {
+  width: 26px; height: 26px; border-radius: 50%; flex: none; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--soft); color: var(--accent2); border: 1px solid var(--border);
+}
+.cstep.done .cs-n { background: var(--good); color: #fff; border-color: var(--good); }
+.cs-pill {
+  font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+}
+.cs-pill.done { background: var(--soft); color: var(--good); border-color: var(--good); }
+.cs-pill.running { color: var(--lemon-deep); border-color: var(--lemon-deep); }
+.cs-pill.failed { background: rgba(208, 59, 59, .12); color: var(--sev-critical); border-color: var(--sev-critical); }
+.cs-flag {
+  font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 10px;
+  background: rgba(223, 179, 43, .18); color: var(--lemon-deep); cursor: help;
+}
+.cs-why { font-size: 13px; margin: 0 0 12px; }
+.cs-note { color: var(--muted); }
+.cs-note:empty { display: none; }
+.cs-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cs-check { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.cs-out:empty { display: none; }
+.cs-out { margin-top: 14px; }
+.cs-ps { margin-top: 12px; }
+.cs-ps summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+.cs-ps pre.code { margin-top: 8px; }
+
+.pwdbox { border: 1px solid var(--lemon-deep); background: var(--soft); border-radius: 12px; padding: 12px 14px; }
+.pwdrow { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+.pwdrow code {
+  font: 15px/1.4 "SFMono-Regular", "Consolas", Menlo, monospace; letter-spacing: .04em;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+  word-break: break-all;
+}
+.scope {
+  display: inline-block; border: 1px solid var(--border); border-radius: 6px; padding: 0 6px;
+  margin: 1px 0; font: 11px/1.6 "SFMono-Regular", "Consolas", Menlo, monospace; color: var(--muted);
+}
+.scope.risky { border-color: var(--sev-critical); color: var(--sev-critical); font-weight: 700; }
+
+.cl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px; }
+.cl-item {
+  display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 12.5px;
+}
+.cl-item:hover { background: var(--soft); }
+.cl-item.on { border-color: var(--good); background: var(--soft); }
+.cl-item input { margin-top: 3px; flex: none; }
+.cl-item b { display: block; }
+.cl-where { display: block; color: var(--accent2); font-size: 11.5px; margin: 1px 0; }
+.cl-what { display: block; color: var(--muted); }
+.lg-ok { color: var(--good); font-weight: 600; }
+.lg-fail { color: var(--sev-critical); font-weight: 600; }
+.lg-note { color: var(--muted); }
 
 /* ---- import / dropzone ---- */
 .dropzone {

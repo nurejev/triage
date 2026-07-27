@@ -4,14 +4,25 @@ Free, browser-based incident response triage for Microsoft 365 - by
 [Limon-IT](https://limon-it.nl). Live at **https://triage.limon-it.nl**.
 
 Suspect a hacked account or BEC? Sign in, type the UPN, get a prioritized
-findings report in seconds. Everything runs client-side: this is a static site,
-there is no backend, and no data ever leaves the browser.
+findings report in seconds - then contain the account from the same screen.
+Everything runs client-side: this is a static site, there is no backend, and no
+data ever leaves the browser.
+
+After sign-in there are two ways in, both driven by the same user search:
+
+| | |
+|---|---|
+| **Triage** | Read-only investigation of one account → severity-ranked findings report. |
+| **Containment** | The first-60-minutes response runbook, executed live against the tenant. |
 
 Sister project of [ENCA](https://github.com/nurejev/enca) and built in the same
 way: static SPA + MSAL (PKCE, no client secret) + a multi-tenant app
-registration with **read-only delegated** Graph permissions. Detection logic is
-inspired by our PowerShell analyzer for the open-source
-[Microsoft-Extractor-Suite](https://github.com/invictus-ir/Microsoft-Extractor-Suite).
+registration. Sign-in requests **read-only delegated** Graph permissions;
+containment asks for its write scopes separately and only when armed. Detection
+logic is inspired by our PowerShell analyzer for the open-source
+[Microsoft-Extractor-Suite](https://github.com/invictus-ir/Microsoft-Extractor-Suite);
+the containment runbook follows Tiago S. Carvalho's
+[Microsoft 365 IR runbook: first 60 minutes](https://www.tiagoscarvalho.com/security-compliance/microsoft-365-incident-response-first-60-minutes-compromised-account-2026).
 
 ## What it checks per user
 
@@ -26,6 +37,31 @@ evidence export as CSV/JSON.
 
 See [COVERAGE.md](COVERAGE.md) for exactly what is checked versus the Microsoft-Extractor-Suite.
 
+## Containment
+
+Opens on whatever account the search selected, and carries the triage findings
+across so the steps your report flagged are marked. The order is deliberate -
+revoking sessions *before* the password reset, so a stolen access token cannot
+be used to add a recovery method and walk back in through the reset.
+
+1. **Preserve evidence** - export before you destroy artefacts.
+2. **Revoke sign-in sessions** - `POST /users/{id}/revokeSignInSessions`.
+3. **Disable the account** - `PATCH accountEnabled:false` (disable, never delete).
+4. **Reset the password** - 20 chars from `crypto.getRandomValues`, shown once, force change at next sign-in.
+5. **Authentication methods** - listed inline, removed per item (phone, Authenticator, FIDO2, TAP, software OATH, email, WHfB).
+6. **Inbox rules, forwarding, delegates** - copy-ready Exchange Online PowerShell; delegated Graph cannot reach another user's mailbox.
+7. **OAuth grants** - listed with risky-scope highlighting and a tenant-wide-consent warning, revoked per grant.
+
+Then the fifteen **blast-radius** checks, the **evidence-preservation** list and
+the **communication** pattern as checklists, and a timestamped **action log**
+that exports as CSV or as a Markdown handover report.
+
+Guard rails: write scopes are requested only when the analyst presses *Arm
+containment*, every mutating action goes through one confirmation dialog naming
+the tenant, actions route through a single `gwrite()` helper, and the whole
+elevation is dropped on sign-out or refresh along with the rest of the session.
+Deploy read-only with `create-appreg.ps1 -ReadOnly` if you never want the option.
+
 ## Deploy your own instance
 
 1. **App registration** - run `create-appreg.ps1` (or create manually: single
@@ -39,8 +75,10 @@ See [COVERAGE.md](COVERAGE.md) for exactly what is checked versus the Microsoft-
    `CNAME` file in this repo pins the custom domain; enable *Enforce HTTPS*.
 4. **Admin consent** - each customer tenant consents once via
    `https://login.microsoftonline.com/organizations/adminconsent?client_id=<CLIENT_ID>&redirect_uri=https://triage.limon-it.nl`.
-   All scopes are read-only; remove access any time by deleting the enterprise
-   application "Limon-IT M365 Triage" in the customer's Entra portal.
+   Remove access any time by deleting the enterprise application
+   "Limon-IT M365 Triage" in the customer's Entra portal. For a look-but-do-not-touch
+   deployment run `create-appreg.ps1 -ReadOnly`, which registers the triage scopes
+   only and leaves containment unable to arm.
 
 ### Local development
 
@@ -72,9 +110,27 @@ workflow prints the build number it ships.
 | UserAuthenticationMethod.Read.All | registered MFA methods |
 | AuditLogsQuery.Read.All | Unified Audit Log (async query API) |
 
-All delegated, all read-only, admin consent required once per tenant. The site
-is static; there are no cookies, no analytics, no server-side processing.
-Findings are indicators, not verdicts - verify before acting.
+Requested at sign-in, all delegated and all read-only. Admin consent once per
+tenant.
+
+Containment scopes - **never requested at sign-in**, only when an analyst arms
+the containment screen:
+
+| Scope | Why |
+|---|---|
+| User.RevokeSessions.All | revoke refresh tokens |
+| User.ReadWrite.All | disable the account, reset the password |
+| User-PasswordProfile.ReadWrite.All | password reset in tenants that split this out |
+| UserAuthenticationMethod.ReadWrite.All | remove attacker-added MFA methods |
+| DelegatedPermissionGrant.ReadWrite.All | revoke OAuth consent grants |
+
+Using them also needs the matching Entra roles - typically some combination of
+User Administrator, Authentication Administrator or Privileged Authentication
+Administrator, and Application or Cloud Application Administrator. Validate
+least privilege against Microsoft Learn before making this a formal procedure.
+
+The site is static; there are no cookies, no analytics, no server-side
+processing. Findings are indicators, not verdicts - verify before acting.
 
 ## License
 
