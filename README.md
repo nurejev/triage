@@ -89,8 +89,36 @@ on the app registration first. nginx ships a strict Content-Security-Policy
 (connect-src limited to `graph.microsoft.com` and `login.microsoftonline.com`),
 so even injected script could not send data anywhere else.
 
-The PowerShell half - the inbox-rules containment step and the full
-extraction, which delegated Graph cannot do - has its own container with
+### Optional: the Exchange containment backend
+
+Microsoft does not let a browser change another user's inbox rules, mailbox
+forwarding or delegates. Deploy this small service and those become buttons in
+the containment runbook instead of copy-paste PowerShell:
+
+```bash
+pwsh ./create-backend-appreg.ps1 -SpaAppId <triage spa app id> -Organization contoso.onmicrosoft.com
+# follow the printed steps (admin consent + Exchange RBAC), then:
+BACKEND_APP_ID=<printed app id> docker compose --profile backend up -d
+```
+
+It is the only component in the whole tool that holds a standing credential -
+a certificate, never a secret. It performs exactly seven mailbox operations,
+and only after verifying that the request carries a Microsoft-signed token
+minted for *this* service, issued to the Triage SPA, belonging to a real
+signed-in user whose directory roles it re-checks with Microsoft on every
+request. Everything is written to an append-only audit log. It runs
+unprivileged, read-only, with no published port.
+
+**Read [SECURITY.md](SECURITY.md)** before deploying it - it explains the whole
+trust model, what an attacker would actually have to do, and how to narrow the
+Exchange permission with RBAC for Applications instead of handing out the
+Exchange Administrator role. Skip the backend entirely and the tool holds no
+standing credential at all.
+
+### The PowerShell companion
+
+For the full extraction (and for the mailbox step if you skip the backend)
+there is a container with
 ExchangeOnlineManagement, Microsoft.Graph and the Microsoft-Extractor-Suite
 preinstalled:
 
@@ -104,9 +132,8 @@ It prints a cheat sheet on start; sign in with device code
 Extraction output written to `/evidence` lands in `./evidence` on the host,
 ready to load back into the web app via *View extraction output*.
 
-Both images are rebuilt and pushed to GHCR by `.github/workflows/docker.yml`
-on every push to `main` (make the two packages public once for anonymous
-pulls).
+All three images are rebuilt and pushed to GHCR by `.github/workflows/docker.yml`
+on every push to `main` (make the packages public once for anonymous pulls).
 
 ## Deploy your own instance
 

@@ -1,0 +1,12 @@
+# Never commit credentials or evidence.
+certs/
+*.pfx
+*.cer
+*.crt
+*.key
+backend.env
+*.env
+audit/
+evidence/
+.DS_Store
+node_modules/

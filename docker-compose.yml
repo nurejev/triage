@@ -1,10 +1,12 @@
 # Limon-IT M365 Triage
 #
-#   docker compose up -d              -> web app on http://localhost:8080
-#   docker compose run --rm pwsh      -> PowerShell with EXO/Graph/Extractor-Suite
+#   docker compose up -d                        -> web app on http://localhost:8080
+#   docker compose --profile backend up -d      -> + Exchange containment backend
+#   docker compose run --rm pwsh                -> PowerShell with EXO/Graph/Extractor-Suite
 #
-# Both images are published by the GitHub Actions workflow; compose falls
-# back to building them locally from this checkout if the pull fails.
+# The backend is optional. Without it everything works except clearing inbox
+# rules, forwarding and delegates from the browser - that step falls back to
+# prefilled PowerShell. With it, those become buttons. See SECURITY.md.
 services:
   triage:
     image: ghcr.io/nurejev/triage:latest
@@ -12,9 +14,34 @@ services:
     ports:
       - "8080:80"
     environment:
-      # Pull the latest main from GitHub on every start; set to "off" to
-      # serve only what is baked into the image (fully offline).
+      # Pull the latest main from GitHub on every start; "off" serves only
+      # what is baked into the image (fully offline).
       GIT_SYNC: "on"
+      # Application ID of the Exchange backend. Empty = no backend.
+      BACKEND_APP_ID: "${BACKEND_APP_ID:-}"
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/nurejev/triage-backend:latest
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    profiles: ["backend"]
+    env_file:
+      - backend.env          # written by create-backend-appreg.ps1
+    volumes:
+      - ./certs:/certs:ro    # backend.crt, backend.key, backend.pfx - read-only
+      - ./audit:/var/log/triage
+    # No published ports: only nginx in the triage container can reach it.
+    expose:
+      - "8081"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/triage
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   pwsh:

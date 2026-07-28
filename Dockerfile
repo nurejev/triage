@@ -22,16 +22,19 @@
 # ======================================================================
 FROM nginx:alpine
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git gettext
 
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Rendered by the entrypoint (it substitutes the backend host), not used raw.
+COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && rm -f /etc/nginx/conf.d/default.conf
 
 # Baked-in fallback copy of the site (kept current by the GHCR workflow).
 COPY . /usr/share/nginx/html/
 RUN rm -rf /usr/share/nginx/html/.git /usr/share/nginx/html/docker \
-    /usr/share/nginx/html/Dockerfile* /usr/share/nginx/html/docker-compose.yml
+    /usr/share/nginx/html/backend /usr/share/nginx/html/certs \
+    /usr/share/nginx/html/Dockerfile* /usr/share/nginx/html/docker-compose.yml \
+    /usr/share/nginx/html/*.env
 
 EXPOSE 80
 ENTRYPOINT ["/entrypoint.sh"]

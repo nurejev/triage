@@ -12,9 +12,19 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 7;
+window.TRIAGE_BUILD = 8;
 window.TRIAGE_BUILD_DATE = "2026-07-28";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 8, date: "2026-07-28", title: "Inbox rules, forwarding and delegates - from the browser",
+    items: [
+      { kind: "new", tool: "Containment", text: "The mailbox step is now live: inbox rules, mailbox forwarding and delegates load inline, suspicious rules are flagged, and you can disable or delete a rule, clear forwarding and remove a delegate with a button - no PowerShell." },
+      { kind: "new", tool: "Containment", text: "Export mailbox evidence JSON captures every rule with its exact conditions before you remediate - the copy legal asks for two days later." },
+      { kind: "new", tool: "Deploy", text: "Optional Exchange containment backend (docker compose --profile backend up -d). It holds the only standing credential in the whole tool: a certificate, app-only, seven mailbox operations, caller's directory roles re-checked with Microsoft on every request, append-only audit log." },
+      { kind: "new", tool: "Docs", text: "SECURITY.md explains the whole trust model in plain language: what each part can touch, where credentials live, and what an attacker would actually have to do." },
+      { kind: "improved", tool: "Containment", text: "The arm card says in one line whether an Exchange backend is connected, connected to the wrong tenant, or absent - so you never guess mid-incident. Without a backend the step falls back to prefilled PowerShell exactly as before." },
+    ],
+  },
   {
     build: 7, date: "2026-07-28", title: "Run everything from GitHub in Docker",
     items: [

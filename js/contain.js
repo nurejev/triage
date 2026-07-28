@@ -212,14 +212,14 @@
           "#       -TemporaryAccessPassMethod / -SoftwareOathMethod / -EmailMethod"
     },
     {
-      key: "rules", n: 5, kind: "manual",
+      key: "rules", n: 5, kind: "rules",
       title: "Inbox rules, mailbox forwarding and delegates",
-      why: "The single most common persistence artefact - and the one Graph cannot reach with delegated " +
-           "permissions on somebody else's mailbox. Run these in Exchange Online PowerShell. Screenshot " +
-           "the rule body before you delete it: the Description field does not preserve the exact " +
-           "conditions, and legal will ask. No PowerShell at hand? " +
-           "docker run --rm -it ghcr.io/nurejev/triage-pwsh:latest has the module preinstalled " +
-           "(sign in with Connect-ExchangeOnline -Device).",
+      btn: "Load rules, forwarding and delegates",
+      why: "The single most common persistence artefact. Microsoft does not let a browser touch another " +
+           "user's mailbox settings, so this step runs through the Exchange containment backend when one " +
+           "is deployed, and falls back to copy-paste PowerShell when it is not. Screenshot or export the " +
+           "rule before you delete it: the Description field does not preserve the exact conditions, and " +
+           "legal will ask.",
       ps: "# no PowerShell on this machine? the companion container has it all:\n" +
           "#   docker run --rm -it -v \"$PWD/evidence:/evidence\" ghcr.io/nurejev/triage-pwsh:latest\n" +
           "Connect-ExchangeOnline -UserPrincipalName admin@tenant.com   # in the container: -Device\n\n" +
@@ -317,6 +317,16 @@
         '<label class="cs-check"><input type="checkbox" data-tick="' + s.key + '-skip"' +
         (checks[s.key + "-skip"] ? " checked" : "") + "> Deliberately skipped</label></div>" +
         '<div class="cs-out" id="out-' + s.key + '"></div>';
+    } else if (s.kind === "rules") {
+      const B = window.TriageBackend;
+      const live = demo || (B && B.available());
+      body = '<div class="cs-actions">' +
+        (live ? '<button class="btn primary" data-act="load" data-key="rules">' + esc(s.btn) + "</button>"
+              : '<span class="mini muted">No Exchange backend for this tenant - use the PowerShell below, ' +
+                "then tick the box.</span>") +
+        '<label class="cs-check"><input type="checkbox" data-tick="rules"' +
+        (checks.rules ? " checked" : "") + "> Checked and cleaned</label></div>" +
+        '<div class="cs-out" id="out-rules"></div>';
     } else if (s.kind === "methods" || s.kind === "oauth") {
       body = '<div class="cs-actions"><button class="btn primary" data-act="load" data-key="' + s.key + '">' +
         esc(s.btn) + "</button>" +
@@ -384,6 +394,30 @@
     if (c) c.textContent = log.length + " entr" + (log.length === 1 ? "y" : "ies");
   }
 
+  // One honest line about the Exchange backend: present and usable, present
+  // but for another tenant, or absent (in which case the mailbox step is
+  // PowerShell). Nobody should have to guess mid-incident.
+  function backendLine() {
+    const B = window.TriageBackend;
+    if (demo) return '<p class="mini muted" style="margin:8px 0 0">Exchange backend: simulated for the demo - ' +
+      "inbox rules, forwarding and delegates are staged, not real.</p>";
+    if (!B || !B.configured()) return '<p class="mini muted" style="margin:8px 0 0">Exchange backend: not deployed. ' +
+      "Everything works except clearing inbox rules, forwarding and delegates from here - that step gives you " +
+      "prefilled PowerShell instead.</p>";
+    if (B.available()) {
+      const h = B.health || {};
+      return '<p class="mini" style="margin:8px 0 0;color:var(--good)">Exchange backend: connected to <b>' +
+        esc(h.organization || h.tenantId || "") + "</b>. Inbox rules, mailbox forwarding and delegates can be " +
+        "read and cleared from this screen.</p>";
+    }
+    const h = B.health;
+    return '<p class="mini" style="margin:8px 0 0;color:var(--sev-medium)">Exchange backend: ' +
+      (h && h.mismatch ? esc(h.mismatch)
+        : h ? "deployed for tenant " + esc(h.organization || h.tenantId) + ", which is not the tenant you are signed into"
+            : "configured but not reachable") +
+      ". The mailbox step falls back to PowerShell.</p>";
+  }
+
   function render() {
     const u = target || {};
     $("containHead").innerHTML =
@@ -415,7 +449,7 @@
       '<span class="hspacer" style="margin-left:auto"></span>' +
       (armed ? '<span class="cs-pill done">write access held</span>'
              : '<button class="btn primary" data-act="arm">Arm containment</button>') +
-      "</div></div>";
+      "</div>" + backendLine() + "</div>";
 
     // --- triage context
     if (ctx && ctx.findings) {
@@ -524,9 +558,14 @@
     if (act === "copypwd") return copyText(tempPwd, el);
     if (act === "run") return runStep(step, false);
     if (act === "extra") return runStep(step, true);
-    if (act === "load") return key === "methods" ? loadMethods() : loadGrants();
+    if (act === "load") return key === "methods" ? loadMethods() : key === "rules" ? loadMailbox() : loadGrants();
     if (act === "delmethod") return delMethod(el.getAttribute("data-id"), el.getAttribute("data-path"), el.getAttribute("data-label"));
     if (act === "delgrant") return delGrant(el.getAttribute("data-id"), el.getAttribute("data-label"));
+    if (act === "delrule") return delRule(el.getAttribute("data-id"), el.getAttribute("data-label"));
+    if (act === "disrule") return disRule(el.getAttribute("data-id"), el.getAttribute("data-label"));
+    if (act === "clearfwd") return clearForwarding();
+    if (act === "deldeleg") return delDelegate(el.getAttribute("data-id"));
+    if (act === "dlrules") return exportMailboxEvidence();
   }
 
   async function arm() {
@@ -540,6 +579,18 @@
       await G.elevate();
       armed = true;
       logAdd("arm", "Containment armed", "ok", "write scopes granted to this tab: " + A.containScopes.join(", "));
+      // Separate consent for the Exchange backend, so arming Graph containment
+      // in a tenant without a backend never prompts for something unusable.
+      const B = window.TriageBackend;
+      if (B && B.available()) {
+        try {
+          await G.token([B.scope()]);
+          logAdd("arm", "Exchange backend authorised", "ok", B.scope());
+        } catch (e2) {
+          logAdd("arm", "Exchange backend not authorised", "fail",
+            String((e2 && (e2.errorCode || e2.message)) || e2));
+        }
+      }
       render();
     } catch (e) {
       const msg = String((e && (e.errorCode || e.message)) || e);
@@ -675,6 +726,192 @@
     });
   }
 
+  // ------------------------------------- inbox rules / forwarding / delegates --
+  // Everything in this block goes through the Exchange containment backend
+  // (see backend/server.js): the browser cannot reach another user's mailbox
+  // settings, and no credential that could is ever shipped to the browser.
+  let mailbox = null;   // { rules, forwarding, delegates }
+
+  async function loadMailbox() {
+    const out = $("out-rules");
+    out.innerHTML = '<p class="mini muted">Asking the Exchange backend…</p>';
+    try {
+      if (demo) {
+        await sleep(600);
+        mailbox = demoMailbox();
+      } else {
+        const B = window.TriageBackend;
+        const [r, f, d] = await Promise.all([
+          B.rulesList(target.userPrincipalName),
+          B.forwardingGet(target.userPrincipalName),
+          B.delegatesList(target.userPrincipalName)
+        ]);
+        mailbox = { rules: r.rules || [], forwarding: f, delegates: d.delegates || [] };
+      }
+      renderMailbox();
+      logAdd("rules", "Read mailbox rules, forwarding and delegates", "ok",
+        mailbox.rules.length + " rule(s), " + mailbox.delegates.length + " delegate(s)" +
+        (fwdActive() ? ", forwarding ACTIVE" : ", no forwarding"));
+    } catch (e) {
+      out.innerHTML = '<p class="mini" style="color:var(--sev-critical)">' + esc(e.message || String(e)) +
+        '</p><p class="mini muted">Use the PowerShell below instead - the commands are prefilled with this mailbox.</p>';
+      logAdd("rules", "Reading mailbox settings failed", "fail", e.message || String(e));
+    }
+  }
+  function fwdActive() {
+    const f = mailbox && mailbox.forwarding;
+    return !!(f && (f.forwardingAddress || f.forwardingSmtpAddress));
+  }
+  // A rule worth looking at twice: it forwards/redirects out, or hides mail.
+  function ruleSuspicious(r) {
+    return (r.forwardTo || []).length || (r.redirectTo || []).length ||
+      (r.forwardAsAttachment || []).length || r.deleteMessage ||
+      /deleted items|rss|junk|archive|conversation history/i.test(r.moveToFolder || "") ||
+      (r.markAsRead && r.stopProcessingRules) || /^[.\s_-]{1,3}$/.test(r.name || "");
+  }
+  function renderMailbox() {
+    const out = $("out-rules");
+    const f = mailbox.forwarding || {};
+    let h = "";
+
+    h += '<h3>Mailbox forwarding</h3>';
+    if (fwdActive()) {
+      h += '<p class="mini" style="color:var(--sev-critical)"><b>Forwarding is active.</b> ' +
+        (f.forwardingSmtpAddress ? "ForwardingSmtpAddress: <code>" + esc(f.forwardingSmtpAddress) + "</code> " : "") +
+        (f.forwardingAddress ? "ForwardingAddress: <code>" + esc(f.forwardingAddress) + "</code> " : "") +
+        (f.deliverToMailboxAndForward ? "(copy kept in the mailbox - the user sees nothing missing)" : "(mail is not kept locally)") +
+        "</p>" + (armed ? '<button class="btn danger small" data-act="clearfwd">Clear forwarding</button>'
+                        : '<span class="mini muted">Arm containment to clear it.</span>');
+    } else {
+      h += '<p class="mini muted">No mailbox-level forwarding configured.</p>';
+    }
+
+    h += '<h3 style="margin-top:16px">Inbox rules <span class="mini muted">(' + mailbox.rules.length + ")</span></h3>";
+    if (!mailbox.rules.length) {
+      h += '<p class="mini muted">No inbox rules on this mailbox.</p>';
+    } else {
+      h += '<table class="ftable"><thead><tr><th>Rule</th><th>What it does</th>' +
+        '<th style="width:70px">State</th><th style="width:150px"></th></tr></thead><tbody>' +
+        mailbox.rules.map(function (r) {
+          const bad = ruleSuspicious(r);
+          const acts = [];
+          if ((r.forwardTo || []).length) acts.push("forwards to " + r.forwardTo.join(", "));
+          if ((r.redirectTo || []).length) acts.push("redirects to " + r.redirectTo.join(", "));
+          if ((r.forwardAsAttachment || []).length) acts.push("forwards as attachment to " + r.forwardAsAttachment.join(", "));
+          if (r.moveToFolder) acts.push("moves to " + r.moveToFolder);
+          if (r.deleteMessage) acts.push("deletes the message");
+          if (r.markAsRead) acts.push("marks as read");
+          if (r.stopProcessingRules) acts.push("stops processing further rules");
+          const cond = [];
+          if ((r.from || []).length) cond.push("from " + r.from.join(", "));
+          if ((r.subjectContains || []).length) cond.push("subject contains " + r.subjectContains.join(", "));
+          if ((r.bodyContains || []).length) cond.push("body contains " + r.bodyContains.join(", "));
+          const label = (r.name || "(unnamed)") + " · " + (acts.join("; ") || "no visible action");
+          return '<tr><td><b>' + esc(r.name || "(unnamed)") + "</b>" +
+            (bad ? ' <span class="cs-flag">suspicious</span>' : "") +
+            '<div class="muted mini">' + esc(r.id) + "</div></td>" +
+            "<td class=\"mini\">" + esc(acts.join("; ") || "—") +
+            (cond.length ? '<div class="muted">when ' + esc(cond.join(" or ")) + "</div>" : "") + "</td>" +
+            '<td class="mini">' + (r.enabled ? "enabled" : "disabled") + "</td><td>" +
+            (armed
+              ? (r.enabled ? '<button class="btn small" data-act="disrule" data-id="' + esc(r.id) +
+                  '" data-label="' + esc(label) + '">Disable</button> ' : "") +
+                '<button class="btn small danger" data-act="delrule" data-id="' + esc(r.id) +
+                '" data-label="' + esc(label) + '">Delete</button>'
+              : '<span class="mini muted">arm first</span>') + "</td></tr>";
+        }).join("") + "</tbody></table>" +
+        '<p class="mini muted">Disable preserves the rule as evidence and stops it working; delete removes it. ' +
+        "Export the JSON below before deleting - it is the only copy of the exact conditions.</p>";
+    }
+
+    h += '<h3 style="margin-top:16px">Delegates <span class="mini muted">(' + mailbox.delegates.length + ")</span></h3>";
+    if (!mailbox.delegates.length) {
+      h += '<p class="mini muted">No explicit non-inherited mailbox permissions.</p>';
+    } else {
+      h += '<table class="ftable"><thead><tr><th>User</th><th>Rights</th><th style="width:90px"></th></tr></thead><tbody>' +
+        mailbox.delegates.map(function (d) {
+          return "<tr><td>" + esc(d.user) + "</td><td class=\"mini\">" + esc((d.accessRights || []).join(", ")) +
+            (d.deny ? " (deny)" : "") + "</td><td>" +
+            (armed && /FullAccess/i.test((d.accessRights || []).join(","))
+              ? '<button class="btn small danger" data-act="deldeleg" data-id="' + esc(d.user) + '">Remove</button>'
+              : '<span class="mini muted">' + (armed ? "manual" : "arm first") + "</span>") + "</td></tr>";
+        }).join("") + "</tbody></table>";
+    }
+
+    h += '<div class="cs-actions" style="margin-top:14px">' +
+      '<button class="btn small lemon" data-act="dlrules">Export mailbox evidence JSON</button>' +
+      '<button class="btn small" data-act="load" data-key="rules">Reload</button></div>';
+
+    out.innerHTML = h;
+    out.querySelectorAll("[data-act]").forEach(function (el) {
+      el.addEventListener("click", function () { onAct(el.getAttribute("data-act"), el.getAttribute("data-key"), el); });
+    });
+  }
+  function mailboxAction(title, warning, okLabel, fn, logLabel) {
+    if (!armed) return;
+    confirmAction(title, "<p>" + warning + "</p>" +
+      (demo ? '<p class="mini muted">Demo tenant: nothing is actually changed.</p>'
+            : '<p class="mini"><b>This changes the mailbox immediately.</b> Export the evidence JSON first if you have not.</p>'),
+      okLabel, async function () {
+        try {
+          const note = await fn();
+          logAdd("rules", logLabel, "ok", note || "");
+          setStatus("rules", "done", note || "");
+          loadMailbox();
+        } catch (e) {
+          logAdd("rules", logLabel + " failed", "fail", e.message || String(e));
+          alert("Exchange refused the change: " + (e.message || e));
+        }
+      });
+  }
+  function delRule(id, label) {
+    mailboxAction("Delete inbox rule", "Delete <b>" + esc(label) + "</b> from " +
+      esc(target.userPrincipalName) + "? The rule and its exact conditions are gone for good.",
+      "Delete rule", async function () {
+        if (demo) { await sleep(350); demoM2().rules = demoM2().rules.filter(r => r.id !== id); return label; }
+        await window.TriageBackend.rulesRemove(target.userPrincipalName, id);
+        return label;
+      }, "Deleted inbox rule");
+  }
+  function disRule(id, label) {
+    mailboxAction("Disable inbox rule", "Disable <b>" + esc(label) + "</b>? It stops working but stays " +
+      "on the mailbox as evidence - the safer choice while the investigation is open.",
+      "Disable rule", async function () {
+        if (demo) { await sleep(300); demoM2().rules.forEach(r => { if (r.id === id) r.enabled = false; }); return label; }
+        await window.TriageBackend.rulesDisable(target.userPrincipalName, id);
+        return label;
+      }, "Disabled inbox rule");
+  }
+  function clearForwarding() {
+    const f = mailbox.forwarding || {};
+    mailboxAction("Clear mailbox forwarding",
+      "Remove forwarding to <b>" + esc(f.forwardingSmtpAddress || f.forwardingAddress || "") + "</b> from " +
+      esc(target.userPrincipalName) + "?", "Clear forwarding", async function () {
+        if (demo) { await sleep(350); const m = demoM2(); const was = m.forwarding.forwardingSmtpAddress;
+          m.forwarding = { forwardingAddress: "", forwardingSmtpAddress: "", deliverToMailboxAndForward: false }; return "was " + was; }
+        const r = await window.TriageBackend.forwardingClear(target.userPrincipalName);
+        return "was " + (r.previousForwardingSmtpAddress || r.previousForwardingAddress || "unset");
+      }, "Cleared mailbox forwarding");
+  }
+  function delDelegate(user) {
+    mailboxAction("Remove mailbox delegate", "Remove FullAccess for <b>" + esc(user) + "</b> on " +
+      esc(target.userPrincipalName) + "?", "Remove delegate", async function () {
+        if (demo) { await sleep(300); const m = demoM2(); m.delegates = m.delegates.filter(d => d.user !== user); return user; }
+        await window.TriageBackend.delegatesRemove(target.userPrincipalName, user);
+        return user;
+      }, "Removed mailbox delegate");
+  }
+  function exportMailboxEvidence() {
+    download("LimonContainment-mailbox-" + (target.userPrincipalName || "user") + "-" + stamp() + ".json",
+      "application/json", JSON.stringify({
+        mailbox: target.userPrincipalName, captured: nowIso(), by: who(), demo: demo,
+        tool: "Limon-IT M365 Triage build " + window.TRIAGE_BUILD,
+        forwarding: mailbox.forwarding, inboxRules: mailbox.rules, delegates: mailbox.delegates
+      }, null, 1));
+    logAdd("rules", "Exported mailbox evidence JSON", "ok",
+      mailbox.rules.length + " rule(s) captured before remediation");
+  }
+
   // ------------------------------------------------------------ OAuth grants --
   async function loadGrants() {
     const out = $("out-oauth");
@@ -777,6 +1014,27 @@
     return demoG;
   }
   function demoDropGrant(id) { demoG = demoGrants().filter(function (g) { return g.id !== id; }); }
+  // Staged mailbox for the demo BEC: the classic hiding rule plus forwarding.
+  let demoMB = null;
+  function demoM2() {
+    if (!demoMB) demoMB = {
+      rules: [
+        { id: "AAMkAD...RuleA", name: ".", enabled: true, priority: 1,
+          forwardTo: ["collector-inbox@gmail-mail.top"], redirectTo: [], forwardAsAttachment: [],
+          moveToFolder: "RSS Feeds", deleteMessage: false, markAsRead: true, stopProcessingRules: true,
+          from: [], subjectContains: ["invoice", "IBAN", "payment"], bodyContains: [] },
+        { id: "AAMkAD...RuleB", name: "Newsletters", enabled: true, priority: 2,
+          forwardTo: [], redirectTo: [], forwardAsAttachment: [], moveToFolder: "Newsletters",
+          deleteMessage: false, markAsRead: false, stopProcessingRules: false,
+          from: ["news@vendor.example"], subjectContains: [], bodyContains: [] }
+      ],
+      forwarding: { forwardingAddress: "", forwardingSmtpAddress: "collector-inbox@gmail-mail.top",
+        deliverToMailboxAndForward: true },
+      delegates: [{ user: "sales.kim@contoso-demo.com", accessRights: ["FullAccess"], deny: false }]
+    };
+    return demoMB;
+  }
+  function demoMailbox() { return demoM2(); }
 
   // --------------------------------------------------------------- exports --
   function exportEvidence() {
@@ -843,8 +1101,14 @@
   // ====================================================================
   function start(user, opts) {
     opts = opts || {};
+    // Probe once per session; render again if the answer changes the screen.
+    if (window.TriageBackend && !opts.demo) {
+      window.TriageBackend.probe().then(function () {
+        if ($("screen-contain").classList.contains("active")) render();
+      });
+    }
     const same = target && user && target.userPrincipalName === user.userPrincipalName;
-    if (!same) { log = []; st = {}; checks = {}; tempPwd = ""; demoM = null; demoG = null; }
+    if (!same) { log = []; st = {}; checks = {}; tempPwd = ""; demoM = null; demoG = null; demoMB = null; mailbox = null; }
     target = user;
     demo = !!opts.demo;
     ctx = opts.context || null;
