@@ -64,7 +64,16 @@ Deploy read-only with `create-appreg.ps1 -ReadOnly` if you never want the option
 
 ## Run it in Docker
 
-The whole tool runs from GitHub in a container - after the one-time admin
+You need a container runtime first. On macOS, either
+[Docker Desktop](https://www.docker.com/products/docker-desktop/)
+(`brew install --cask docker`, then launch the app once - the `docker` command
+only appears after the app has run) or the lighter
+[OrbStack](https://orbstack.dev) (`brew install --cask orbstack`). On Windows,
+Docker Desktop with the WSL2 backend. On Linux, `docker.io` plus
+`docker-compose-plugin` from your distribution. Check it works with
+`docker run --rm hello-world`.
+
+The whole tool then runs from GitHub in a container - after the one-time admin
 consent, anyone on the team can spin it up anywhere:
 
 ```bash
@@ -159,11 +168,16 @@ on every push to `main` (make the packages public once for anonymous pulls).
    deployment run `create-appreg.ps1 -ReadOnly`, which registers the triage scopes
    only and leaves containment unable to arm.
 
-### Local development
+### Local development (no Docker needed)
+
+The web app is a plain static site, so any static server will do - you just
+do not get the Exchange backend or the strict CSP that the container adds:
 
 ```bash
 python3 -m http.server 8080
-# open http://localhost:8080 - use "Try the demo" (no sign-in needed)
+# open http://localhost:8080 - "Try the demo" needs no sign-in at all,
+# and http://localhost:8080 is a registered redirect URI, so real sign-in,
+# triage and Graph containment work too.
 ```
 
 ### Releasing a new build
