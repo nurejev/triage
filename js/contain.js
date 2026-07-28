@@ -217,8 +217,12 @@
       why: "The single most common persistence artefact - and the one Graph cannot reach with delegated " +
            "permissions on somebody else's mailbox. Run these in Exchange Online PowerShell. Screenshot " +
            "the rule body before you delete it: the Description field does not preserve the exact " +
-           "conditions, and legal will ask.",
-      ps: "Connect-ExchangeOnline -UserPrincipalName admin@tenant.com\n\n" +
+           "conditions, and legal will ask. No PowerShell at hand? " +
+           "docker run --rm -it ghcr.io/nurejev/triage-pwsh:latest has the module preinstalled " +
+           "(sign in with Connect-ExchangeOnline -Device).",
+      ps: "# no PowerShell on this machine? the companion container has it all:\n" +
+          "#   docker run --rm -it -v \"$PWD/evidence:/evidence\" ghcr.io/nurejev/triage-pwsh:latest\n" +
+          "Connect-ExchangeOnline -UserPrincipalName admin@tenant.com   # in the container: -Device\n\n" +
           "# Inbox rules - look for anything created in the incident window\n" +
           "Get-InboxRule -Mailbox {UPN} | Format-List Name,Description,Enabled,RedirectTo,MoveToFolder,DeleteMessage\n\n" +
           "# Mailbox-level forwarding (a different surface to inbox rules)\n" +

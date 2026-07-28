@@ -6,7 +6,7 @@
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 triage tool. Investigate a suspected account compromise or BEC directly from your browser. Nothing leaves your machine.">
 <link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=6">
+<link rel="stylesheet" href="css/app.css?v=7">
 </head>
 <body>
 <header>
@@ -213,6 +213,15 @@ Install-Module -Name Az                        -Scope CurrentUser   # only for A
 
 # The suite itself (PowerShell Gallery)
 Install-Module -Name Microsoft-Extractor-Suite -Scope CurrentUser</code></pre>
+      <p><strong>Or skip the installs entirely</strong> and use the ready-made container - PowerShell 7
+        with ExchangeOnlineManagement, Microsoft.Graph and the Extractor-Suite preinstalled. It prints a
+        cheat sheet on start, and everything written to <code>/evidence</code> lands in
+        <code>./evidence</code> on your machine:</p>
+      <pre class="code"><code>docker run --rm -it -v "$PWD/evidence:/evidence" ghcr.io/nurejev/triage-pwsh:latest
+
+# no browser in a container - sign in with a device code:
+Connect-ExchangeOnline -Device
+Connect-MgGraph -UseDeviceCode -Scopes "AuditLog.Read.All","Directory.Read.All"</code></pre>
     </div>
 
     <div class="card">
@@ -490,14 +499,14 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/authConfig.js?v=6"></script>
-<script src="js/build.js?v=6"></script>
-<script src="js/graph.js?v=6"></script>
-<script src="js/demo.js?v=6"></script>
-<script src="js/detections.js?v=6"></script>
-<script src="js/report.js?v=6"></script>
-<script src="js/contain.js?v=6"></script>
-<script src="js/app.js?v=6"></script>
-<script src="js/import.js?v=6"></script>
+<script src="js/authConfig.js?v=7"></script>
+<script src="js/build.js?v=7"></script>
+<script src="js/graph.js?v=7"></script>
+<script src="js/demo.js?v=7"></script>
+<script src="js/detections.js?v=7"></script>
+<script src="js/report.js?v=7"></script>
+<script src="js/contain.js?v=7"></script>
+<script src="js/app.js?v=7"></script>
+<script src="js/import.js?v=7"></script>
 </body>
 </html>

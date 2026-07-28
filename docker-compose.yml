@@ -1,0 +1,29 @@
+# Limon-IT M365 Triage
+#
+#   docker compose up -d              -> web app on http://localhost:8080
+#   docker compose run --rm pwsh      -> PowerShell with EXO/Graph/Extractor-Suite
+#
+# Both images are published by the GitHub Actions workflow; compose falls
+# back to building them locally from this checkout if the pull fails.
+services:
+  triage:
+    image: ghcr.io/nurejev/triage:latest
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      # Pull the latest main from GitHub on every start; set to "off" to
+      # serve only what is baked into the image (fully offline).
+      GIT_SYNC: "on"
+    restart: unless-stopped
+
+  pwsh:
+    image: ghcr.io/nurejev/triage-pwsh:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.pwsh
+    profiles: ["extract"]   # not started by plain `up`; use `run --rm pwsh`
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./evidence:/evidence

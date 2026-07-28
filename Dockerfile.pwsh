@@ -1,0 +1,32 @@
+# ======================================================================
+#  Limon-IT M365 Triage - PowerShell companion container
+#
+#  Everything the containment runbook and the full-extraction guide need
+#  in PowerShell, preinstalled: ExchangeOnlineManagement (inbox rules,
+#  forwarding, delegates), Microsoft.Graph, and the open-source
+#  Microsoft-Extractor-Suite by Invictus IR.
+#
+#      docker run --rm -it -v "$PWD/evidence:/evidence" ghcr.io/nurejev/triage-pwsh:latest
+#
+#  You land in pwsh with the modules loaded and a cheat sheet printed.
+#  There is no browser in the container, so sign in with device code:
+#      Connect-ExchangeOnline -Device
+#      Connect-MgGraph -UseDeviceCode -Scopes "AuditLog.Read.All","Directory.Read.All"
+#
+#  Evidence written under /evidence lands in ./evidence on your machine.
+#  Az (Azure activity logs) is not preinstalled - it adds ~1 GB; run
+#  Install-Module Az.Accounts,Az.Monitor inside the container if needed.
+# ======================================================================
+FROM mcr.microsoft.com/powershell:latest
+
+SHELL ["pwsh", "-Command"]
+RUN Set-PSRepository PSGallery -InstallationPolicy Trusted; \
+    Install-Module ExchangeOnlineManagement -Scope AllUsers -Force; \
+    Install-Module Microsoft.Graph -Scope AllUsers -Force; \
+    Install-Module Microsoft-Extractor-Suite -Scope AllUsers -Force
+
+COPY docker/pwsh-profile.ps1 /opt/triage/profile.ps1
+
+WORKDIR /evidence
+VOLUME /evidence
+ENTRYPOINT ["pwsh", "-NoExit", "-Command", ". /opt/triage/profile.ps1"]

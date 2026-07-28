@@ -62,6 +62,52 @@ the tenant, actions route through a single `gwrite()` helper, and the whole
 elevation is dropped on sign-out or refresh along with the rest of the session.
 Deploy read-only with `create-appreg.ps1 -ReadOnly` if you never want the option.
 
+## Run it in Docker
+
+The whole tool runs from GitHub in a container - after the one-time admin
+consent, anyone on the team can spin it up anywhere:
+
+```bash
+# straight from the published image (built from GitHub by Actions)
+docker run --rm -p 8080:80 ghcr.io/nurejev/triage:latest
+
+# or build directly from the GitHub repo, no checkout needed
+docker build -t m365-triage https://github.com/nurejev/triage.git
+docker run --rm -p 8080:80 m365-triage
+
+# or with compose from a checkout
+docker compose up -d
+```
+
+Open **http://localhost:8080** - that redirect URI is registered on the app
+registration, so sign-in, consent, triage and containment all work exactly as
+on the hosted site. On every start the container pulls the latest `main` from
+GitHub and serves that (baked-in copy as offline fallback); set `GIT_SYNC=off`
+to pin to the image, or `GIT_REPO`/`GIT_REF` to serve a fork or branch.
+Self-hosting under a different origin? Add that origin as a SPA redirect URI
+on the app registration first. nginx ships a strict Content-Security-Policy
+(connect-src limited to `graph.microsoft.com` and `login.microsoftonline.com`),
+so even injected script could not send data anywhere else.
+
+The PowerShell half - the inbox-rules containment step and the full
+extraction, which delegated Graph cannot do - has its own container with
+ExchangeOnlineManagement, Microsoft.Graph and the Microsoft-Extractor-Suite
+preinstalled:
+
+```bash
+docker run --rm -it -v "$PWD/evidence:/evidence" ghcr.io/nurejev/triage-pwsh:latest
+# or: docker compose run --rm pwsh
+```
+
+It prints a cheat sheet on start; sign in with device code
+(`Connect-ExchangeOnline -Device`, `Connect-MgGraph -UseDeviceCode`).
+Extraction output written to `/evidence` lands in `./evidence` on the host,
+ready to load back into the web app via *View extraction output*.
+
+Both images are rebuilt and pushed to GHCR by `.github/workflows/docker.yml`
+on every push to `main` (make the two packages public once for anonymous
+pulls).
+
 ## Deploy your own instance
 
 1. **App registration** - run `create-appreg.ps1` (or create manually: single

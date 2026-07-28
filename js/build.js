@@ -12,9 +12,18 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 6;
-window.TRIAGE_BUILD_DATE = "2026-07-27";
+window.TRIAGE_BUILD = 7;
+window.TRIAGE_BUILD_DATE = "2026-07-28";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 7, date: "2026-07-28", title: "Run everything from GitHub in Docker",
+    items: [
+      { kind: "new", tool: "Deploy", text: "One-command self-hosting: docker run ghcr.io/nurejev/triage pulls the latest build from GitHub on start and serves it on localhost:8080 - sign-in, consent, triage and containment all work as on the hosted site." },
+      { kind: "new", tool: "Full extraction", text: "Companion container ghcr.io/nurejev/triage-pwsh with ExchangeOnlineManagement, Microsoft.Graph and the Microsoft-Extractor-Suite preinstalled. Device-code sign-in, cheat sheet on start, /evidence volume for the output." },
+      { kind: "improved", tool: "Containment", text: "The inbox-rules step points at the PowerShell container for machines without Exchange Online PowerShell." },
+      { kind: "improved", tool: "Security", text: "The Docker image serves with a strict Content-Security-Policy: the browser only allows connections to graph.microsoft.com and login.microsoftonline.com." },
+    ],
+  },
   {
     build: 6, date: "2026-07-27", title: "Containment - the first 60 minutes",
     items: [
