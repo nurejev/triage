@@ -95,11 +95,17 @@ Microsoft does not let a browser change another user's inbox rules, mailbox
 forwarding or delegates. Deploy this small service and those become buttons in
 the containment runbook instead of copy-paste PowerShell:
 
-```bash
-pwsh ./create-backend-appreg.ps1 -SpaAppId <triage spa app id> -Organization contoso.onmicrosoft.com
+```powershell
+./create-backend-appreg.ps1 -SpaAppId 8f1b5185-e782-4dc3-8aee-92ba4616c8d0 `
+    -Organization contoso.onmicrosoft.com
 # follow the printed steps (admin consent + Exchange RBAC), then:
-BACKEND_APP_ID=<printed app id> docker compose --profile backend up -d
+docker compose --profile backend up -d
 ```
+
+The script writes `backend.env` (for the backend container) and `.env` (which
+`docker compose` reads by itself), so there is no environment variable to
+export - the command above is identical in PowerShell, bash and zsh. Both files
+and the whole `certs/` directory are gitignored; do not commit them.
 
 It is the only component in the whole tool that holds a standing credential -
 a certificate, never a secret. It performs exactly seven mailbox operations,

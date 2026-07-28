@@ -5,6 +5,7 @@ certs/
 *.crt
 *.key
 backend.env
+.env
 *.env
 audit/
 evidence/
