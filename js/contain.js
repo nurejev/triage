@@ -253,24 +253,14 @@
     "files.read.all", "files.readwrite.all", "sites.readwrite.all", "offline_access",
     "directory.readwrite.all", "user.readwrite.all", "application.readwrite.all"];
 
-  // ---- blast radius: the fifteen checks ---------------------------------
-  const BLAST = [
-    ["Sign-in logs (interactive)", "Entra > Sign-in logs > Interactive", "Atypical travel, anonymous IPs, out-of-hours sign-ins, new user agents, failures followed by one success."],
-    ["Sign-in logs (non-interactive / SP)", "Entra > Sign-in logs > Non-interactive, Service principal", "Tokens used by apps the user consented to; service principal activity tied to the user."],
-    ["Risky users / risky sign-ins", "Entra ID Protection", "Risk detections in the last 30 days - including the medium ones below the auto-block threshold."],
-    ["Inbox rules", "Exchange Online PowerShell / Outlook", "Anything created in the incident window: redirect, move to Deleted Items, mark as read, external forward."],
-    ["Mailbox forwarding", "Exchange Online: Get-Mailbox", "ForwardingAddress and ForwardingSmtpAddress - the SMTP field can point externally while the other is empty."],
-    ["Mailbox audit - MailItemsAccessed", "Purview Audit (Unified Audit Log)", "Bulk read patterns; message IDs accessed in tight windows. This is the exfiltration signal."],
-    ["SharePoint & OneDrive activity", "Purview Audit: FileDownloaded, FileSyncDownloadedFull, FileAccessedExtended", "Sites the user never touched, volume downloads, sync from unusual devices."],
-    ["Teams activity", "Purview Audit: Teams activities", "Chats with external tenants, files shared in 1:1 chats, channel posts during the window."],
-    ["OAuth consent grants", "Entra > Enterprise applications > User consent", "Recently consented apps; Mail.ReadWrite / Files.ReadWrite.All / offline_access is the phishing pattern."],
-    ["Power Automate flows", "Power Platform admin centre > Flows by owner", "The most overlooked exfiltration channel. Flows that mail externally or write to SharePoint."],
-    ["Power Apps owned", "Power Platform admin centre > Apps by owner", "Quick sweep for any account that has touched Power Platform."],
-    ["Group membership changes", "Entra > Audit logs > 'Member Added'", "Privileged groups, distribution lists with mailbox access, sensitive Teams."],
-    ["Service principals the user could edit", "Entra > Audit logs > service principal actions", "New credentials added to an existing service principal during the window - admin-level persistence."],
-    ["New user creation", "Entra > Audit logs > 'Add user'", "If the account could create users, this is where the second account is hiding."],
-    ["Conditional Access policy edits", "Entra > Audit logs > 'Update conditional access policy'", "If the account held Security or CA Administrator: was a policy edited or disabled?"]
-  ];
+  // ---- blast radius: the fifteen checks ----------------------------------
+  // The definitions and the code that answers each one live in js/blast.js;
+  // this file owns rendering, the action log and the evidence exports.
+  const BLAST = (window.TriageBlast ? window.TriageBlast.checks : []).map(function (c) {
+    return [c.title, c.where, c.what];
+  });
+  let blastResults = {};   // check key -> { summary, count, rows, raw, caveat }
+  let blastDays = 30;      // window the checks query over
 
   const EVIDENCE = [
     ["Sign-in log export (JSON)", "Entra sign-in logs filtered to the user. JSON, not CSV - CSV truncates the nested fields. Retention is licence-dependent (7 days Free, 30 days P1/P2)."],
@@ -367,6 +357,171 @@
     if (key === "rules") return hit(/inbox rule|forward/i);
     if (key === "revoke") return hit(/sign-in|impossible travel|brute|legacy|risk/i);
     return "";
+  }
+
+  // ---- blast radius: runnable cards --------------------------------------
+  // Each check answers itself where an API allows it. Running one ticks it;
+  // exporting it also ticks the evidence item it satisfies, so the evidence
+  // list reflects what you have actually preserved rather than what you
+  // remembered to tick.
+  function blastDoneCount() {
+    return (window.TriageBlast ? window.TriageBlast.checks : [])
+      .filter(function (c) { return checks["blast-" + (c.n - 1)]; }).length;
+  }
+  function blastCard() {
+    const B = window.TriageBlast;
+    if (!B) return "";
+    const ualReady = B.ualAvailable({ demo: demo, evidence: ctx && ctx.evidence });
+    return '<div class="card"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">' +
+      '<h2 style="margin:0">Blast radius — the fifteen checks</h2>' +
+      '<span class="mini muted" id="blastDone">' + blastDoneCount() + " of 15 done</span>" +
+      '<span class="hspacer" style="margin-left:auto"></span>' +
+      '<label class="mini muted">Window <select id="blastDays">' +
+      [7, 30, 90].map(function (d) {
+        return '<option value="' + d + '"' + (d === blastDays ? " selected" : "") + ">" + d + " days</option>";
+      }).join("") + "</select></label>" +
+      '<button class="btn small primary" data-act="blastAll">Run all checks</button>' +
+      '<button class="btn small lemon" data-act="blastExportAll">Export all evidence</button></div>' +
+      '<p class="muted mini">Containment without mapping is a false sense of security. Work the list to the ' +
+      "end even when you are sure you found the persistence on item 4 — the second mechanism is usually a " +
+      "Power Automate flow or an OAuth grant found on the third pass. Each check that can answer itself does; " +
+      "exporting one preserves it as evidence and ticks the matching item below.</p>" +
+      (ualReady ? "" :
+        '<div class="banner warn mini" id="ualBanner">Checks 6, 7 and 8 read the Unified Audit Log, which is ' +
+        "not in memory for this account. Run triage with the audit log enabled, or " +
+        '<a href="#" data-act="loadUal">query it now</a> — Microsoft runs it asynchronously and it can take ' +
+        "several minutes.<span id=\"ualStatus\"></span></div>") +
+      '<div class="cl-grid blast">' + B.checks.map(blastItem).join("") + "</div></div>";
+  }
+  function blastItem(c) {
+    const r = blastResults[c.key];
+    const done = !!checks["blast-" + (c.n - 1)];
+    const manual = c.mode === "manual";
+    return '<div class="cl-item blast' + (done ? " on" : "") + (r && r.failed ? " failed" : "") +
+      '" id="bl-' + c.key + '">' +
+      '<label class="bl-head"><input type="checkbox" data-tick="blast-' + (c.n - 1) + '"' +
+      (done ? " checked" : "") + "><span><b>" + c.n + ". " + esc(c.title) + "</b>" +
+      '<span class="cl-where">' + esc(c.where) + "</span></span></label>" +
+      '<div class="cl-what">' + esc(c.what) + "</div>" +
+      (r ? blastResult(c, r) : "") +
+      '<div class="bl-actions">' +
+      (manual
+        ? '<span class="mini muted">No API — check it in the portal.</span>'
+        : '<button class="btn small" data-act="blastRun" data-key="' + c.key + '">' +
+          (r ? "Re-run" : "Run check") + "</button>") +
+      (r && !r.failed ? '<button class="btn small lemon" data-act="blastExport" data-key="' + c.key +
+        '">Export</button>' : "") +
+      (manual && c.ps ? '<button class="btn small" data-act="blastPs" data-key="' + c.key +
+        '">Copy PowerShell</button>' : "") +
+      "</div>" +
+      (manual && c.why ? '<div class="mini muted bl-why">' + esc(c.why) + "</div>" : "") +
+      "</div>";
+  }
+  function blastResult(c, r) {
+    if (r.running) return '<div class="bl-res mini muted">Running…</div>';
+    if (r.failed) return '<div class="bl-res mini" style="color:var(--sev-critical)">' + esc(r.summary) + "</div>";
+    return '<div class="bl-res"><div class="bl-sum mini' + (r.alert ? " hot" : "") + '">' + esc(r.summary) + "</div>" +
+      (r.rows && r.rows.length
+        ? '<table class="bl-tbl">' + r.rows.slice(0, 8).map(function (row) {
+            return "<tr><td>" + esc(row[0]) + "</td><td>" + esc(String(row[1] == null ? "" : row[1])) + "</td></tr>";
+          }).join("") + "</table>" +
+          (r.rows.length > 8 ? '<div class="mini muted">+' + (r.rows.length - 8) + " more in the export</div>" : "")
+        : "") +
+      (r.caveat ? '<div class="mini muted bl-caveat">' + esc(r.caveat) + "</div>" : "") + "</div>";
+  }
+
+  function blastCtx() {
+    return { target: target, demo: demo, days: blastDays,
+      evidence: ctx && ctx.evidence,
+      // Reuse the mailbox already loaded in step 5 rather than asking the
+      // backend twice; in demo mode fall back to the staged one.
+      mailbox: mailbox || (demo ? demoM2() : null), grants: null };
+  }
+  async function blastRun(key, quiet) {
+    const c = window.TriageBlast.checks.filter(function (x) { return x.key === key; })[0];
+    if (!c || !c.run) return;
+    blastResults[key] = { running: true };
+    refreshBlast();
+    try {
+      const res = await c.run(blastCtx());
+      blastResults[key] = res;
+      checks["blast-" + (c.n - 1)] = true;
+      if (!quiet) logAdd("blast", "Ran blast-radius check " + c.n + " · " + c.title, "ok", res.summary);
+    } catch (e) {
+      blastResults[key] = { failed: true, summary: (e && e.message) || String(e) };
+      logAdd("blast", "Blast-radius check " + c.n + " · " + c.title + " failed", "fail", (e && e.message) || String(e));
+    }
+    refreshBlast();
+  }
+  async function blastAll() {
+    const list = window.TriageBlast.checks.filter(function (c) { return !!c.run; });
+    logAdd("blast", "Running all blast-radius checks", "note", list.length + " automated checks over " + blastDays + " days");
+    for (const c of list) await blastRun(c.key, true);
+    const done = list.filter(function (c) { return blastResults[c.key] && !blastResults[c.key].failed; });
+    const hot = done.filter(function (c) { return blastResults[c.key].alert; });
+    logAdd("blast", "Blast-radius sweep complete", hot.length ? "ok" : "ok",
+      done.length + "/" + list.length + " answered" +
+      (hot.length ? " · flagged: " + hot.map(function (c) { return c.n + " " + c.title; }).join("; ") : " · nothing flagged"));
+  }
+  function blastExport(key) {
+    const c = window.TriageBlast.checks.filter(function (x) { return x.key === key; })[0];
+    const r = blastResults[key];
+    if (!c || !r || r.failed) return;
+    download("LimonContainment-blast" + c.n + "-" + c.key + "-" + (target.userPrincipalName || "user") +
+      "-" + stamp() + ".json", "application/json", JSON.stringify({
+        check: c.n, title: c.title, mailbox: target.userPrincipalName, windowDays: blastDays,
+        captured: nowIso(), by: who(), demo: demo,
+        tool: "Limon-IT M365 Triage build " + window.TRIAGE_BUILD,
+        summary: r.summary, caveat: r.caveat || "", count: r.count, detail: r.rows, raw: r.raw
+      }, null, 1));
+    logAdd("blast", "Exported evidence for check " + c.n + " · " + c.title, "ok", r.summary);
+    tickEvidence(c);
+  }
+  function blastExportAll() {
+    const B = window.TriageBlast;
+    const bundle = { mailbox: target.userPrincipalName, windowDays: blastDays, captured: nowIso(),
+      by: who(), demo: demo, tool: "Limon-IT M365 Triage build " + window.TRIAGE_BUILD, checks: [] };
+    B.checks.forEach(function (c) {
+      const r = blastResults[c.key];
+      bundle.checks.push({ check: c.n, title: c.title, mode: c.mode,
+        status: r ? (r.failed ? "failed" : "answered") : (c.run ? "not run" : "manual"),
+        summary: r ? r.summary : "", caveat: (r && r.caveat) || "", count: r ? r.count : null,
+        detail: r ? r.rows : null, raw: r ? r.raw : null });
+      if (r && !r.failed) tickEvidence(c, true);
+    });
+    download("LimonContainment-blastradius-" + (target.userPrincipalName || "user") + "-" + stamp() + ".json",
+      "application/json", JSON.stringify(bundle, null, 1));
+    const answered = bundle.checks.filter(function (c) { return c.status === "answered"; }).length;
+    logAdd("blast", "Exported the blast-radius bundle", "ok", answered + " of 15 checks answered");
+    refreshBlast();
+    renderChecklistTicks();
+  }
+  // Exporting a check preserves the evidence that check produces, so tick the
+  // matching item on the evidence list rather than making the analyst do it.
+  function tickEvidence(c, silent) {
+    if (c.evid === undefined) return;
+    const id = "evid-" + c.evid;
+    if (checks[id]) return;
+    checks[id] = true;
+    if (!silent) logAdd("checklist", "Ticked: evidence · " + EVIDENCE[c.evid][0], "note", "exported from check " + c.n);
+    renderChecklistTicks();
+  }
+  // Re-sync checkbox DOM state without re-rendering the whole screen.
+  function renderChecklistTicks() {
+    document.querySelectorAll("#containBody [data-tick]").forEach(function (el) {
+      const on = !!checks[el.getAttribute("data-tick")];
+      el.checked = on;
+      const item = el.closest(".cl-item");
+      if (item) item.classList.toggle("on", on);
+    });
+  }
+  function refreshBlast() {
+    const grid = document.querySelector("#containBody .cl-grid.blast");
+    if (!grid) return;
+    grid.innerHTML = window.TriageBlast.checks.map(blastItem).join("");
+    const lbl = $("blastDone");
+    if (lbl) lbl.textContent = blastDoneCount() + " of 15 done";
+    bind();
   }
 
   function checklistCard(id, title, intro, rows, cols) {
@@ -478,10 +633,7 @@
 
     h += STEPS.map(stepCard).join("");
 
-    h += checklistCard("blast", "Blast radius — the fifteen checks",
-      "Containment without mapping is a false sense of security. Work the list to the end even when you " +
-      "are sure you found the persistence on item 4 — the second mechanism is usually a Power Automate " +
-      "flow or an OAuth grant found on the third pass.", BLAST, 3);
+    h += blastCard();
 
     h += checklistCard("evid", "Evidence to preserve",
       "The exports are what survive the remediation. This folder is what forensics, audit and — if it " +
@@ -513,13 +665,30 @@
   // ====================================================================
   function bind() {
     const root = $("screen-contain");
+    // Idempotent: refreshBlast() re-runs this after re-rendering one grid, and
+    // double-bound buttons would fire their action twice.
     root.querySelectorAll("[data-act]").forEach(function (el) {
+      if (el.dataset.bound) return;
+      el.dataset.bound = "1";
       el.addEventListener("click", function (e) {
         e.preventDefault();
         onAct(el.getAttribute("data-act"), el.getAttribute("data-key"), el);
       });
     });
+    const ds = $("blastDays");
+    if (ds && !ds.dataset.bound) {
+      ds.dataset.bound = "1";
+      ds.addEventListener("change", function () {
+        blastDays = parseInt(ds.value, 10);
+        blastResults = {};
+        window.TriageBlast.reset();
+        logAdd("blast", "Blast-radius window set to " + blastDays + " days", "note", "previous results cleared");
+        refreshBlast();
+      });
+    }
     root.querySelectorAll("[data-tick]").forEach(function (el) {
+      if (el.dataset.bound) return;
+      el.dataset.bound = "1";
       el.addEventListener("change", function () {
         const id = el.getAttribute("data-tick");
         checks[id] = el.checked;
@@ -566,6 +735,36 @@
     if (act === "clearfwd") return clearForwarding();
     if (act === "deldeleg") return delDelegate(el.getAttribute("data-id"));
     if (act === "dlrules") return exportMailboxEvidence();
+    if (act === "blastRun") return blastRun(key);
+    if (act === "blastAll") return blastAll();
+    if (act === "blastExport") return blastExport(key);
+    if (act === "blastExportAll") return blastExportAll();
+    if (act === "blastPs") {
+      const c = window.TriageBlast.checks.filter(function (x) { return x.key === key; })[0];
+      return copyText(c.ps.replace(/\{UPN\}/g, target.userPrincipalName), el);
+    }
+    if (act === "loadUal") return loadUalNow();
+  }
+
+  // The Unified Audit Log query Microsoft runs asynchronously - minutes, not
+  // seconds. Never implicit: the analyst asks for it, and gets a status while
+  // it runs.
+  async function loadUalNow() {
+    const s = $("ualStatus");
+    if (s) s.textContent = " · starting…";
+    logAdd("blast", "Started a Unified Audit Log query", "note", "window " + blastDays + " days");
+    try {
+      await window.TriageBlast.loadUal(blastCtx(), function (status, sec) {
+        if (s) s.textContent = " · " + status + " (" + sec + "s)";
+      });
+      logAdd("blast", "Unified Audit Log query finished", "ok", "checks 6, 7 and 8 can now run");
+      const b = $("ualBanner");
+      if (b) b.remove();
+      for (const k of ["mailitems", "spo", "teams"]) await blastRun(k, true);
+    } catch (e) {
+      if (s) s.textContent = " · failed: " + ((e && e.message) || e);
+      logAdd("blast", "Unified Audit Log query failed", "fail", (e && e.message) || String(e));
+    }
   }
 
   async function arm() {
@@ -1083,7 +1282,19 @@
         return "- [" + (state === "done" ? "x" : " ") + "] **" + s.n + ". " + s.title + "** — " + state +
           (st[s.key] && st[s.key].note ? " (" + st[s.key].note + ")" : "");
       }).join("\n") + "\n\n" +
-      cl("blast", "Blast radius", BLAST) + cl("evid", "Evidence preserved", EVIDENCE) + cl("comm", "Communication", COMMS) +
+      // Blast radius gets its own section: what each check actually found is
+      // more useful to the next person than a row of ticks.
+      "### Blast radius (" + window.TriageBlast.checks.filter(function (c) { return checks["blast-" + (c.n - 1)]; }).length +
+        "/15)\n\n" + window.TriageBlast.checks.map(function (c) {
+        const r = blastResults[c.key];
+        const box = checks["blast-" + (c.n - 1)] ? "x" : " ";
+        const state = r ? (r.failed ? "FAILED: " + r.summary : r.summary)
+          : (c.run ? "not run" : "manual - check in the portal");
+        return "- [" + box + "] **" + c.n + ". " + c.title + "** — " + (r && r.alert ? "**FLAGGED** " : "") +
+          String(state).replace(/\|/g, "/") +
+          (r && r.caveat ? "\n  - _" + r.caveat + "_" : "");
+      }).join("\n") + "\n\n" +
+      cl("evid", "Evidence preserved", EVIDENCE) + cl("comm", "Communication", COMMS) +
       "## Action log\n\n| Time (UTC) | Step | Action | Result | Detail |\n|---|---|---|---|---|\n" +
       log.map(function (e) {
         return "| " + e.ts + " | " + e.step + " | " + e.action.replace(/\|/g, "/") + " | " + e.result +
@@ -1108,7 +1319,14 @@
       });
     }
     const same = target && user && target.userPrincipalName === user.userPrincipalName;
-    if (!same) { log = []; st = {}; checks = {}; tempPwd = ""; demoM = null; demoG = null; demoMB = null; mailbox = null; }
+    if (!same) {
+      log = []; st = {}; checks = {}; tempPwd = "";
+      demoM = null; demoG = null; demoMB = null; mailbox = null;
+      blastResults = {};
+      const d = (opts.context && opts.context.evidence && opts.context.evidence.days) || 30;
+      blastDays = [7, 30, 90].indexOf(d) >= 0 ? d : 30;   // the 24h triage window is too short to map with
+      if (window.TriageBlast) window.TriageBlast.reset();
+    }
     target = user;
     demo = !!opts.demo;
     ctx = opts.context || null;

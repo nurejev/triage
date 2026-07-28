@@ -6,7 +6,7 @@
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 incident response tool. Triage a suspected account compromise or BEC read-only, then walk the first-60-minutes containment runbook on the same account. Runs in your browser or your own Docker host.">
 <link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=8">
+<link rel="stylesheet" href="css/app.css?v=9">
 </head>
 <body>
 <header>
@@ -407,11 +407,19 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
         <li><strong>Revoke OAuth consent grants</strong> - the persistence that survives both the password
           reset and the session revocation.</li>
       </ol>
-      <p>After the steps come the <strong>fifteen blast-radius checks</strong>, the
-        <strong>evidence-preservation list</strong> and the <strong>communication pattern</strong> (never
-        notify the user on the channel you suspect is compromised). Everything you run or tick is written to
-        a timestamped <strong>action log</strong> that exports as CSV or as a Markdown handover report for
-        the ticket.</p>
+      <p>After the steps come the <strong>fifteen blast-radius checks</strong>. Thirteen of them answer
+        themselves - from Graph, from the Unified Audit Log, or from the Exchange backend - and tell you
+        what they found rather than asking you to go and look: which countries produced a successful
+        sign-in, whether a stolen token is still being renewed non-interactively, whether mailbox reads
+        were individual messages or a whole folder synced down, the busiest download hour, whether
+        credentials were added to a service principal. <em>Run all checks</em> sweeps the lot and logs
+        which ones it flagged. Each result exports as JSON, and exporting one ticks the evidence item it
+        satisfies. The two Power Platform checks cannot be automated - the admin API is not reachable with
+        the permissions this tool holds - so they say so and hand you the PowerShell.</p>
+      <p>Then the <strong>evidence-preservation list</strong> and the <strong>communication pattern</strong>
+        (never notify the user on the channel you suspect is compromised). Everything you run or tick is
+        written to a timestamped <strong>action log</strong> that exports as CSV or as a Markdown handover
+        report for the ticket.</p>
       <p class="mini muted">Containment needs delegated <em>write</em> permissions
         (<code>User.RevokeSessions.All</code>, <code>User.ReadWrite.All</code>,
         <code>UserAuthenticationMethod.ReadWrite.All</code>, <code>DelegatedPermissionGrant.ReadWrite.All</code>)
@@ -507,16 +515,18 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/config.js?v=8"></script>
-<script src="js/authConfig.js?v=8"></script>
-<script src="js/build.js?v=8"></script>
-<script src="js/graph.js?v=8"></script>
-<script src="js/demo.js?v=8"></script>
-<script src="js/detections.js?v=8"></script>
-<script src="js/report.js?v=8"></script>
-<script src="js/backend.js?v=8"></script>
-<script src="js/contain.js?v=8"></script>
-<script src="js/app.js?v=8"></script>
-<script src="js/import.js?v=8"></script>
+<script src="js/config.js?v=9"></script>
+<script src="js/authConfig.js?v=9"></script>
+<script src="js/build.js?v=9"></script>
+<script src="js/graph.js?v=9"></script>
+<script src="js/demo.js?v=9"></script>
+<script src="js/demoblast.js?v=9"></script>
+<script src="js/detections.js?v=9"></script>
+<script src="js/report.js?v=9"></script>
+<script src="js/backend.js?v=9"></script>
+<script src="js/blast.js?v=9"></script>
+<script src="js/contain.js?v=9"></script>
+<script src="js/app.js?v=9"></script>
+<script src="js/import.js?v=9"></script>
 </body>
 </html>

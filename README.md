@@ -52,9 +52,13 @@ be used to add a recovery method and walk back in through the reset.
 6. **Inbox rules, forwarding, delegates** - copy-ready Exchange Online PowerShell; delegated Graph cannot reach another user's mailbox.
 7. **OAuth grants** - listed with risky-scope highlighting and a tenant-wide-consent warning, revoked per grant.
 
-Then the fifteen **blast-radius** checks, the **evidence-preservation** list and
-the **communication** pattern as checklists, and a timestamped **action log**
-that exports as CSV or as a Markdown handover report.
+Then the fifteen **blast-radius** checks - thirteen of which answer themselves
+from Graph, the Unified Audit Log or the Exchange backend and summarise what
+they found, with *Run all checks* to sweep the lot; each result exports as JSON
+and exporting one ticks the evidence item it satisfies. The two Power Platform
+checks have no reachable API, say so, and hand you the PowerShell. Then the
+**evidence-preservation** list, the **communication** pattern, and a timestamped
+**action log** that exports as CSV or as a Markdown handover report.
 
 Guard rails: write scopes are requested only when the analyst presses *Arm
 containment*, every mutating action goes through one confirmation dialog naming

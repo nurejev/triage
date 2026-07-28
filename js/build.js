@@ -12,9 +12,20 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 8;
+window.TRIAGE_BUILD = 9;
 window.TRIAGE_BUILD_DATE = "2026-07-28";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 9, date: "2026-07-28", title: "The fifteen blast-radius checks now run themselves",
+    items: [
+      { kind: "new", tool: "Containment", text: "Blast radius is no longer a checklist you tick by hand: thirteen of the fifteen checks answer themselves from Graph, the Unified Audit Log or the Exchange backend, and summarise what they found - successful countries, non-interactive token reuse, bind vs sync mailbox reads, busiest download hour, credentials added to a service principal." },
+      { kind: "new", tool: "Containment", text: "Run all checks sweeps the lot in one go and logs which ones it flagged; each result exports as JSON, and Export all evidence produces one bundle covering all fifteen." },
+      { kind: "new", tool: "Containment", text: "Exporting a check ticks the evidence item it satisfies, so the evidence list reflects what you actually preserved rather than what you remembered to tick." },
+      { kind: "new", tool: "Containment", text: "Checks that cannot be automated say why and hand you the PowerShell instead - the two Power Platform ones, because the admin API is not reachable with the permissions this tool holds." },
+      { kind: "improved", tool: "Containment", text: "Findings worth acting on are highlighted by the check itself rather than guessed from its wording, and the handover report now carries what each check found, its caveats, and which ones are FLAGGED." },
+      { kind: "improved", tool: "Containment", text: "A 7/30/90-day window selector for the sweep, defaulting to the window your triage used. The Unified Audit Log is never queried implicitly - it takes minutes, so you ask for it." },
+    ],
+  },
   {
     build: 8, date: "2026-07-28", title: "Inbox rules, forwarding and delegates - from the browser",
     items: [
