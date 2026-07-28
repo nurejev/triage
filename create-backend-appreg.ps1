@@ -23,7 +23,17 @@
     or Global Administrator).
 
 .PARAMETER SpaAppId
-    Application (client) ID of the Triage SPA - the value in js/authConfig.js.
+    Application (client) ID of the Triage SPA - the clientId value in
+    js/authConfig.js. Currently 8f1b5185-e782-4dc3-8aee-92ba4616c8d0.
+
+.PARAMETER Organization
+    The tenant's Exchange organisation name, e.g. contoso.onmicrosoft.com.
+    Find it with: (Get-MgOrganization).VerifiedDomains | Where IsInitial
+
+.NOTES
+    Runs on macOS, Linux and Windows. Needs openssl (already present on
+    macOS and Linux; on Windows it ships with Git) and the Microsoft.Graph
+    PowerShell module.
 
 .EXAMPLE
     ./create-backend-appreg.ps1 -SpaAppId 8f1b5185-e782-4dc3-8aee-92ba4616c8d0 `
@@ -44,33 +54,50 @@ $ctx = Get-MgContext
 $tenantId = $ctx.TenantId
 
 # ---------------------------------------------------------------- 1. cert ---
+# Four files, all in $CertPath:
+#   backend.key / backend.crt  PEM - Node signs the client assertion with these
+#   backend.pfx                PKCS#12 - Connect-ExchangeOnline wants this
+#   backend.cer                DER - uploaded to the app registration
+# openssl is used wherever it exists (macOS, Linux, and Windows with Git
+# installed); the Windows PKI cmdlets are the fallback, since they do not
+# exist on macOS or Linux PowerShell.
 if (-not $PfxPassword) { $PfxPassword = Read-Host "Password for the .pfx" -AsSecureString }
 New-Item -ItemType Directory -Force -Path $CertPath | Out-Null
-Write-Host "Generating certificate..." -ForegroundColor Cyan
-$cert = New-SelfSignedCertificate -Subject "CN=M365TriageBackend" `
-    -CertStoreLocation "Cert:\CurrentUser\My" -KeyExportPolicy Exportable `
-    -KeySpec Signature -KeyLength 2048 -NotAfter (Get-Date).AddMonths($CertMonths)
-
-$pfx = Join-Path $CertPath "backend.pfx"
-$cer = Join-Path $CertPath "backend.cer"
-Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $PfxPassword | Out-Null
-Export-Certificate  -Cert $cert -FilePath $cer | Out-Null
-
-# Node needs PEM (public cert + private key) for the client assertion.
-# openssl is the least surprising way to get both out of the pfx.
+$pfx    = Join-Path $CertPath "backend.pfx"
+$cer    = Join-Path $CertPath "backend.cer"
 $crtPem = Join-Path $CertPath "backend.crt"
 $keyPem = Join-Path $CertPath "backend.key"
 $plain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
     [Runtime.InteropServices.Marshal]::SecureStringToBSTR($PfxPassword))
+$days = [int]([math]::Round($CertMonths * 30.4))
+
+Write-Host "Generating certificate ($CertMonths months)..." -ForegroundColor Cyan
 if (Get-Command openssl -ErrorAction SilentlyContinue) {
-    & openssl pkcs12 -in $pfx -clcerts -nokeys -out $crtPem -passin "pass:$plain" 2>$null
-    & openssl pkcs12 -in $pfx -nocerts -nodes  -out $keyPem -passin "pass:$plain" 2>$null
-    Write-Host "  wrote $crtPem and $keyPem" -ForegroundColor Gray
-} else {
-    Write-Warning "openssl not found - convert the pfx yourself:"
-    Write-Warning "  openssl pkcs12 -in backend.pfx -clcerts -nokeys -out backend.crt"
-    Write-Warning "  openssl pkcs12 -in backend.pfx -nocerts -nodes  -out backend.key"
+    & openssl req -x509 -newkey rsa:2048 -sha256 -days $days -nodes `
+        -keyout $keyPem -out $crtPem -subj "/CN=M365TriageBackend" 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "openssl failed to generate the key pair" }
+    & openssl pkcs12 -export -out $pfx -inkey $keyPem -in $crtPem `
+        -passout "pass:$plain" 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "openssl failed to build the .pfx" }
+    & openssl x509 -in $crtPem -outform der -out $cer 2>$null
 }
+elseif (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) {
+    Write-Host "  openssl not found - using the Windows PKI cmdlets." -ForegroundColor Gray
+    $cert = New-SelfSignedCertificate -Subject "CN=M365TriageBackend" `
+        -CertStoreLocation "Cert:\CurrentUser\My" -KeyExportPolicy Exportable `
+        -KeySpec Signature -KeyLength 2048 -NotAfter (Get-Date).AddMonths($CertMonths)
+    Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $PfxPassword | Out-Null
+    Export-Certificate  -Cert $cert -FilePath $cer | Out-Null
+    Write-Warning "The container also needs PEM files. Install openssl and run:"
+    Write-Warning "  openssl pkcs12 -in $pfx -clcerts -nokeys -out $crtPem"
+    Write-Warning "  openssl pkcs12 -in $pfx -nocerts -nodes  -out $keyPem"
+}
+else {
+    throw "Neither openssl nor New-SelfSignedCertificate is available. Install openssl (macOS: it is already there; Linux: apt install openssl; Windows: comes with Git) and re-run."
+}
+# The private key is the whole ballgame - do not leave it world-readable.
+if ($IsLinux -or $IsMacOS) { & chmod 600 $keyPem $pfx 2>$null }
+Write-Host "  wrote $keyPem, $crtPem, $pfx, $cer" -ForegroundColor Gray
 
 # ----------------------------------------------------------------- 2. app ---
 $graphAppId = "00000003-0000-0000-c000-000000000000"
@@ -112,10 +139,10 @@ $app = New-MgApplication -DisplayName $DisplayName `
     }
 
 Update-MgApplication -ApplicationId $app.Id -IdentifierUris @("api://$($app.AppId)")
-$certBytes = [Convert]::ToBase64String((Get-Item $cer | Get-Content -AsByteStream -Raw))
 Update-MgApplication -ApplicationId $app.Id -KeyCredentials @(@{
     Type = "AsymmetricX509Cert"; Usage = "Verify"
-    Key = [Convert]::FromBase64String($certBytes); DisplayName = "M365TriageBackend"
+    Key = [System.IO.File]::ReadAllBytes((Resolve-Path $cer).Path)
+    DisplayName = "M365TriageBackend"
 })
 $sp = New-MgServicePrincipal -AppId $app.AppId
 
