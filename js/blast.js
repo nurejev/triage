@@ -87,10 +87,10 @@
   // where  : where a human would look in the portal (kept for the manual path)
   // what   : what you are looking for
   // mode   : graph | ual | exo | manual
-  // evid   : index in the evidence-preservation list this check's export covers
+  // evid   : ids of the evidence-preservation items this check's export produces
   const CHECKS = [
     {
-      n: 1, key: "signin-interactive", title: "Sign-in logs (interactive)", mode: "graph", evid: 0,
+      n: 1, key: "signin-interactive", title: "Sign-in logs (interactive)", mode: "graph", evid: ["signin"],
       where: "Entra > Sign-in logs > Interactive",
       what: "Atypical travel, anonymous IPs, out-of-hours sign-ins, new user agents, failures followed by one success.",
       run: async function (c) {
@@ -122,7 +122,7 @@
       }
     },
     {
-      n: 2, key: "signin-noninteractive", title: "Sign-in logs (non-interactive / SP)", mode: "graph", evid: 0,
+      n: 2, key: "signin-noninteractive", title: "Sign-in logs (non-interactive / SP)", mode: "graph", evid: ["signin"],
       where: "Entra > Sign-in logs > Non-interactive, Service principal",
       what: "Tokens used by apps the user consented to; service principal activity tied to the user.",
       run: async function (c) {
@@ -142,7 +142,7 @@
       }
     },
     {
-      n: 3, key: "risky", title: "Risky users / risky sign-ins", mode: "graph", evid: 3,
+      n: 3, key: "risky", title: "Risky users / risky sign-ins", mode: "graph", evid: ["risk"],
       where: "Entra ID Protection",
       what: "Risk detections in the last 30 days - including the medium ones below the auto-block threshold.",
       run: async function (c) {
@@ -173,7 +173,7 @@
       }
     },
     {
-      n: 4, key: "inbox-rules", title: "Inbox rules", mode: "exo", evid: 4,
+      n: 4, key: "inbox-rules", title: "Inbox rules", mode: "exo", evid: ["mailbox"],
       where: "Exchange Online PowerShell / Outlook",
       what: "Anything created in the incident window: redirect, move to Deleted Items, mark as read, external forward.",
       run: async function (c) {
@@ -203,7 +203,7 @@
       }
     },
     {
-      n: 5, key: "forwarding", title: "Mailbox forwarding", mode: "exo", evid: 4,
+      n: 5, key: "forwarding", title: "Mailbox forwarding", mode: "exo", evid: ["mailbox"],
       where: "Exchange Online: Get-Mailbox",
       what: "ForwardingAddress and ForwardingSmtpAddress - the SMTP field can point externally while the other is empty.",
       run: async function (c) {
@@ -224,7 +224,7 @@
       }
     },
     {
-      n: 6, key: "mailitems", title: "Mailbox audit - MailItemsAccessed", mode: "ual", evid: 6,
+      n: 6, key: "mailitems", title: "Mailbox audit - MailItemsAccessed", mode: "ual", evid: ["mailitems"],
       where: "Purview Audit (Unified Audit Log)",
       what: "Bulk read patterns; message IDs accessed in tight windows. This is the exfiltration signal.",
       run: async function (c) {
@@ -253,7 +253,7 @@
       }
     },
     {
-      n: 7, key: "spo", title: "SharePoint & OneDrive activity", mode: "ual", evid: 1,
+      n: 7, key: "spo", title: "SharePoint & OneDrive activity", mode: "ual", evid: ["ual"],
       where: "Purview Audit: FileDownloaded, FileSyncDownloadedFull, FileAccessedExtended",
       what: "Sites the user never touched, volume downloads, sync from unusual devices.",
       run: async function (c) {
@@ -279,7 +279,7 @@
       }
     },
     {
-      n: 8, key: "teams", title: "Teams activity", mode: "ual", evid: 1,
+      n: 8, key: "teams", title: "Teams activity", mode: "ual", evid: ["ual"],
       where: "Purview Audit: Teams activities",
       what: "Chats with external tenants, files shared in 1:1 chats, channel posts during the window.",
       run: async function (c) {
@@ -295,7 +295,7 @@
       }
     },
     {
-      n: 9, key: "oauth", title: "OAuth consent grants", mode: "graph", evid: 5,
+      n: 9, key: "oauth", title: "OAuth consent grants", mode: "graph", evid: ["oauth"],
       where: "Entra > Enterprise applications > User consent",
       what: "Recently consented apps; Mail.ReadWrite / Files.ReadWrite.All / offline_access is the phishing pattern.",
       run: async function (c) {
@@ -347,7 +347,7 @@
           "  Select-Object DisplayName, CreatedTime, AppName"
     },
     {
-      n: 12, key: "groups", title: "Group membership changes", mode: "graph", evid: 1,
+      n: 12, key: "groups", title: "Group membership changes", mode: "graph", evid: ["audits"],
       where: "Entra > Audit logs > 'Member Added'",
       what: "Privileged groups, distribution lists with mailbox access, sensitive Teams.",
       run: async function (c) {
@@ -367,7 +367,7 @@
       }
     },
     {
-      n: 13, key: "sp-creds", title: "Service principals the user could edit", mode: "graph", evid: 1,
+      n: 13, key: "sp-creds", title: "Service principals the user could edit", mode: "graph", evid: ["audits"],
       where: "Entra > Audit logs > service principal actions",
       what: "New credentials added to an existing service principal during the window - admin-level persistence.",
       run: async function (c) {
@@ -392,7 +392,7 @@
       }
     },
     {
-      n: 14, key: "new-users", title: "New user creation", mode: "graph", evid: 1,
+      n: 14, key: "new-users", title: "New user creation", mode: "graph", evid: ["audits"],
       where: "Entra > Audit logs > 'Add user'",
       what: "If the account could create users, this is where the second account is hiding.",
       run: async function (c) {
@@ -412,7 +412,7 @@
       }
     },
     {
-      n: 15, key: "ca-policy", title: "Conditional Access policy edits", mode: "graph", evid: 1,
+      n: 15, key: "ca-policy", title: "Conditional Access policy edits", mode: "graph", evid: ["audits"],
       where: "Entra > Audit logs > 'Update conditional access policy'",
       what: "If the account held Security or CA Administrator: was a policy edited or disabled?",
       run: async function (c) {

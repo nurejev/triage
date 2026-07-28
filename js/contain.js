@@ -262,23 +262,64 @@
   let blastResults = {};   // check key -> { summary, count, rows, raw, caveat }
   let blastDays = 30;      // window the checks query over
 
+  // ---- evidence to preserve ----------------------------------------------
+  // Each item says where it comes from. Items with `checks` are produced by
+  // the blast-radius checks above and tick themselves when you export one -
+  // an evidence list that ticks itself only when the file actually exists is
+  // worth more than one somebody ticked from memory.
   const EVIDENCE = [
-    ["Sign-in log export (JSON)", "Entra sign-in logs filtered to the user. JSON, not CSV - CSV truncates the nested fields. Retention is licence-dependent (7 days Free, 30 days P1/P2)."],
-    ["Unified Audit Log search", "Purview Audit filtered to the user. Save the CSV export and the search ID for reproducibility."],
-    ["Defender XDR incident evidence", "Incident timeline, alert detail and entity graph; the incidents API where JSON detail is needed."],
-    ["Identity Protection risk detections", "Each event's JSON payload: location, device, application, risk reason."],
-    ["Inbox rule body screenshot", "Before deleting. The PowerShell Description field does not preserve the exact conditions."],
-    ["OAuth grant detail", "App ID, display name, scopes, consent timestamp, consent type. Screenshot the enterprise app page too."],
-    ["MailItemsAccessed query", "Its own export - it answers whether access was a bind (specific message) or a sync (bulk)."],
-    ["Communication log", "Timestamped: who was notified, when, on what channel, what they were told."]
+    { id: "signin", title: "Sign-in log export (JSON)", checks: [1, 2],
+      detail: "Entra sign-in logs for the user, interactive and non-interactive. JSON rather than CSV - CSV " +
+        "truncates the nested location and status fields. Native retention is licence-dependent (7 days Free, " +
+        "30 days P1/P2), so archive to a SIEM if you need a longer window than that." },
+    { id: "ual", title: "Unified Audit Log search", checks: [7, 8],
+      detail: "Purview Audit filtered to the user - SharePoint, OneDrive and Teams activity. Keep the search ID " +
+        "alongside the export; it is what makes the search reproducible later." },
+    { id: "mailitems", title: "MailItemsAccessed query", checks: [6],
+      detail: "Its own export, because it answers one specific forensic question: was access a bind (an " +
+        "individual message) or a sync (a whole folder pulled down)." },
+    { id: "audits", title: "Directory audit export", checks: [12, 13, 14, 15],
+      detail: "The Entra audit log - a different source to the Unified Audit Log. What this account changed in " +
+        "the directory: group and role membership, service-principal credentials, users created, Conditional " +
+        "Access edits." },
+    { id: "risk", title: "Identity Protection risk detections", checks: [3],
+      detail: "Each detection's payload: location, device, application, risk reason. Needs Entra ID P2." },
+    { id: "mailbox", title: "Inbox rules and mailbox forwarding", checks: [4, 5],
+      detail: "Captured before you remediate. The export holds each rule's exact conditions, which the " +
+        "PowerShell Description field does not preserve. Screenshot the rule in Outlook as well if this is " +
+        "heading anywhere near a legal process." },
+    { id: "oauth", title: "OAuth grant detail", checks: [9],
+      detail: "Application ID, display name, scopes, consent type. Screenshot the enterprise application page " +
+        "too - the portal display name is sometimes more informative than the API response." },
+    { id: "defender", title: "Defender XDR incident evidence", manual: true,
+      detail: "Incident timeline, alert detail and the entity graph. This tool has no Defender API, so export it " +
+        "from the portal, or use the incidents API where JSON-level detail is needed." },
+    { id: "commlog", title: "Communication log", manual: true, template: "commlog",
+      detail: "Who was notified, when, on what channel, and what they were told. The action log covers what you " +
+        "did to the tenant; this covers what you said to people. Both belong in the handover." }
   ];
 
+  // ---- communication ------------------------------------------------------
+  // Each audience gets a prefilled markdown template: the facts this session
+  // already knows, the wording that avoids the classic mistakes, and blanks
+  // where judgement is required.
   const COMMS = [
-    ["The user - out of band", "Phone or in person. Never the mailbox or Teams you suspect is compromised. Twenty seconds: suspicious activity, access temporarily restricted, call me back on this number, ignore anything claiming to be IT in the meantime."],
-    ["The manager", "They support the user and make the operational calls - and they hand you context you do not have (\"she screen-shared with a vendor last Tuesday\")."],
-    ["Security lead / CISO", "One paragraph, calibrated for thirty seconds: one user compromised, suspected vector, containment in progress, blast radius under way, evidence preserved, regulatory assessment pending."],
-    ["DPO / privacy lead", "The moment there is reasonable suspicion of personal data exposure. GDPR Art. 33 is 72 hours from awareness - you surface the facts, they decide whether the clock starts."],
-    ["Leadership", "Per the standing protocol. Do not improvise the leadership call - say the facts, no more and no less."]
+    { id: "user", title: "The user - out of band", template: "user",
+      detail: "Phone or in person. Never the mailbox or Teams you suspect is compromised. Twenty seconds: " +
+        "suspicious activity, access temporarily restricted, call me back on this number, ignore anything " +
+        "claiming to be IT in the meantime." },
+    { id: "manager", title: "The manager", template: "manager",
+      detail: "They support the user and make the operational calls - and they hand you context you do not " +
+        "have (\"she screen-shared with a vendor last Tuesday\")." },
+    { id: "security", title: "Security lead / CISO", template: "security",
+      detail: "One paragraph, calibrated for thirty seconds: one user compromised, suspected vector, " +
+        "containment in progress, blast radius under way, evidence preserved, regulatory assessment pending." },
+    { id: "dpo", title: "DPO / privacy lead", template: "dpo",
+      detail: "The moment there is reasonable suspicion of personal data exposure. GDPR Art. 33 is 72 hours " +
+        "from awareness - you surface the facts, they decide whether the clock starts." },
+    { id: "leadership", title: "Leadership", template: "leadership",
+      detail: "Per the standing protocol. Do not improvise the leadership call - say the facts, no more and " +
+        "no less." }
   ];
 
   // ====================================================================
@@ -499,11 +540,14 @@
   // Exporting a check preserves the evidence that check produces, so tick the
   // matching item on the evidence list rather than making the analyst do it.
   function tickEvidence(c, silent) {
-    if (c.evid === undefined) return;
-    const id = "evid-" + c.evid;
-    if (checks[id]) return;
-    checks[id] = true;
-    if (!silent) logAdd("checklist", "Ticked: evidence · " + EVIDENCE[c.evid][0], "note", "exported from check " + c.n);
+    (c.evid || []).forEach(function (eid) {
+      const id = "evid-" + eid;
+      if (checks[id]) return;
+      checks[id] = true;
+      const item = EVIDENCE.filter(function (e) { return e.id === eid; })[0];
+      if (!silent) logAdd("checklist", "Ticked: evidence · " + (item ? item.title : eid), "note",
+        "produced by check " + c.n);
+    });
     renderChecklistTicks();
   }
   // Re-sync checkbox DOM state without re-rendering the whole screen.
@@ -514,6 +558,14 @@
       const item = el.closest(".cl-item");
       if (item) item.classList.toggle("on", on);
     });
+    updateCounts();
+  }
+  function updateCounts() {
+    const e = $("evidDone"), c = $("commDone");
+    if (e) e.textContent = EVIDENCE.filter(function (x) { return checks["evid-" + x.id]; }).length +
+      " of " + EVIDENCE.length + " preserved";
+    if (c) c.textContent = COMMS.filter(function (x) { return checks["comm-" + x.id]; }).length +
+      " of " + COMMS.length + " done";
   }
   function refreshBlast() {
     const grid = document.querySelector("#containBody .cl-grid.blast");
@@ -521,20 +573,106 @@
     grid.innerHTML = window.TriageBlast.checks.map(blastItem).join("");
     const lbl = $("blastDone");
     if (lbl) lbl.textContent = blastDoneCount() + " of 15 done";
+    updateCounts();
     bind();
   }
 
-  function checklistCard(id, title, intro, rows, cols) {
-    return '<div class="card"><h2>' + esc(title) + "</h2>" +
-      '<p class="muted mini">' + intro + "</p>" +
-      '<div class="cl-grid">' + rows.map(function (r, i) {
-        const cid = id + "-" + i;
-        return '<label class="cl-item' + (checks[cid] ? " on" : "") + '" data-cl="' + cid + '">' +
-          '<input type="checkbox" data-tick="' + cid + '"' + (checks[cid] ? " checked" : "") + ">" +
-          "<span><b>" + (cols === 3 ? (i + 1) + ". " : "") + esc(r[0]) + "</b>" +
-          (cols === 3 ? '<span class="cl-where">' + esc(r[1]) + "</span>" : "") +
-          '<span class="cl-what">' + esc(r[cols === 3 ? 2 : 1]) + "</span></span></label>";
+  // ---- evidence + communication cards ------------------------------------
+  function evidenceCard() {
+    const auto = EVIDENCE.filter(function (e) { return e.checks; }).length;
+    return '<div class="card"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">' +
+      '<h2 style="margin:0">Evidence to preserve</h2>' +
+      '<span class="mini muted" id="evidDone"></span></div>' +
+      '<p class="muted mini">The exports are what survive the remediation — this is what forensics, audit ' +
+      "and, if it goes that far, the regulator will work from. " + auto + " of these " + EVIDENCE.length +
+      " are produced by the blast-radius checks above and tick themselves when you export the check that " +
+      "makes them; the rest you collect by hand.</p>" +
+      '<div class="cl-grid">' + EVIDENCE.map(function (e) {
+        const cid = "evid-" + e.id;
+        const src = e.checks
+          ? '<span class="ev-src auto">from check ' + e.checks.join(", ") + "</span>"
+          : '<span class="ev-src manual">collect by hand</span>';
+        return '<div class="cl-item' + (checks[cid] ? " on" : "") + '">' +
+          '<label class="bl-head"><input type="checkbox" data-tick="' + cid + '"' +
+          (checks[cid] ? " checked" : "") + "><span><b>" + esc(e.title) + "</b>" + src + "</span></label>" +
+          '<div class="cl-what" style="margin-left:24px">' + esc(e.detail) + "</div>" +
+          (e.template ? '<div class="bl-actions"><button class="btn small lemon" data-act="tmpl" data-key="' +
+            e.template + '">Download template</button></div>' : "") +
+          "</div>";
       }).join("") + "</div></div>";
+  }
+  function commsCard() {
+    return '<div class="card"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">' +
+      '<h2 style="margin:0">Communication</h2>' +
+      '<span class="mini muted" id="commDone"></span>' +
+      '<span class="hspacer" style="margin-left:auto"></span>' +
+      '<button class="btn small lemon" data-act="tmplAll">Download all templates</button></div>' +
+      '<p class="muted mini">Do not talk to the compromised user on the compromised channel. The IR engineer ' +
+      "surfaces facts; the DPO, legal and leadership decide what is notifiable. Each template comes prefilled " +
+      "with what this session already knows — the account, what you contained, what the checks flagged — with " +
+      "blanks where judgement is needed. Downloading one ticks it.</p>" +
+      '<div class="cl-grid">' + COMMS.map(function (c) {
+        const cid = "comm-" + c.id;
+        return '<div class="cl-item' + (checks[cid] ? " on" : "") + '">' +
+          '<label class="bl-head"><input type="checkbox" data-tick="' + cid + '"' +
+          (checks[cid] ? " checked" : "") + "><span><b>" + esc(c.title) + "</b></span></label>" +
+          '<div class="cl-what" style="margin-left:24px">' + esc(c.detail) + "</div>" +
+          '<div class="bl-actions"><button class="btn small lemon" data-act="tmpl" data-key="' + c.template +
+          '">Download template</button></div></div>';
+      }).join("") + "</div></div>";
+  }
+
+  // Facts handed to the templates, so the analyst edits rather than writes.
+  function templateFacts() {
+    const flagged = [], f = [];
+    (window.TriageBlast ? window.TriageBlast.checks : []).forEach(function (c) {
+      const r = blastResults[c.key];
+      if (r && r.alert) flagged.push(c.n + " " + c.title + " (" + r.summary + ")");
+    });
+    const top = ((ctx && ctx.findings) || []).filter(function (x) {
+      return x.Severity === "Critical" || x.Severity === "High";
+    }).slice(0, 8).map(function (x) { return x.Severity + ": " + x.Title; });
+    const name = (target.displayName || "").trim();
+    // Fall back to the mailbox local part, capitalised, so the call script
+    // still addresses a person even when we only ever had a UPN string.
+    const local = String(target.userPrincipalName || "").split("@")[0].split(/[._-]/)[0];
+    const first = name ? name.split(/[\s.]+/)[0]
+      : local ? local.charAt(0).toUpperCase() + local.slice(1) : "";
+    return {
+      upn: target.userPrincipalName, displayName: name,
+      firstName: first,
+      operator: who(), now: nowIso().slice(0, 19).replace("T", " "),
+      firstAction: log.length ? log[0].ts.slice(0, 19).replace("T", " ") : nowIso().slice(0, 19).replace("T", " "),
+      demo: demo,
+      steps: STEPS.filter(function (s) { return s.kind !== "gate"; }).map(function (s) {
+        return { n: s.n, title: s.title, status: (st[s.key] && st[s.key].status) || "not done" };
+      }),
+      topFindings: top, flagged: flagged,
+      blastDone: blastDoneCount(),
+      exfilSignal: ["mailitems", "spo"].some(function (k) { return blastResults[k] && blastResults[k].alert; }),
+      has: function (k) { return !!(blastResults[k] && blastResults[k].alert); },
+      summaryOf: function (k) { return (blastResults[k] && blastResults[k].summary) || "not run"; }
+    };
+  }
+  function tmplDownload(key) {
+    const fn = window.TriageTemplates && window.TriageTemplates[key];
+    if (!fn) return;
+    const item = COMMS.filter(function (c) { return c.template === key; })[0] ||
+      EVIDENCE.filter(function (e) { return e.template === key; })[0];
+    download("LimonContainment-" + key + "-" + (target.userPrincipalName || "user") + "-" + stamp() + ".md",
+      "text/markdown;charset=utf-8", fn(templateFacts()));
+    const cid = (COMMS.indexOf(item) >= 0 ? "comm-" : "evid-") + item.id;
+    if (!checks[cid]) {
+      checks[cid] = true;
+      logAdd("checklist", "Ticked: " + item.title, "note", "template downloaded");
+    } else {
+      logAdd("checklist", "Downloaded template: " + item.title, "note", "");
+    }
+    renderChecklistTicks();
+  }
+  function tmplAll() {
+    COMMS.forEach(function (c) { tmplDownload(c.template); });
+    logAdd("comms", "Downloaded all communication templates", "ok", COMMS.length + " files");
   }
 
   function renderLog() {
@@ -635,13 +773,9 @@
 
     h += blastCard();
 
-    h += checklistCard("evid", "Evidence to preserve",
-      "The exports are what survive the remediation. This folder is what forensics, audit and — if it " +
-      "goes that far — the regulator will work from.", EVIDENCE, 2);
+    h += evidenceCard();
 
-    h += checklistCard("comm", "Communication",
-      "Do not talk to the compromised user on the compromised channel. The IR engineer surfaces facts; " +
-      "the DPO, legal and leadership decide what is notifiable.", COMMS, 2);
+    h += commsCard();
 
     h += '<div class="card"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0">Action log</h2>' +
       '<span class="mini muted" id="clogCount"></span><span class="hspacer" style="margin-left:auto"></span>' +
@@ -655,6 +789,7 @@
     $("containBody").innerHTML = h;
     bind();
     renderLog();
+    updateCounts();
     STEPS.forEach(function (s) {
       if (st[s.key]) setStatus(s.key, st[s.key].status, st[s.key].note);
     });
@@ -703,11 +838,17 @@
     });
   }
   function labelForTick(id) {
-    const m = /^(blast|evid|comm)-(\d+)$/.exec(id);
-    if (m) {
-      const src = { blast: BLAST, evid: EVIDENCE, comm: COMMS }[m[1]];
-      return (m[1] === "blast" ? "blast radius " + (+m[2] + 1) + " · " : m[1] === "evid" ? "evidence · " : "communication · ") +
-        src[+m[2]][0];
+    const b = /^blast-(\d+)$/.exec(id);
+    if (b) return "blast radius " + (+b[1] + 1) + " · " + (BLAST[+b[1]] || ["?"])[0];
+    const e = /^evid-(.+)$/.exec(id);
+    if (e) {
+      const it = EVIDENCE.filter(function (x) { return x.id === e[1]; })[0];
+      return "evidence · " + (it ? it.title : e[1]);
+    }
+    const cm = /^comm-(.+)$/.exec(id);
+    if (cm) {
+      const it = COMMS.filter(function (x) { return x.id === cm[1]; })[0];
+      return "communication · " + (it ? it.title : cm[1]);
     }
     const base = id.replace(/-(skip|done)$/, "");
     const s = STEPS.filter(function (x) { return x.key === base; })[0];
@@ -744,6 +885,8 @@
       return copyText(c.ps.replace(/\{UPN\}/g, target.userPrincipalName), el);
     }
     if (act === "loadUal") return loadUalNow();
+    if (act === "tmpl") return tmplDownload(key);
+    if (act === "tmplAll") return tmplAll();
   }
 
   // The Unified Audit Log query Microsoft runs asynchronously - minutes, not
@@ -1261,12 +1404,13 @@
   function exportLogMd() {
     const done = STEPS.filter(function (s) { return st[s.key] && st[s.key].status === "done"; });
     const open = STEPS.filter(function (s) { return !st[s.key] || (st[s.key].status !== "done" && st[s.key].status !== "skipped"); });
-    const cl = function (id, title, rows) {
-      const ticked = rows.map(function (r, i) { return checks[id + "-" + i] ? r[0] : null; }).filter(Boolean);
-      const miss = rows.map(function (r, i) { return checks[id + "-" + i] ? null : r[0]; }).filter(Boolean);
-      return "### " + title + " (" + ticked.length + "/" + rows.length + ")\n\n" +
-        (ticked.length ? ticked.map(function (t) { return "- [x] " + t; }).join("\n") + "\n" : "") +
-        (miss.length ? miss.map(function (t) { return "- [ ] " + t; }).join("\n") + "\n" : "") + "\n";
+    const cl = function (prefix, title, items) {
+      const done = items.filter(function (i) { return checks[prefix + "-" + i.id]; }).length;
+      return "### " + title + " (" + done + "/" + items.length + ")\n\n" +
+        items.map(function (i) {
+          return "- [" + (checks[prefix + "-" + i.id] ? "x" : " ") + "] " + i.title +
+            (i.checks ? " _(from check " + i.checks.join(", ") + ")_" : i.manual ? " _(by hand)_" : "");
+        }).join("\n") + "\n\n";
     };
     const md = "# Containment handover — " + (target.userPrincipalName || "") + "\n\n" +
       "- **Account:** " + (target.userPrincipalName || "") + (target.displayName ? " (" + target.displayName + ")" : "") + "\n" +

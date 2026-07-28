@@ -201,10 +201,12 @@
       suggestions = await searchUsers(q);
       suggSel = -1;
       renderSugg();
-      // exact match typed in full
+      // Typed the whole UPN without touching the list? Select it anyway, so the
+      // rest of the app gets the display name and object id rather than just a
+      // string - the containment templates address the person by name.
       if (!selectedUser) {
         const exact = suggestions.find(function (u) { return u.userPrincipalName.toLowerCase() === q.toLowerCase(); });
-        if (exact) $("startBtn").disabled = false;
+        if (exact) pick(exact);
       }
     }, 250);
   });

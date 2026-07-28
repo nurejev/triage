@@ -6,7 +6,7 @@
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 incident response tool. Triage a suspected account compromise or BEC read-only, then walk the first-60-minutes containment runbook on the same account. Runs in your browser or your own Docker host.">
 <link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=9">
+<link rel="stylesheet" href="css/app.css?v=10">
 </head>
 <body>
 <header>
@@ -416,10 +416,17 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
         which ones it flagged. Each result exports as JSON, and exporting one ticks the evidence item it
         satisfies. The two Power Platform checks cannot be automated - the admin API is not reachable with
         the permissions this tool holds - so they say so and hand you the PowerShell.</p>
-      <p>Then the <strong>evidence-preservation list</strong> and the <strong>communication pattern</strong>
-        (never notify the user on the channel you suspect is compromised). Everything you run or tick is
-        written to a timestamped <strong>action log</strong> that exports as CSV or as a Markdown handover
-        report for the ticket.</p>
+      <p>Then the <strong>evidence-preservation list</strong>, where each item says which check produces it
+        and ticks itself when you export that check, so the list reflects the files you actually have rather
+        than what somebody remembered to tick. Two items - the Defender XDR incident export and the
+        communication log - are marked as yours to collect by hand.</p>
+      <p>Finally the <strong>communication pattern</strong>: never notify the user on the channel you suspect
+        is compromised. Each audience downloads as a <strong>markdown template</strong> prefilled with what
+        this session already knows - the twenty-second call script (including what <em>not</em> to say), the
+        manager brief, the one-paragraph CISO status, a DPO note with the personal-data exposure table filled
+        in from the checks, the leadership brief and a communication log - with blanks left where judgement is
+        required. Everything you run, tick or download is written to a timestamped <strong>action log</strong>
+        that exports as CSV or as a Markdown handover report for the ticket.</p>
       <p class="mini muted">Containment needs delegated <em>write</em> permissions
         (<code>User.RevokeSessions.All</code>, <code>User.ReadWrite.All</code>,
         <code>UserAuthenticationMethod.ReadWrite.All</code>, <code>DelegatedPermissionGrant.ReadWrite.All</code>)
@@ -515,18 +522,19 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/config.js?v=9"></script>
-<script src="js/authConfig.js?v=9"></script>
-<script src="js/build.js?v=9"></script>
-<script src="js/graph.js?v=9"></script>
-<script src="js/demo.js?v=9"></script>
-<script src="js/demoblast.js?v=9"></script>
-<script src="js/detections.js?v=9"></script>
-<script src="js/report.js?v=9"></script>
-<script src="js/backend.js?v=9"></script>
-<script src="js/blast.js?v=9"></script>
-<script src="js/contain.js?v=9"></script>
-<script src="js/app.js?v=9"></script>
-<script src="js/import.js?v=9"></script>
+<script src="js/config.js?v=10"></script>
+<script src="js/authConfig.js?v=10"></script>
+<script src="js/build.js?v=10"></script>
+<script src="js/graph.js?v=10"></script>
+<script src="js/demo.js?v=10"></script>
+<script src="js/demoblast.js?v=10"></script>
+<script src="js/detections.js?v=10"></script>
+<script src="js/report.js?v=10"></script>
+<script src="js/backend.js?v=10"></script>
+<script src="js/blast.js?v=10"></script>
+<script src="js/templates.js?v=10"></script>
+<script src="js/contain.js?v=10"></script>
+<script src="js/app.js?v=10"></script>
+<script src="js/import.js?v=10"></script>
 </body>
 </html>
