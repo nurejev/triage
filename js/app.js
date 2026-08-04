@@ -85,7 +85,11 @@
   $("helpLink").addEventListener("click", openHelp);
   $("helpBack").addEventListener("click", function () { showScreen(lastScreen); });
   function homeScreen() { return G.account || demoMode ? "screen-mode" : "screen-login"; }
-  $("logoHome").addEventListener("click", function () { showScreen(homeScreen()); });
+  function goHome() { showScreen(homeScreen()); }
+  // The logo has always been a home link; the button says so out loud, because
+  // mid-incident nobody goes hunting for an affordance.
+  $("logoHome").addEventListener("click", goHome);
+  $("homeBtn").addEventListener("click", goHome);
   // Full-extraction guide + Extractor-Suite output importer (reachable signed-in or not).
   $("extractBtn").addEventListener("click", function () { showScreen("screen-extract"); });
   $("importOpen").addEventListener("click", function (e) { e.preventDefault(); showScreen("screen-import"); });
@@ -104,6 +108,7 @@
     $("whoName").textContent = name;
     $("whoTenant").textContent = tenant || "";
     $("signOutBtn").style.display = "";
+    $("homeBtn").style.display = "";
     $("demoBanner").style.display = demoMode ? "" : "none";
     showScreen("screen-mode");
     maybeShowWhatsNew();
@@ -151,6 +156,7 @@
     demoMode = false;
     $("whoBox").style.display = "none";
     $("signOutBtn").style.display = "none";
+    $("homeBtn").style.display = "none";
     showScreen("screen-login");
   });
   $("demoBtn").addEventListener("click", function () {

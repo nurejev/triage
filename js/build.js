@@ -18,6 +18,7 @@ window.TRIAGE_CHANGELOG = [
   {
     build: 10, date: "2026-07-28", title: "Communication templates, and evidence that says where it came from",
     items: [
+      { kind: "improved", tool: "Home", text: "A Home button in the top bar next to Full extraction. The logo was always a home link, but nothing said so - and mid-incident nobody goes hunting for an affordance." },
       { kind: "new", tool: "Containment", text: "Every communication step downloads as a markdown template prefilled with what the session knows: the call script for the user (with what not to say), the manager brief, the one-paragraph CISO status, the DPO note with a personal-data exposure table filled in from the checks, the leadership brief, and a communication log. Download all templates takes the lot." },
       { kind: "fixed", tool: "Containment", text: "Evidence items now say which check produces them, and the four directory-audit checks no longer tick 'Unified Audit Log search' - the Entra audit log is a different source, and claiming otherwise put a false statement in the evidence record." },
       { kind: "new", tool: "Containment", text: "Directory audit export is its own evidence item; inbox rules and forwarding are one item covering both; each item is labelled either 'from check N' or 'collect by hand'." },
