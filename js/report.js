@@ -122,7 +122,9 @@
       const dr = document.createElement("tr");
       dr.className = "detail-row";
       dr.style.display = "none";
-      dr.innerHTML = '<td colspan="3">' + esc(f.Detail) +
+      // Details are plain text; newlines carry structure (e.g. the MFA method
+      // list), so render them as line breaks.
+      dr.innerHTML = '<td colspan="3">' + esc(f.Detail).replace(/\n/g, "<br>") +
         (f.Recommendation ? '<div class="rec"><strong>Recommended action:</strong> ' + esc(f.Recommendation) + "</div>" : "") +
         '<div class="src muted">Source: ' + esc(f.Source) + "</div></td>";
       tr.addEventListener("click", function () {

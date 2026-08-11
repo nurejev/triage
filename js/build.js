@@ -12,9 +12,18 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 10;
-window.TRIAGE_BUILD_DATE = "2026-07-28";
+window.TRIAGE_BUILD = 11;
+window.TRIAGE_BUILD_DATE = "2026-08-11";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 11, date: "2026-08-11", title: "Tabs that keep their place, and the full MFA list in the report",
+    items: [
+      { kind: "new", tool: "Navigation", text: "ENCA-style tool tabs under the header: Triage, Containment, Full extraction and Import each open as a tab with a home button, a + menu and close buttons - switching tabs resumes the tool exactly where it was, so a running scan keeps running instead of starting at the beginning again." },
+      { kind: "improved", tool: "Navigation", text: "A scan that finishes while you are on another tab no longer yanks you over - the Triage tab quietly resumes at the finished report. Per-screen scroll memory restores where you were on each screen." },
+      { kind: "improved", tool: "Search", text: "Starting a new scan while one is still running asks first, instead of silently discarding the running one." },
+      { kind: "improved", tool: "Report", text: "The MFA finding now lists every registered authentication method with the same labels and detail as containment's Load authentication methods - password and SSPR email included, with device names, phone numbers and registration dates - so you see the whole picture before heading over to containment." },
+    ],
+  },
   {
     build: 10, date: "2026-07-28", title: "Communication templates, and evidence that says where it came from",
     items: [

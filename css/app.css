@@ -80,6 +80,65 @@ header {
 .hspacer { margin-left: auto; }
 .hwrap .who { text-align: right; line-height: 1.2; }
 
+/* ---------- tool tab bar (ENCA-style) ---------- */
+.toolnav {
+  position: sticky; top: 58px; z-index: 45;
+  background: var(--surface); border-bottom: 1px solid var(--border); padding: 6px 0;
+}
+.toolnav-inner {
+  max-width: 1160px; margin: 0 auto; padding: 0 18px;
+  display: flex; gap: 4px; align-items: center; justify-content: center;
+  overflow-x: auto; scrollbar-width: thin;
+}
+.toolnav-inner::-webkit-scrollbar { height: 6px; }
+.toolnav-btn {
+  flex: none; border: 1px solid transparent; background: none; color: var(--muted);
+  font: inherit; font-weight: 600; font-size: 12.5px; padding: 6px 12px;
+  border-radius: 8px; white-space: nowrap; cursor: pointer; transition: .12s;
+}
+.toolnav-btn:hover { background: var(--soft); color: var(--ink); }
+/* home reads as a real button, not a stray glyph */
+.toolnav-btn.home {
+  padding: 6px 11px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--muted);
+}
+.toolnav-btn.home svg { width: 19px; height: 19px; display: block; }
+.toolnav-btn.home:hover { background: var(--soft); border-color: var(--green); color: var(--green); }
+.toolnav-btn.home.active { background: var(--green); border-color: var(--green); color: #fff; }
+[data-theme="dark"] .toolnav-btn.home.active { color: #0b120e; }
+.toolnav-btn.add { font-size: 15px; padding: 5px 11px; color: var(--accent2); }
+/* an open tab = label + close, sharing a pill */
+.toolnav-tab {
+  flex: none; display: inline-flex; align-items: center;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--soft);
+}
+.toolnav-tab .toolnav-btn { border: 0; padding: 6px 6px 6px 12px; }
+.toolnav-tab .toolnav-x {
+  border: 0; background: none; color: var(--muted); cursor: pointer;
+  font: inherit; font-size: 15px; line-height: 1; padding: 4px 9px 4px 4px; border-radius: 0 8px 8px 0;
+}
+.toolnav-tab .toolnav-x:hover { color: var(--ink); }
+.toolnav-tab.active { background: var(--green); border-color: var(--green); }
+.toolnav-tab.active .toolnav-btn, .toolnav-tab.active .toolnav-x { color: #fff; }
+/* keep the active (green) tab readable on hover */
+.toolnav-tab.active .toolnav-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+.toolnav-tab.active .toolnav-x:hover { background: rgba(255,255,255,.15); color: #fff; }
+[data-theme="dark"] .toolnav-tab.active .toolnav-btn,
+[data-theme="dark"] .toolnav-tab.active .toolnav-x { color: #0b120e; }
+[data-theme="dark"] .toolnav-tab.active .toolnav-btn:hover,
+[data-theme="dark"] .toolnav-tab.active .toolnav-x:hover { background: rgba(0,0,0,.12); color: #0b120e; }
+/* + menu popover */
+.toolnav-menu {
+  position: fixed; z-index: 410; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow); padding: 6px; max-height: 60vh; overflow: auto; width: 264px;
+}
+.toolnav-menu button {
+  display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--ink);
+  font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+}
+.toolnav-menu button:hover { background: var(--soft); }
+.toolnav-menu button.open { color: var(--muted); }
+
 /* ---------- buttons & inputs ---------- */
 .btn {
   border: 1px solid var(--border); background: var(--surface); color: var(--ink);

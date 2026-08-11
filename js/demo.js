@@ -26,7 +26,11 @@
       createdDateTime: "2021-03-01T09:00:00Z",
       lastPasswordChangeDateTime: upn === "finance@" + DOM ? "2022-01-10T09:00:00Z" : "2026-05-01T09:00:00Z"
     }, signIns: [], ualRecords: [], oauthGrants: [], riskyUsers: [], riskDetections: [],
-      authMethods: { loaded: true, methods: [{ "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod" }] },
+      authMethods: { loaded: true, methods: [
+        { "@odata.type": "#microsoft.graph.passwordAuthenticationMethod", id: "28c10230-6103-485e-b985-444c60001490" },
+        { "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod",
+          id: "77aa00bb-0000-1111-2222-333344445555", displayName: "iPhone 14", createdDateTime: "2023-02-11T08:00:00Z" }
+      ] },
       directoryAudits: [] };
 
     // normal traffic
@@ -36,8 +40,17 @@
     }
     if (upn !== V) return ev;
 
-    // the incident
-    ev.authMethods = { loaded: true, methods: [] };
+    // the incident - the same methods the containment demo lists, so the
+    // triage finding and the runbook tell one coherent story: the user's own
+    // authenticator is gone, replaced by the attacker's phone + authenticator
+    // registered minutes after the risky sign-in.
+    ev.authMethods = { loaded: true, methods: [
+      { "@odata.type": "#microsoft.graph.passwordAuthenticationMethod", id: "28c10230-6103-485e-b985-444c60001490" },
+      { "@odata.type": "#microsoft.graph.phoneAuthenticationMethod", id: "3179e48a-750b-4051-897c-87b9720928f7",
+        phoneNumber: "+234 807 555 0142", createdDateTime: "2026-07-15T03:18:00Z" },
+      { "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod", id: "a1b2c3d4-1111-2222-3333-444455556666",
+        displayName: "SM-G991B", deviceTag: "SoftwareTokenActivated", createdDateTime: "2026-07-15T03:19:00Z" }
+    ] };
     for (let i = 0; i < 14; i++) {
       ev.signIns.push(signIn(V, "2026-07-15T03:" + String(i).padStart(2, "0") + ":00Z",
         "154.16.10.88", "Nigeria", "Lagos", 50126));

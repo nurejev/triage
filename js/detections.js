@@ -10,6 +10,31 @@
   }
   function uniq(arr) { return Array.from(new Set(arr.filter(Boolean))); }
 
+  // Same labels as the containment runbook's "Load authentication methods", so
+  // the report and the runbook describe the account in the same words.
+  const METHOD_LABELS = {
+    "#microsoft.graph.phoneAuthenticationMethod": "Phone",
+    "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod": "Microsoft Authenticator",
+    "#microsoft.graph.fido2AuthenticationMethod": "FIDO2 / passkey",
+    "#microsoft.graph.softwareOathAuthenticationMethod": "Software OATH token",
+    "#microsoft.graph.temporaryAccessPassAuthenticationMethod": "Temporary Access Pass",
+    "#microsoft.graph.emailAuthenticationMethod": "Email (SSPR)",
+    "#microsoft.graph.windowsHelloForBusinessAuthenticationMethod": "Windows Hello for Business",
+    "#microsoft.graph.passwordlessMicrosoftAuthenticatorAuthenticationMethod": "Passwordless Authenticator",
+    "#microsoft.graph.platformCredentialAuthenticationMethod": "Platform credential",
+    "#microsoft.graph.passwordAuthenticationMethod": "Password"
+  };
+  function methodLabel(m) {
+    return METHOD_LABELS[m["@odata.type"]] ||
+      (m["@odata.type"] || "unknown").replace("#microsoft.graph.", "").replace("AuthenticationMethod", "");
+  }
+  function methodLine(m) {
+    const det = m.phoneNumber || m.emailAddress || m.displayName || m.deviceTag || m.model ||
+      (m.lifetimeInMinutes ? "TAP, " + m.lifetimeInMinutes + " min" : "");
+    const created = (m.createdDateTime || "").slice(0, 10);
+    return "• " + methodLabel(m) + (det ? " — " + det : "") + (created ? " · registered " + created : "");
+  }
+
   function analyze(ev) {
     const F = [];
     function add(sev, cat, title, detail, ts, rec, src) {
@@ -237,19 +262,28 @@
 
     // ================= MFA =================
     if (ev.authMethods && ev.authMethods.loaded) {
-      const strong = (ev.authMethods.methods || []).filter(function (m) {
+      const methods = ev.authMethods.methods || [];
+      const strong = methods.filter(function (m) {
         return /(microsoftAuthenticator|fido2|windowsHello|softwareOath|phone|temporaryAccessPass)/i.test(m["@odata.type"] || "");
       });
+      // The complete list, exactly as containment's "Load authentication
+      // methods" shows it - password and SSPR email included - so you see
+      // everything registered on the account before heading over there.
+      const listing = methods.length
+        ? "All registered methods (" + methods.length + "):\n" + methods.map(methodLine).join("\n")
+        : "";
       if (!strong.length) {
         add("High", "Account", "No MFA methods registered",
-          "This account has no strong authentication methods registered - only a password protects it.",
+          "This account has no strong authentication methods registered - only a password protects it." +
+          (listing ? "\n\n" + listing : ""),
           null,
           "Register MFA (preferably phishing-resistant) and require it via Conditional Access.",
           "Authentication methods");
       } else {
         add("Info", "Account", "MFA methods registered: " +
-          uniq(strong.map(function (m) { return (m["@odata.type"] || "").replace("#microsoft.graph.", "").replace("AuthenticationMethod", ""); })).join(", "),
-          "Verify the user recognizes each method - attackers add their own authenticator after a takeover.",
+          uniq(strong.map(methodLabel)).join(", "),
+          listing + "\n\nVerify the user recognizes each method - attackers add their own " +
+          "authenticator after a takeover. The containment runbook can remove any of these.",
           null,
           "Ask the user to confirm every registered method and device.",
           "Authentication methods");

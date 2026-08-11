@@ -10,11 +10,127 @@
 
   // ---------- helpers ----------
   function $(id) { return document.getElementById(id); }
+
+  // ---------- ENCA-style tool tabs ----------
+  // A tab exists only for a tool you have opened; switching tabs resumes the
+  // tool exactly where it was - mid-scan, mid-runbook, mid-report - instead of
+  // restarting it at its first screen. Screens stay in the DOM the whole time,
+  // so nothing running (a collection, a UAL query) is ever interrupted.
+  const TOOL_TABS = [
+    ["triage", "🔎 Triage"],
+    ["contain", "🛡 Containment"],
+    ["extract", "📤 Full extraction"],
+    ["import", "📥 Import evidence"]
+  ];
+  let openTabs = [], activeTab = null;
+  // The screen each tool is currently on - where its tab resumes to.
+  const toolScreen = { triage: "screen-search", contain: "screen-search",
+    extract: "screen-extract", import: "screen-import" };
+  function toolFor(id) {
+    if (id === "screen-progress" || id === "screen-report") return "triage";
+    if (id === "screen-search") return mode === "contain" ? "contain" : "triage";
+    if (id === "screen-contain") return "contain";
+    if (id === "screen-extract") return "extract";
+    if (id === "screen-import") return "import";
+    return null;
+  }
+  function tabLabel(t) {
+    const hit = TOOL_TABS.filter(function (x) { return x[0] === t; })[0];
+    return hit ? hit[1] : t;
+  }
+  function renderTabs() {
+    const signedIn = (G && G.account) || demoMode;
+    const home = '<button class="toolnav-btn home ' + (activeTab ? "" : "active") + '" data-navhome title="Home" aria-label="Home">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M3 10.6 12 3.2l9 7.4"/><path d="M5.2 9.4V20.4h13.6V9.4"/><path d="M9.6 20.4v-6.2h4.8v6.2"/></svg></button>';
+    const tabs = openTabs.map(function (t) {
+      return '<span class="toolnav-tab ' + (t === activeTab ? "active" : "") + '">' +
+        '<button class="toolnav-btn" data-nav="' + t + '">' + esc(tabLabel(t)) + "</button>" +
+        '<button class="toolnav-x" data-close="' + t + '" title="Close tab">&times;</button></span>';
+    }).join("");
+    const add = '<button class="toolnav-btn add" data-navadd title="Open a tool in a new tab">＋</button>';
+    const closeAll = openTabs.length > 1 ? '<button class="toolnav-btn" data-navcloseall title="Close all tabs">✕ all</button>' : "";
+    $("toolNav").innerHTML = '<div class="toolnav-inner">' + home + tabs + add + closeAll + "</div>";
+    // the bar only appears once signed in and a tool is open
+    $("toolNav").style.display = signedIn && openTabs.length ? "block" : "none";
+  }
+  function resumeTool(t) {
+    // The shared search screen belongs to whichever mode last used it, so
+    // resuming there has to restore that mode's wording first.
+    if (toolScreen[t] === "screen-search") setMode(t === "contain" ? "contain" : "triage");
+    showScreen(toolScreen[t]);
+  }
+  function closeTab(t) {
+    const i = openTabs.indexOf(t);
+    if (i < 0) return;
+    openTabs.splice(i, 1);
+    if (activeTab === t) {
+      const next = openTabs[i] || openTabs[i - 1] || null;   // neighbour, else last
+      if (next) resumeTool(next);
+      else showScreen(homeScreen());
+    } else renderTabs();
+  }
+  function openTool(t) {
+    if (openTabs.indexOf(t) >= 0) return resumeTool(t);
+    if (t === "triage" || t === "contain") return openSearch(t);
+    showScreen(toolScreen[t]);
+  }
+  function openAddMenu(anchor) {
+    closeAddMenu();
+    const menu = document.createElement("div");
+    menu.className = "toolnav-menu"; menu.id = "toolAddMenu";
+    menu.innerHTML = TOOL_TABS.map(function (x) {
+      const open = openTabs.indexOf(x[0]) >= 0;
+      return '<button data-nav="' + x[0] + '" class="' + (open ? "open" : "") + '">' + esc(x[1]) +
+        (open ? " <span class='mini'>&middot; open</span>" : "") + "</button>";
+    }).join("");
+    document.body.appendChild(menu);
+    const r = anchor.getBoundingClientRect();
+    menu.style.top = (r.bottom + 4) + "px";
+    menu.style.left = Math.min(r.left, window.innerWidth - 280) + "px";
+    menu.addEventListener("click", function (e) {
+      const b = e.target.closest("[data-nav]");
+      if (!b) return;
+      closeAddMenu(); openTool(b.getAttribute("data-nav"));
+    });
+    setTimeout(function () { document.addEventListener("click", closeAddMenu, { once: true }); }, 0);
+  }
+  function closeAddMenu() { const m = $("toolAddMenu"); if (m) m.remove(); }
+  $("toolNav").addEventListener("click", function (e) {
+    if (e.target.closest("[data-navhome]")) return showScreen(homeScreen());
+    if (e.target.closest("[data-navcloseall]")) {
+      openTabs = []; activeTab = null; renderTabs();
+      return showScreen(homeScreen());
+    }
+    if (e.target.closest("[data-navadd]")) return openAddMenu(e.target.closest("[data-navadd]"));
+    const x = e.target.closest("[data-close]");
+    if (x) { e.stopPropagation(); return closeTab(x.getAttribute("data-close")); }
+    const b = e.target.closest("[data-nav]");
+    if (b) resumeTool(b.getAttribute("data-nav"));
+  });
+
+  // Per-screen scroll memory (ENCA-style): the position of the screen you
+  // leave is saved and restored when you come back; a screen you have not
+  // visited yet starts at the top.
+  const screenScroll = {};
+  let shownScreen = null;
   function showScreen(id) {
+    if (shownScreen && shownScreen !== id) screenScroll[shownScreen] = window.scrollY;
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
     $(id).classList.add("active");
     if (id !== "screen-whatsnew" && id !== "screen-help") lastScreen = id;
-    window.scrollTo(0, 0);
+    // Register/activate the owning tool's tab, and remember this screen as the
+    // place its tab resumes to.
+    const t = toolFor(id);
+    if (t) {
+      if (openTabs.indexOf(t) < 0) openTabs.push(t);
+      activeTab = t;
+      toolScreen[t] = id;
+    } else activeTab = null;
+    renderTabs();
+    const changed = shownScreen !== id;
+    shownScreen = id;
+    if (changed) window.scrollTo(0, screenScroll[id] || 0);
   }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
@@ -134,8 +250,10 @@
     showScreen("screen-search");
     $("upnInput").focus();
   }
-  $("modeTriageBtn").addEventListener("click", function () { openSearch("triage"); });
-  $("modeContainBtn").addEventListener("click", function () { openSearch("contain"); });
+  // Resume the tool where it was if its tab is already open (a scan in flight,
+  // a report on screen, a runbook mid-step) - only a first open starts at search.
+  $("modeTriageBtn").addEventListener("click", function () { openTool("triage"); });
+  $("modeContainBtn").addEventListener("click", function () { openTool("contain"); });
   $("searchBackBtn").addEventListener("click", function () { showScreen("screen-mode"); });
   $("signInBtn").addEventListener("click", async function () {
     if (A.clientId.indexOf("00000000") === 0) {
@@ -157,6 +275,9 @@
     $("whoBox").style.display = "none";
     $("signOutBtn").style.display = "none";
     $("homeBtn").style.display = "none";
+    // Forensic hygiene: a fresh session starts with no tabs from the last one.
+    openTabs = []; activeTab = null;
+    toolScreen.triage = toolScreen.contain = "screen-search";
     showScreen("screen-login");
   });
   $("demoBtn").addEventListener("click", function () {
@@ -341,27 +462,32 @@
     return ev;
   }
 
+  let scanning = false;   // a collect in flight - switching tabs never touches it
   async function startTriage() {
     const upn = (selectedUser && selectedUser.userPrincipalName) || upnInput.value.trim();
     if (!upn) return;
+    if (scanning && !confirm("A scan is still running. Start a new one anyway? The running scan's progress will be discarded.")) return;
     const days = parseInt($("daysSel").value, 10);
     const withUal = $("ualChk").checked;
     $("progTitle").textContent = "Collecting evidence for " + upn + "…";
     stepUi();
     showScreen("screen-progress");
     let ev;
-    if (demoMode) {
-      ev = window.TriageDemo.evidenceFor(upn);
-      ev.days = days;
-      // animate the steps for the demo
-      for (const s of STEPS) {
-        setStep(s[0], "run");
-        await new Promise(function (r) { setTimeout(r, 180); });
-        setStep(s[0], "ok");
+    scanning = true;
+    try {
+      if (demoMode) {
+        ev = window.TriageDemo.evidenceFor(upn);
+        ev.days = days;
+        // animate the steps for the demo
+        for (const s of STEPS) {
+          setStep(s[0], "run");
+          await new Promise(function (r) { setTimeout(r, 180); });
+          setStep(s[0], "ok");
+        }
+      } else {
+        ev = await collect(upn, days, withUal);
       }
-    } else {
-      ev = await collect(upn, days, withUal);
-    }
+    } finally { scanning = false; }
     showEvidence(ev);
   }
   // ---------- containment ----------
@@ -406,7 +532,15 @@
     // Imported evidence has no live tenant behind it - containment would have
     // nothing to act on, so the hand-off button only shows for a live/demo run.
     $("containFromReportBtn").style.display = ev.imported ? "none" : "";
-    showScreen("screen-report");
+    // A scan can finish while the analyst is on another tab. Don't yank them
+    // over - the report quietly becomes where the Triage tab resumes.
+    const watching = !shownScreen || shownScreen === "screen-import" || toolFor(shownScreen) === "triage";
+    if (watching) showScreen("screen-report");
+    else {
+      if (openTabs.indexOf("triage") < 0) openTabs.push("triage");
+      toolScreen.triage = "screen-report";
+      renderTabs();
+    }
   }
   $("startBtn").addEventListener("click", startSelected);
   $("newSearchBtn").addEventListener("click", function () {
