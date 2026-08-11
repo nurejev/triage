@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Limon-IT M365 Analyzer (BETA) - tenant-wide MAS-style triage</title>
+<meta name="description" content="Browser-based, tenant-wide Microsoft 365 / Entra ID log analyzer. A web port of the Microsoft-Analyzer-Suite detection rules: pull live from Graph or import Extractor-Suite output, and read a severity-ranked findings report with a per-account drill-down.">
+<link rel="icon" href="assets/favicon.svg">
+<link rel="stylesheet" href="css/app.css?v=1">
+<link rel="stylesheet" href="css/beta.css?v=1">
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <span id="logoHome" class="logowrap" title="Home">
+      <img class="logo-img only-light" src="assets/logo-mark-light.svg" alt="Limon-IT">
+      <img class="logo-img only-dark" src="assets/logo-mark-dark.svg" alt="Limon-IT">
+    </span>
+    <span class="app-tag">Limon-<span class="accent">IT</span> <span class="muted">·</span> ANALYZER <span class="beta-badge">BETA</span></span>
+    <span class="mini muted" id="brandHost">triage.limon-it.nl/BETA</span>
+    <span class="hspacer"></span>
+    <button class="btn small noprint" id="homeBtn" style="display:none">&#8962; Home</button>
+    <button class="btn small noprint" id="helpBtn">Help</button>
+    <button class="btn small noprint" id="themeBtn" title="Theme">🌗</button>
+    <span class="who mini" id="whoBox" style="display:none">
+      <span id="whoName" style="font-weight:600"></span><br>
+      <span class="muted" id="whoTenant"></span>
+    </span>
+    <button class="btn small noprint" id="signOutBtn" style="display:none">Sign out</button>
+  </div>
+</header>
+
+<nav class="toolnav noprint" id="toolNav" style="display:none"></nav>
+
+<main>
+  <!-- ============ LOGIN ============ -->
+  <section class="screen active" id="screen-login">
+    <div class="hero">
+      <span class="logowrap">
+        <img class="logo-big-img only-light" src="assets/logo-mark-light.svg" alt="Limon-IT">
+        <img class="logo-big-img only-dark" src="assets/logo-mark-dark.svg" alt="Limon-IT">
+      </span>
+      <h1>M365 Analyzer <span class="beta-badge">BETA</span></h1>
+      <p class="lead">A tenant-wide log analyzer in the browser — a web port of the
+        <a href="https://github.com/LETHAL-FORENSICS/Microsoft-Analyzer-Suite" target="_blank" rel="noopener">Microsoft-Analyzer-Suite</a>
+        detection rules. Pull sign-in logs, directory audits, the Unified Audit Log, Identity Protection,
+        OAuth grants and inventory live from Graph, <em>or</em> import Microsoft-Extractor-Suite output —
+        then read a severity-ranked report with a per-account drill-down.</p>
+      <div class="actions">
+        <button class="btn primary" id="signInBtn">Sign in with Microsoft</button>
+        <button class="btn" id="demoBtn">Try the demo</button>
+      </div>
+      <p class="mini muted">Read-only, delegated Graph permissions — the same the Triage tool uses.
+        First time in your tenant? An administrator must <a href="#" id="consentLink">grant consent once</a>.<br>
+        This is the BETA. Looking for the per-account incident tool? <a href="#" id="prodLink">Open Triage →</a></p>
+      <div class="trustrow">
+        <span>Runs entirely in your browser</span>
+        <span>Read-only</span>
+        <span>Live Graph or file import</span>
+        <span>MAS detection rules</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MODE CHOICE ============ -->
+  <section class="screen" id="screen-mode">
+    <div class="card">
+      <h1>How do you want to analyze this tenant?</h1>
+      <p class="muted">Both paths run the same detection engine and produce the same report.
+        Live is fastest for a quick tenant sweep; import covers the Exchange-Online-only sources
+        (message trace, transport rules) that a browser can't reach, and any depth you've already extracted.</p>
+    </div>
+    <div class="modegrid">
+      <button class="modecard" id="modeScanBtn">
+        <span class="mc-ico">&#128269;</span>
+        <span class="mc-t">Live scan <span class="mc-tag ro">read-only</span></span>
+        <span class="mc-d">Pull the whole tenant window live from Microsoft Graph — sign-ins, directory
+          audits, risky users &amp; detections, OAuth grants, users, devices, admins, and the Unified
+          Audit Log — and analyze it in this tab.</span>
+        <span class="mc-go">Scan the tenant &rarr;</span>
+      </button>
+      <button class="modecard" id="modeImportBtn">
+        <span class="mc-ico">&#128229;</span>
+        <span class="mc-t">Import files <span class="mc-tag ro">offline</span></span>
+        <span class="mc-d">Drop Microsoft-Extractor-Suite CSV/JSON output in — sign-in logs, UAL, OAuth,
+          users, devices and more. Files are parsed in your browser; nothing is uploaded. Covers the
+          EXO-only sources live can't reach.</span>
+        <span class="mc-go">Import an export &rarr;</span>
+      </button>
+    </div>
+    <div class="card" id="demoBanner" style="display:none">
+      <span class="mini">&#127819; <strong>Demo mode.</strong> A simulated tenant with a staged BEC + illicit-consent
+        incident across several accounts. Run a <strong>Live scan</strong> to see the tenant-wide report and the
+        per-account drill-down — no real permissions, nothing touched.</span>
+    </div>
+  </section>
+
+  <!-- ============ LIVE SCAN CONFIG ============ -->
+  <section class="screen" id="screen-config">
+    <div class="card">
+      <h1>Live tenant scan</h1>
+      <p class="muted">Choose the window. A wider window and the Unified Audit Log are more complete but
+        slower — the UAL query runs asynchronously in Microsoft and can take minutes.</p>
+      <div class="optrow">
+        <label>Look back
+          <select id="betaDaysSel">
+            <option value="1">24 hours</option>
+            <option value="7" selected>7 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="betaUalChk" checked> Include Unified Audit Log (slower, more complete)</label>
+        <button class="btn primary" id="startScanBtn">Start scan</button>
+        <button class="btn small" id="configBack">&larr; Back</button>
+      </div>
+      <p class="mini muted" style="margin-top:12px">Tenant-wide reads can be large. Page caps keep the tab
+        responsive; very large tenants or long windows are better served by the import path.</p>
+    </div>
+  </section>
+
+  <!-- ============ PROGRESS ============ -->
+  <section class="screen" id="screen-progress">
+    <div class="card">
+      <h1 id="betaProgTitle">Collecting tenant-wide evidence…</h1>
+      <p class="muted mini">Everything is fetched straight from Microsoft Graph into this browser tab.</p>
+      <ul class="steps" id="betaStepList"></ul>
+    </div>
+  </section>
+
+  <!-- ============ IMPORT ============ -->
+  <section class="screen" id="screen-import">
+    <div class="card">
+      <h1>Import Extractor-Suite output</h1>
+      <p class="muted">Drop the CSV/JSON files a Microsoft-Extractor-Suite run produced. Recognized by filename:
+        SignInLogs, AuditLogs, RiskyUsers, RiskyDetections, OAuthPermissions, Users, Devices, Admins, MFA,
+        and the Unified Audit Log. Drop several at once — they merge into one tenant view.</p>
+      <div id="betaDrop" class="dropzone">
+        <p><strong>Drag files here</strong> or <button class="btn small" id="betaBrowse">browse</button></p>
+        <input type="file" id="betaFile" multiple accept=".csv,.json" style="display:none">
+        <p class="mini muted">Parsed in your browser — nothing is uploaded.</p>
+      </div>
+      <div id="betaImportStatus" class="mini muted" style="margin-top:12px"></div>
+      <p class="optrow" style="margin-top:12px"><button class="btn small" id="importBack">&larr; Back</button></p>
+    </div>
+  </section>
+
+  <!-- ============ REPORT ============ -->
+  <section class="screen" id="screen-report">
+    <div class="card noprint">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+        <div>
+          <h1 id="betaRepScope">Tenant-wide analysis</h1>
+          <span class="mini muted" id="betaRepMeta"></span>
+        </div>
+        <span class="hspacer" style="margin-left:auto"></span>
+        <div class="exportrow">
+          <button class="btn small" id="betaDlCsv">⤓ Findings CSV</button>
+          <button class="btn small" id="betaDlJson">⤓ Evidence JSON</button>
+          <button class="btn small" id="betaPrint">Print</button>
+          <button class="btn small" id="betaNewScan">New analysis</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tiles" id="betaTiles"></div>
+
+    <div class="card">
+      <div class="sevbar" id="betaSevbar"></div>
+      <div class="chips" id="betaSevchips" style="margin-top:10px"></div>
+      <div class="coverage" id="betaCoverage" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Accounts implicated</h2>
+      <p class="mini muted">The MAS "who is compromised" view. Click an account to filter the findings below to it.</p>
+      <table class="ftable"><thead><tr><th>Account</th><th>Findings by severity</th><th>Analyzers</th></tr></thead>
+        <tbody id="betaUsers"></tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="filters">
+        <select id="betaCatsel"></select>
+        <input type="search" id="betaFq" placeholder="Filter findings…">
+        <span class="mini muted" id="betaFilterNote"></span>
+      </div>
+      <table class="ftable"><thead><tr><th style="width:110px">Severity</th><th>Finding</th><th style="width:150px">When</th></tr></thead>
+        <tbody id="betaFrows"></tbody></table>
+      <p class="mini muted" id="betaFempty" style="display:none">No findings match the current filter.</p>
+    </div>
+  </section>
+
+  <!-- ============ HELP ============ -->
+  <section class="screen" id="screen-help">
+    <div class="card">
+      <h1>About this BETA</h1>
+      <p>This is a browser port of the <a href="https://github.com/LETHAL-FORENSICS/Microsoft-Analyzer-Suite" target="_blank" rel="noopener">Microsoft-Analyzer-Suite</a>
+        (MAS) by LETHAL-FORENSICS. MAS is a set of PowerShell analyzers that read Microsoft-Extractor-Suite
+        exports and produce styled Excel workbooks. This BETA reimplements its detection rules in the browser,
+        adds a live Graph collector so you don't have to extract first, and renders an interactive report
+        instead of Excel.</p>
+      <h2>What it covers</h2>
+      <p>The Core BEC set — EntraSignInLogs, EntraAuditLogs, the Unified Audit Log, RiskyUsers &amp; RiskyDetections,
+        and OAuthPermissions — plus the Inventory set (Users, Devices, Admins) and an MFA-coverage view. The blacklists
+        (ASN, country, user-agent, application, risky permission) are the MAS lists, regenerated from their repo.</p>
+      <h2>What stays import-only</h2>
+      <p>Message Trace, Transport Rules, Mailbox Permissions and Mailbox Audit Status are Exchange-Online-only and
+        can't be reached from a browser. Import an Extractor-Suite export to analyze them (message-trace analysis lands
+        in a later build).</p>
+      <h2>Two ways in</h2>
+      <p><strong>Live scan</strong> pulls the whole tenant window from Graph with read-only delegated permissions.
+        <strong>Import</strong> parses Extractor-Suite CSV/JSON in your browser. Both run the same engine and produce
+        the same report.</p>
+      <p class="optrow"><button class="btn small" id="helpBack">&larr; Back</button></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="fwrap">
+    <span class="mini muted" id="buildStampFoot"></span>
+    <span class="mini muted">Detection rules ported from LETHAL-FORENSICS/Microsoft-Analyzer-Suite (MIT). Not affiliated.</span>
+  </div>
+</footer>
+
+<script src="vendor/msal-browser.min.js"></script>
+<script src="js/authConfig.js?v=1"></script>
+<script src="js/build.js?v=1"></script>
+<script src="js/graph.js?v=1"></script>
+<script src="js/blacklists.js?v=1"></script>
+<script src="js/analyzers.js?v=1"></script>
+<script src="js/collect.js?v=1"></script>
+<script src="js/import.js?v=1"></script>
+<script src="js/demo.js?v=1"></script>
+<script src="js/report.js?v=1"></script>
+<script src="js/app.js?v=1"></script>
+</body>
+</html>

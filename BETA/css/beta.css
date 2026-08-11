@@ -1,0 +1,17 @@
+/* BETA-only additions on top of the shared Triage stylesheet. */
+.beta-badge {
+  display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .08em;
+  background: var(--lemon); color: #12331f; border-radius: 6px; padding: 1px 6px; vertical-align: middle;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.coverage { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+  background: var(--soft); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; color: var(--muted);
+}
+.pill .num { font-weight: 700; color: var(--ink); }
+.ucount { font-weight: 700; font-variant-numeric: tabular-nums; margin-right: 8px; }
+.urow { cursor: pointer; }
+.urow:hover td { background: var(--soft); }
+.urow.sel td { background: var(--soft); box-shadow: inset 3px 0 0 var(--accent2); }
+.dropzone.over { border-color: var(--accent2); background: var(--soft); }
