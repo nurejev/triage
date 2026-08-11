@@ -6,13 +6,21 @@
   let account = null;
   let elevated = false;   // true once the containment (write) scopes are held
 
+  // The BETA lives under /BETA/, but the app registration only has the site
+  // ROOT as a redirect URI - the one the main Triage app uses. Reuse it instead
+  // of registering /BETA/index.html: with popup sign-in the reply page is just
+  // bounced off and closed, so it never has to be the page we started from.
+  // Override with TRIAGE_AUTH.redirectUri if a deployment registers its own.
+  function redirectUri() {
+    return A.redirectUri || (window.location.origin + "/");
+  }
   function app() {
     if (!msalApp) {
       msalApp = new msal.PublicClientApplication({
         auth: {
           clientId: A.clientId,
           authority: A.authority,
-          redirectUri: window.location.origin + window.location.pathname
+          redirectUri: redirectUri()
         },
         cache: { cacheLocation: "sessionStorage" }
       });

@@ -20,8 +20,13 @@ window.TRIAGE_AUTH = {
     "AuditLogsQuery.Read.All"
   ],
   containScopes: [],   // BETA is analysis-only; no write path
+  // Optional: pin the MSAL reply URL if a deployment registers its own. Left
+  // unset, sign-in reuses the site ROOT redirect URI (see js/graph.js), which
+  // is what the app registration already has.
+  redirectUri: null,
   adminConsentUrl: function () {
+    // Consent must also reply to a registered URI - use the site root, not /BETA/.
     return "https://login.microsoftonline.com/organizations/adminconsent?client_id=" +
-      this.clientId + "&redirect_uri=" + encodeURIComponent(window.location.origin + window.location.pathname);
+      this.clientId + "&redirect_uri=" + encodeURIComponent(this.redirectUri || (window.location.origin + "/"));
   }
 };
