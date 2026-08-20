@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 incident response tool. Triage a suspected account compromise or BEC read-only, then walk the first-60-minutes containment runbook on the same account. Runs in your browser or your own Docker host.">
-<link rel="icon" href="assets/favicon.svg?v=12" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=12">
+<link rel="icon" href="assets/favicon.svg?v=13" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css?v=13">
 </head>
 <body>
 <header>
   <div class="hwrap">
     <span id="logoHome" class="logowrap" title="Home">
-      <img class="logo-img only-light" src="assets/logo-mark-light.svg?v=12" alt="TRIAGE">
-      <img class="logo-img only-dark" src="assets/logo-mark-dark.svg?v=12" alt="TRIAGE">
+      <img class="logo-img only-light" src="assets/logo-mark-light.svg?v=13" alt="TRIAGE">
+      <img class="logo-img only-dark" src="assets/logo-mark-dark.svg?v=13" alt="TRIAGE">
     </span>
     <span class="app-tag">Limon-<span class="accent">IT</span> <span class="muted">·</span> TRIAGE</span>
     <span class="mini muted" id="brandHost">triage.limon-it.nl</span>
@@ -50,8 +50,8 @@
          the four trust badges are all still here. -->
     <div class="login-card">
       <span class="logowrap">
-        <img class="logo-big-img only-light" src="assets/logo-mark-light.svg?v=12" alt="TRIAGE">
-        <img class="logo-big-img only-dark" src="assets/logo-mark-dark.svg?v=12" alt="TRIAGE">
+        <img class="logo-big-img only-light" src="assets/logo-mark-light.svg?v=13" alt="TRIAGE">
+        <img class="logo-big-img only-dark" src="assets/logo-mark-dark.svg?v=13" alt="TRIAGE">
       </span>
       <h1>Microsoft 365 Triage</h1>
       <p class="lead">Suspect a hacked mailbox or account? Investigate it right now, from your
@@ -482,6 +482,53 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
     </div>
 
     <div class="card">
+      <h2>Running it in Docker (optional)</h2>
+      <p><strong>You do not need Docker to use this tool.</strong> Triage, containment and the demo all
+        run in your browser from the hosted site (or any static server) - Docker changes nothing about
+        how the analysis works. It exists for teams that want to <strong>self-host</strong> the app,
+        turn the mailbox-containment step into buttons, or run the extraction without installing
+        PowerShell modules. Three images, each independent and optional:</p>
+      <table class="ftable">
+        <thead><tr><th>Container</th><th>What it does</th><th>When you need it</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Web (nginx)</td>
+            <td>Serves the app from your own host instead of GitHub Pages, behind a strict
+                Content-Security-Policy that lets the browser reach <em>only</em> Microsoft Graph and
+                login - so injected script could not send data anywhere else.</td>
+            <td>You want to run the tool on your own infrastructure rather than trust GitHub to serve
+                the code, or you plan to deploy the Exchange backend (traffic to it is proxied through
+                this container).</td>
+          </tr>
+          <tr>
+            <td>Exchange backend</td>
+            <td>Performs the seven mailbox operations a browser cannot - clearing inbox rules,
+                forwarding and delegates - so the containment runbook shows buttons instead of
+                copy-paste PowerShell.</td>
+            <td>Only if you want the mailbox-containment step automated. It is the one component that
+                holds a standing credential (a certificate, never a secret); read
+                <a href="https://github.com/nurejev/triage/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>
+                before deploying it. Skip it and that step falls back to prefilled PowerShell.</td>
+          </tr>
+          <tr>
+            <td>PowerShell companion</td>
+            <td>PowerShell 7 with ExchangeOnlineManagement, Microsoft.Graph and the
+                Microsoft-Extractor-Suite preinstalled, writing evidence to a shared folder.</td>
+            <td>For the <em>Full extraction</em> when you would rather not install the modules on your
+                own machine. Output lands in <code>./evidence</code>; load it back via
+                <em>View extraction output</em>.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="mini muted">Quick start: <code>docker run --rm -p 8080:80 ghcr.io/nurejev/triage:latest</code>,
+        then open <code>http://localhost:8080</code> (a registered redirect URI, so sign-in and consent
+        work as on the hosted site). Or <code>docker compose up -d</code> for the web app, add
+        <code>--profile backend</code> for the Exchange backend, and <code>docker compose run --rm pwsh</code>
+        for the extraction shell. Full deployment steps and the trust model are in the repo's README and
+        SECURITY.md.</p>
+    </div>
+
+    <div class="card">
       <h2>Removing access</h2>
       <p>The tool holds no standing access: tokens expire after about an hour and nothing runs when the tab
         is closed - including any containment permissions, which are dropped with the rest of the session.
@@ -541,19 +588,19 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/config.js?v=12"></script>
-<script src="js/authConfig.js?v=12"></script>
-<script src="js/build.js?v=12"></script>
-<script src="js/graph.js?v=12"></script>
-<script src="js/demo.js?v=12"></script>
-<script src="js/demoblast.js?v=12"></script>
-<script src="js/detections.js?v=12"></script>
-<script src="js/report.js?v=12"></script>
-<script src="js/backend.js?v=12"></script>
-<script src="js/blast.js?v=12"></script>
-<script src="js/templates.js?v=12"></script>
-<script src="js/contain.js?v=12"></script>
-<script src="js/app.js?v=12"></script>
-<script src="js/import.js?v=12"></script>
+<script src="js/config.js?v=13"></script>
+<script src="js/authConfig.js?v=13"></script>
+<script src="js/build.js?v=13"></script>
+<script src="js/graph.js?v=13"></script>
+<script src="js/demo.js?v=13"></script>
+<script src="js/demoblast.js?v=13"></script>
+<script src="js/detections.js?v=13"></script>
+<script src="js/report.js?v=13"></script>
+<script src="js/backend.js?v=13"></script>
+<script src="js/blast.js?v=13"></script>
+<script src="js/templates.js?v=13"></script>
+<script src="js/contain.js?v=13"></script>
+<script src="js/app.js?v=13"></script>
+<script src="js/import.js?v=13"></script>
 </body>
 </html>

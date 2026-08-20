@@ -12,9 +12,15 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 12;
+window.TRIAGE_BUILD = 13;
 window.TRIAGE_BUILD_DATE = "2026-08-20";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 13, date: "2026-08-20", title: "Help: what Docker is for",
+    items: [
+      { kind: "new", tool: "Help", text: "Clear explainer of the three optional Docker containers - the nginx web host with strict CSP, the Exchange containment backend, and the preloaded PowerShell companion - and exactly when each is needed. Docker is never required for triage." },
+    ],
+  },
   {
     build: 12, date: "2026-08-20", title: "Triage gets its own mark, and an obvious way out of the demo",
     items: [
