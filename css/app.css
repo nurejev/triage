@@ -11,6 +11,8 @@
   --surface: #ffffff;
   --bg: #f2f7f3;
   --soft: #eaf3ec;
+  /* the soft top-right wash on the login card - TUNO's token, same value */
+  --glow: #cdeed4;
   --radius: 16px;
   --shadow: 0 10px 30px rgba(18, 51, 31, .10);
   /* severity (status) colors - icon + label always accompany these */
@@ -31,6 +33,7 @@
   --surface: #161d19;
   --bg: #0f1512;
   --soft: #1c2620;
+  --glow: #1e472955;
   --shadow: 0 10px 30px rgba(0, 0, 0, .35);
   --sev-medium: #fab219;
   --sev-low: #3987e5;
@@ -46,6 +49,7 @@
     --surface: #161d19;
     --bg: #0f1512;
     --soft: #1c2620;
+    --glow: #1e472955;
     --shadow: 0 10px 30px rgba(0, 0, 0, .35);
     --sev-medium: #fab219;
     --sev-low: #3987e5;
@@ -175,20 +179,38 @@ h2 { font-size: 16px; margin: 0 0 12px; }
 h3 { font-size: 14px; margin: 0 0 8px; }
 
 /* ---------- login screen ---------- */
-.hero { max-width: 660px; margin: 40px auto 0; text-align: center; }
-.hero .logo-big {
-  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 16px;
-  background: var(--lemon); color: #12331f; font-weight: 800; font-size: 32px;
-  display: flex; align-items: center; justify-content: center;
+/* Same chassis as TUNO's login card: the screen is a centring flex box and the
+   card is a single surface panel with the product mark on top. The one
+   deviation from TUNO's 460px is the max-width below - Triage's card carries a
+   second button and a four-item trust row, and 460 breaks the trust row onto
+   four lines. Everything else (padding, radial highlight, type scale, note
+   sizes) is TUNO's, so the two products read as one family. */
+#screen-login { align-items: center; justify-content: center; min-height: calc(100vh - 160px); }
+#screen-login.active { display: flex; }
+.login-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 48px; max-width: 520px; text-align: center;
+  background-image: radial-gradient(500px 260px at 85% -80px, var(--glow) 0%, transparent 60%);
 }
-.hero h1 { font-size: 28px; }
-.hero p.lead { color: var(--muted); font-size: 15px; }
-.hero .actions { display: flex; gap: 10px; justify-content: center; margin: 22px 0 8px; flex-wrap: wrap; }
+.login-card h1 { font-size: 24px; margin: 18px 0 8px; letter-spacing: -.02em; }
+.login-card p.lead { color: var(--muted); line-height: 1.55; font-size: 14px; margin: 0 0 26px; }
+/* Buttons stack full-width like TUNO's single sign-in button, rather than
+   sitting side by side - a 520px card is too narrow for two pills to breathe. */
+.login-card .actions { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.ms-btn {
+  width: 100%; justify-content: center; padding: 12px; font-size: 14px;
+  display: inline-flex; align-items: center; gap: 9px;
+}
+.login-note { margin-top: 20px; font-size: 12px; color: var(--muted); line-height: 1.5; }
 .trustrow {
-  display: flex; gap: 18px; justify-content: center; flex-wrap: wrap;
-  margin-top: 26px; color: var(--muted); font-size: 12.5px;
+  display: flex; gap: 8px 18px; justify-content: center; flex-wrap: wrap;
+  margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);
+  color: var(--muted); font-size: 12.5px;
 }
 .trustrow span::before { content: "✓ "; color: var(--good); font-weight: 700; }
+/* the mark on the login card, sized as on TUNO */
+.logo-big-img { width: 132px; height: 132px; display: block; margin: 0 auto; }
 
 /* ---------- search screen ---------- */
 .searchbox { position: relative; max-width: 560px; }
@@ -306,7 +328,8 @@ footer { border-top: 1px solid var(--border); background: var(--surface); }
 /* ---------- logo & help ---------- */
 .logowrap { display: inline-flex; cursor: pointer; flex: none; }
 .logo-img { width: 34px; height: 34px; display: block; }
-.logo-big-img { width: 76px; height: 76px; display: block; margin: 0 auto 16px; }
+/* .logo-big-img lives with the login card rules above - it is sized there so the
+   card's proportions are all in one place. */
 .accent { color: var(--accent2); }
 .only-dark { display: none; }
 [data-theme="dark"] .only-light { display: none; }

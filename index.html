@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Limon-IT M365 Triage - free incident response tool for Microsoft 365</title>
 <meta name="description" content="Free browser-based Microsoft 365 incident response tool. Triage a suspected account compromise or BEC read-only, then walk the first-60-minutes containment runbook on the same account. Runs in your browser or your own Docker host.">
-<link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=11">
+<link rel="icon" href="assets/favicon.svg?v=12" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css?v=12">
 </head>
 <body>
 <header>
   <div class="hwrap">
     <span id="logoHome" class="logowrap" title="Home">
-      <img class="logo-img only-light" src="assets/logo-mark-light.svg" alt="Limon-IT">
-      <img class="logo-img only-dark" src="assets/logo-mark-dark.svg" alt="Limon-IT">
+      <img class="logo-img only-light" src="assets/logo-mark-light.svg?v=12" alt="TRIAGE">
+      <img class="logo-img only-dark" src="assets/logo-mark-dark.svg?v=12" alt="TRIAGE">
     </span>
     <span class="app-tag">Limon-<span class="accent">IT</span> <span class="muted">·</span> TRIAGE</span>
     <span class="mini muted" id="brandHost">triage.limon-it.nl</span>
@@ -38,26 +38,33 @@
 <main>
   <!-- ============ LOGIN ============ -->
   <section class="screen active" id="screen-login">
-    <div class="hero">
+    <!-- Login card in the TUNO/ENCA shape: mark, title, one-paragraph blurb,
+         full-width actions, small print, trust row. Nothing was dropped in the
+         restyle - the demo button, the consent/help/security/import links and
+         the four trust badges are all still here. -->
+    <div class="login-card">
       <span class="logowrap">
-        <img class="logo-big-img only-light" src="assets/logo-mark-light.svg" alt="Limon-IT">
-        <img class="logo-big-img only-dark" src="assets/logo-mark-dark.svg" alt="Limon-IT">
+        <img class="logo-big-img only-light" src="assets/logo-mark-light.svg?v=12" alt="TRIAGE">
+        <img class="logo-big-img only-dark" src="assets/logo-mark-dark.svg?v=12" alt="TRIAGE">
       </span>
       <h1>Microsoft 365 Triage</h1>
       <p class="lead">Suspect a hacked mailbox or account? Investigate it right now, from your
         browser. Sign-in history, audit trail, inbox-rule and OAuth abuse - analyzed in seconds -
         and when it is real, walk the first-60-minutes containment runbook on the same account.</p>
       <div class="actions">
-        <button class="btn primary" id="signInBtn">Sign in with Microsoft</button>
-        <button class="btn" id="demoBtn">Try the demo</button>
+        <button class="btn primary ms-btn" id="signInBtn">
+          <svg width="17" height="17" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+          Sign in with Microsoft
+        </button>
+        <button class="btn ms-btn" id="demoBtn">Try the demo</button>
       </div>
-      <p class="mini muted">First time in your tenant? An administrator must
+      <div class="login-note">First time in your tenant? An administrator must
         <a href="#" id="consentLink">grant consent once</a>. Signing in only ever requests
         read-only permissions; the permissions that change something are requested separately,
-        the moment you arm containment.<br>
-        New here? Read the <a href="#" id="helpLink">help &amp; data overview</a> or the
+        the moment you arm containment.</div>
+      <div class="login-note">New here? Read the <a href="#" id="helpLink">help &amp; data overview</a> or the
         <a href="https://github.com/nurejev/triage/blob/main/SECURITY.md" target="_blank" rel="noopener">security model</a>.
-        Already ran a full extraction? <a href="#" id="importOpen">View the output here</a> - no sign-in needed.</p>
+        Already ran a full extraction? <a href="#" id="importOpen">View the output here</a> - no sign-in needed.</div>
       <div class="trustrow">
         <span>Runs entirely in your browser</span>
         <span>Triage is read-only</span>

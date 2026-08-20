@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Limon-IT M365 Analyzer (BETA) - tenant-wide MAS-style triage</title>
 <meta name="description" content="Browser-based, tenant-wide Microsoft 365 / Entra ID log analyzer. A web port of the Microsoft-Analyzer-Suite detection rules: pull live from Graph or import Extractor-Suite output, and read a severity-ranked findings report with a per-account drill-down.">
-<link rel="icon" href="assets/favicon.svg">
-<link rel="stylesheet" href="css/app.css?v=1">
+<link rel="icon" href="assets/favicon.svg?v=12" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css?v=12">
 <link rel="stylesheet" href="css/beta.css?v=1">
 </head>
 <body>
 <header>
   <div class="hwrap">
     <span id="logoHome" class="logowrap" title="Home">
-      <img class="logo-img only-light" src="assets/logo-mark-light.svg" alt="Limon-IT">
-      <img class="logo-img only-dark" src="assets/logo-mark-dark.svg" alt="Limon-IT">
+      <img class="logo-img only-light" src="assets/logo-mark-light.svg?v=12" alt="TRIAGE">
+      <img class="logo-img only-dark" src="assets/logo-mark-dark.svg?v=12" alt="TRIAGE">
     </span>
     <span class="app-tag">Limon-<span class="accent">IT</span> <span class="muted">·</span> ANALYZER <span class="beta-badge">BETA</span></span>
     <span class="mini muted" id="brandHost">triage.limon-it.nl/BETA</span>
@@ -35,10 +35,12 @@
 <main>
   <!-- ============ LOGIN ============ -->
   <section class="screen active" id="screen-login">
-    <div class="hero">
+    <!-- Login card in the TUNO/ENCA shape - see the note in ../index.html.
+         Same restyle here so BETA and production do not drift apart. -->
+    <div class="login-card">
       <span class="logowrap">
-        <img class="logo-big-img only-light" src="assets/logo-mark-light.svg" alt="Limon-IT">
-        <img class="logo-big-img only-dark" src="assets/logo-mark-dark.svg" alt="Limon-IT">
+        <img class="logo-big-img only-light" src="assets/logo-mark-light.svg?v=12" alt="TRIAGE">
+        <img class="logo-big-img only-dark" src="assets/logo-mark-dark.svg?v=12" alt="TRIAGE">
       </span>
       <h1>M365 Analyzer <span class="beta-badge">BETA</span></h1>
       <p class="lead">A tenant-wide log analyzer in the browser — a web port of the
@@ -47,12 +49,15 @@
         OAuth grants and inventory live from Graph, <em>or</em> import Microsoft-Extractor-Suite output —
         then read a severity-ranked report with a per-account drill-down.</p>
       <div class="actions">
-        <button class="btn primary" id="signInBtn">Sign in with Microsoft</button>
-        <button class="btn" id="demoBtn">Try the demo</button>
+        <button class="btn primary ms-btn" id="signInBtn">
+          <svg width="17" height="17" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+          Sign in with Microsoft
+        </button>
+        <button class="btn ms-btn" id="demoBtn">Try the demo</button>
       </div>
-      <p class="mini muted">Read-only, delegated Graph permissions — the same the Triage tool uses.
-        First time in your tenant? An administrator must <a href="#" id="consentLink">grant consent once</a>.<br>
-        This is the BETA. Looking for the per-account incident tool? <a href="#" id="prodLink">Open Triage →</a></p>
+      <div class="login-note">Read-only, delegated Graph permissions — the same the Triage tool uses.
+        First time in your tenant? An administrator must <a href="#" id="consentLink">grant consent once</a>.</div>
+      <div class="login-note">This is the BETA. Looking for the per-account incident tool? <a href="#" id="prodLink">Open Triage →</a></div>
       <div class="trustrow">
         <span>Runs entirely in your browser</span>
         <span>Read-only</span>
