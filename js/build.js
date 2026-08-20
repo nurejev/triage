@@ -12,9 +12,18 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 11;
-window.TRIAGE_BUILD_DATE = "2026-08-11";
+window.TRIAGE_BUILD = 12;
+window.TRIAGE_BUILD_DATE = "2026-08-20";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 12, date: "2026-08-20", title: "Triage gets its own mark, and an obvious way out of the demo",
+    items: [
+      { kind: "new", tool: "Branding", text: "Triage now wears its own product mark - the magnifier with a pulse trace through the lens, the same artwork already used on limon-it.nl - instead of the generic Limon-IT lemon. Favicon, header and login card all updated, light and dark." },
+      { kind: "improved", tool: "Sign in", text: "The login screen moves onto the same card TUNO and ENCA use: the mark on a single surface panel, one blurb, full-width buttons. The demo button, the consent, help, security and import links and the trust badges are all still there." },
+      { kind: "new", tool: "Demo mode", text: "An obvious way back out of the demo. The demo banner gets a Leave demo & sign in button, the header button relabels itself to Exit demo while you are in the simulated tenant, and a DEMO pill sits in the header on every screen - not just the mode chooser - so you can never lose track of which tenant you are looking at." },
+      { kind: "fixed", tool: "Demo mode", text: "Leaving the demo now strips ?demo=1 from the URL, so a refresh no longer drops you straight back into the simulated tenant as if the exit button had not worked." },
+    ],
+  },
   {
     build: 11, date: "2026-08-11", title: "Tabs that keep their place, and the full MFA list in the report",
     items: [

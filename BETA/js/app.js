@@ -86,6 +86,10 @@
     $("whoBox").style.display = ""; $("whoName").textContent = name; $("whoTenant").textContent = tenant || "";
     $("signOutBtn").style.display = ""; $("homeBtn").style.display = "";
     $("demoBanner").style.display = demoMode ? "" : "none";
+    $("demoPill").style.display = demoMode ? "" : "none";
+    // You never signed in to the demo, so "Sign out" reads as a no-op.
+    $("signOutBtn").textContent = demoMode ? "Exit demo" : "Sign out";
+    $("signOutBtn").title = demoMode ? "Leave the simulated tenant and go back to the sign-in screen" : "";
     showScreen("screen-mode");
   }
   $("signInBtn").addEventListener("click", async function () {
@@ -93,11 +97,23 @@
     catch (e) { if (e && /interaction_in_progress|user_cancelled/i.test(String(e.errorCode || e.message))) return; alert("Sign-in failed: " + (e.message || e)); }
   });
   $("demoBtn").addEventListener("click", function () { demoMode = true; afterSignIn("Demo analyst", "contoso-demo.com"); });
-  $("signOutBtn").addEventListener("click", async function () {
-    if (!demoMode) await G.signOut(); demoMode = false;
+  // One way out, shared by the header button and the banner's "Leave demo".
+  async function endSession() {
+    if (!demoMode) await G.signOut();
+    const wasDemo = demoMode; demoMode = false;
     $("whoBox").style.display = "none"; $("signOutBtn").style.display = "none"; $("homeBtn").style.display = "none";
+    $("demoBanner").style.display = "none"; $("demoPill").style.display = "none";
+    $("signOutBtn").textContent = "Sign out"; $("signOutBtn").title = "";
+    // Otherwise ?demo=1 drops you back into the simulated tenant on refresh.
+    if (wasDemo && /[?&]demo=1/.test(location.search)) {
+      const url = new URL(location.href);
+      url.searchParams.delete("demo");
+      history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
     openTabs = []; activeTab = null; showScreen("screen-login");
-  });
+  }
+  $("signOutBtn").addEventListener("click", endSession);
+  $("demoExitBtn").addEventListener("click", endSession);
 
   // ---------- mode choice ----------
   $("modeScanBtn").addEventListener("click", function () { openTool("scan"); });

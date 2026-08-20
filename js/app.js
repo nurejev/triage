@@ -226,6 +226,13 @@
     $("signOutBtn").style.display = "";
     $("homeBtn").style.display = "";
     $("demoBanner").style.display = demoMode ? "" : "none";
+    $("demoPill").style.display = demoMode ? "" : "none";
+    // You never signed in to the demo, so "Sign out" reads as a no-op and people
+    // hunt for a way back to the login screen that is already right there.
+    $("signOutBtn").textContent = demoMode ? "Exit demo" : "Sign out";
+    $("signOutBtn").title = demoMode
+      ? "Leave the simulated tenant and go back to the sign-in screen"
+      : "";
     showScreen("screen-mode");
     maybeShowWhatsNew();
   }
@@ -269,17 +276,34 @@
       alert("Sign-in failed: " + (e.message || e));
     }
   });
-  $("signOutBtn").addEventListener("click", async function () {
+  // One way out, shared by the header button and the banner's "Leave demo".
+  // Leaving the demo and signing out land in the same place - the login screen
+  // with nothing carried over - so they are the same code path.
+  async function endSession() {
     if (!demoMode) await G.signOut();
+    const wasDemo = demoMode;
     demoMode = false;
     $("whoBox").style.display = "none";
     $("signOutBtn").style.display = "none";
     $("homeBtn").style.display = "none";
+    $("demoBanner").style.display = "none";
+    $("demoPill").style.display = "none";
+    $("signOutBtn").textContent = "Sign out";
+    $("signOutBtn").title = "";
+    // Otherwise ?demo=1 puts you straight back in the simulated tenant on the
+    // next refresh, which looks like the exit button did not work.
+    if (wasDemo && /[?&]demo=1/.test(location.search)) {
+      const url = new URL(location.href);
+      url.searchParams.delete("demo");
+      history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
     // Forensic hygiene: a fresh session starts with no tabs from the last one.
     openTabs = []; activeTab = null;
     toolScreen.triage = toolScreen.contain = "screen-search";
     showScreen("screen-login");
-  });
+  }
+  $("signOutBtn").addEventListener("click", endSession);
+  $("demoExitBtn").addEventListener("click", endSession);
   $("demoBtn").addEventListener("click", function () {
     demoMode = true;
     afterSignIn("Demo analyst", "contoso-demo.com");

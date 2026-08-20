@@ -83,6 +83,16 @@ header {
 .app-tag { font-weight: 700; letter-spacing: .02em; }
 .hspacer { margin-left: auto; }
 .hwrap .who { text-align: right; line-height: 1.2; }
+/* Lemon rather than a severity colour on purpose: being in the demo is not a
+   warning, it just needs to be impossible to miss. */
+.demo-pill {
+  flex: none; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  border-radius: 999px; padding: 3px 10px;
+  background: var(--lemon); color: #12331f; border: 1px solid var(--lemon-deep);
+}
+/* the banner keeps its copy on the left and the way out on the right */
+.demo-banner { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.demo-banner .mini { flex: 1 1 320px; }
 
 /* ---------- tool tab bar (ENCA-style) ---------- */
 .toolnav {

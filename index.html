@@ -23,10 +23,16 @@
     <button class="btn small noprint" id="helpBtn">Help</button>
     <button class="btn small noprint" id="whatsNewBtn">What's new</button>
     <button class="btn small noprint" id="themeBtn" title="Theme">🌗</button>
+    <!-- Visible on every screen, not just the mode chooser: once you are three
+         steps into a runbook the banner is long gone, and "am I looking at the
+         fake tenant?" is exactly the question you do not want to guess at. -->
+    <span class="demo-pill noprint" id="demoPill" style="display:none" title="Simulated tenant - nothing here is real">DEMO</span>
     <span class="who mini" id="whoBox" style="display:none">
       <span id="whoName" style="font-weight:600"></span><br>
       <span class="muted" id="whoTenant"></span>
     </span>
+    <!-- Doubles as "leave the demo" - relabelled in afterSignIn(), because
+         "Sign out" is meaningless when you never signed in. -->
     <button class="btn small noprint" id="signOutBtn" style="display:none">Sign out</button>
   </div>
 </header>
@@ -102,10 +108,11 @@
         <span class="mc-go">Contain an account &rarr;</span>
       </button>
     </div>
-    <div class="card" id="demoBanner" style="display:none">
+    <div class="card demo-banner" id="demoBanner" style="display:none">
       <span class="mini">&#127819; <strong>Demo mode.</strong> You are looking at a simulated tenant with a
       staged BEC incident. Try <strong>jan.devries@contoso-demo.com</strong>. Containment runs the
       full runbook against that fake account - no real permissions, nothing changed.</span>
+      <button class="btn small noprint" id="demoExitBtn">Leave demo &amp; sign in &rarr;</button>
     </div>
   </section>
 
@@ -534,19 +541,19 @@ Start-MESTriage                  # quick per-user triage template</code></pre>
 </footer>
 
 <script src="vendor/msal-browser.min.js"></script>
-<script src="js/config.js?v=11"></script>
-<script src="js/authConfig.js?v=11"></script>
-<script src="js/build.js?v=11"></script>
-<script src="js/graph.js?v=11"></script>
-<script src="js/demo.js?v=11"></script>
-<script src="js/demoblast.js?v=11"></script>
-<script src="js/detections.js?v=11"></script>
-<script src="js/report.js?v=11"></script>
-<script src="js/backend.js?v=11"></script>
-<script src="js/blast.js?v=11"></script>
-<script src="js/templates.js?v=11"></script>
-<script src="js/contain.js?v=11"></script>
-<script src="js/app.js?v=11"></script>
-<script src="js/import.js?v=11"></script>
+<script src="js/config.js?v=12"></script>
+<script src="js/authConfig.js?v=12"></script>
+<script src="js/build.js?v=12"></script>
+<script src="js/graph.js?v=12"></script>
+<script src="js/demo.js?v=12"></script>
+<script src="js/demoblast.js?v=12"></script>
+<script src="js/detections.js?v=12"></script>
+<script src="js/report.js?v=12"></script>
+<script src="js/backend.js?v=12"></script>
+<script src="js/blast.js?v=12"></script>
+<script src="js/templates.js?v=12"></script>
+<script src="js/contain.js?v=12"></script>
+<script src="js/app.js?v=12"></script>
+<script src="js/import.js?v=12"></script>
 </body>
 </html>
