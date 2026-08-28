@@ -124,7 +124,11 @@
         displayName: "LimonTriage " + upn + " " + new Date().toISOString(),
         filterStartDateTime: startIso,
         filterEndDateTime: endIso,
-        userPrincipalNames: [upn]
+        // MUST be userPrincipalNameFilters. The API silently ignores unknown
+        // members, so a misnamed property does not error - it returns the whole
+        // tenant's audit log for the window, which then gets rendered under this
+        // one UPN. See auditLogQuery resource type for the exact property names.
+        userPrincipalNameFilters: [upn]
       })
     });
     const id = job.id;

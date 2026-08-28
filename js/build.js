@@ -12,9 +12,18 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 13;
-window.TRIAGE_BUILD_DATE = "2026-08-20";
+window.TRIAGE_BUILD = 14;
+window.TRIAGE_BUILD_DATE = "2026-08-28";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 14, date: "2026-08-28", title: "Audit findings are scoped to the account again",
+    items: [
+      { kind: "fixed", tool: "User triage", text: "The Unified Audit Log query sent userPrincipalNames instead of userPrincipalNameFilters. Graph ignores unknown properties rather than rejecting them, so the query ran unfiltered and returned the whole tenant's audit log for the window - every record then rendered as a finding against whichever account you searched. An account with no sign-ins and no activity of its own could show thousands of audit events and a row of High findings that belonged to an admin." },
+      { kind: "new", tool: "User triage", text: "Audit records whose actor is not the account under investigation are excluded from the findings and reported once, by name, as a data-quality note. If the query ever stops being scoped again the tool says so instead of inventing an incident." },
+      { kind: "improved", tool: "User triage", text: "Consent findings are scored on what was actually consented to. Tenant-wide admin consent drops to Info with a pointer to Entra > Enterprise applications; a user-consented app is rated on the scopes it received, so consent phishing still surfaces as Critical. Service, application and service-principal actors can no longer raise a High on their own." },
+      { kind: "fixed", tool: "User triage", text: "Client IP is read from the top-level clientIp on Graph audit records, not only from inside auditData, so audit findings stop reporting an empty IP list." },
+    ],
+  },
   {
     build: 13, date: "2026-08-20", title: "Help: what Docker is for",
     items: [

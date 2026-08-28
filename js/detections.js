@@ -166,11 +166,128 @@
     };
     const hits = {};
     const downloads = [];
-    (ev.ualRecords || []).forEach(function (r) {
+
+    // ---- Severity context --------------------------------------------------
+    // A bare operation name is not a severity. "Consent to application." is
+    // routine tenant administration when an admin grants it, and a red flag
+    // when a user grants two or more risky scopes to an unknown app. Same for
+    // actor: service-side events cannot be evidence of account compromise.
+
+    // Graph /security/auditLog records return userType as a string enum;
+    // Extractor-Suite imports carry the raw numeric UAL UserType. Accept both.
+    const NON_HUMAN_TYPES = ["system", "application", "serviceprincipal", "custompolicy", "systempolicy"];
+    const NON_HUMAN_CODES = [4, 5, 6, 7, 8];
+
+    // Shared by the consent severity logic below and the OAuth grants section.
+    // One definition of "risky scope" for both, so a scope cannot be Critical
+    // in one part of the report and unremarkable in another.
+    const RISKY_SCOPES = [
+      [/full_access_as_app|EWS\.AccessAsUser/i, "full mailbox access via EWS", "Critical"],
+      [/Mail\.ReadWrite|Mail\.Send/i, "read/write or send mail", "Critical"],
+      [/Mail\.Read(?!Write)|Mail\.ReadBasic/i, "read mail", "High"],
+      [/MailboxSettings\.ReadWrite/i, "modify mailbox settings (rules!)", "High"],
+      [/Directory\.ReadWrite\.All|RoleManagement\.ReadWrite/i, "write to the directory", "Critical"],
+      [/AppRoleAssignment\.ReadWrite\.All|Application\.ReadWrite\.All/i, "manage app permissions (privilege escalation)", "Critical"],
+      [/Files\.ReadWrite\.All|Sites\.ReadWrite\.All|Sites\.FullControl/i, "full file access", "High"],
+      [/User\.ReadWrite\.All/i, "modify all user accounts", "High"]
+    ];
+
+    function userTypeOf(r, ad) {
+      const v = (r.userType !== undefined && r.userType !== null && r.userType !== "")
+        ? r.userType : ad.UserType;
+      return (v === undefined || v === null) ? "" : String(v);
+    }
+    function isNonHuman(r, ad) {
+      const v = userTypeOf(r, ad);
+      if (v === "") return false;
+      if (/^\d+$/.test(v)) return NON_HUMAN_CODES.indexOf(parseInt(v, 10)) >= 0;
+      return NON_HUMAN_TYPES.indexOf(v.toLowerCase()) >= 0;
+    }
+    // ConsentContext.IsAdminConsent and ConsentAction.Permissions live in
+    // ModifiedProperties on Entra records and ExtendedProperties on some
+    // workloads. Check both rather than assuming a shape.
+    function auditProp(ad, name) {
+      const bags = [ad.ModifiedProperties, ad.ExtendedProperties];
+      for (let i = 0; i < bags.length; i++) {
+        const bag = bags[i];
+        if (!Array.isArray(bag)) continue;
+        for (let j = 0; j < bag.length; j++) {
+          if (bag[j] && bag[j].Name === name) {
+            const v = bag[j].NewValue !== undefined ? bag[j].NewValue : bag[j].Value;
+            if (v !== undefined && v !== null) return String(v);
+          }
+        }
+      }
+      return "";
+    }
+    function ualSeverity(op, r, ad) {
+      const base = NOTABLE[op] ? NOTABLE[op][0] : "Info";
+      if (isNonHuman(r, ad)) {
+        return { sev: "Info", why: "non-human actor (userType " + userTypeOf(r, ad) + ")" };
+      }
+      if (op === "Consent to application.") {
+        if (/true/i.test(auditProp(ad, "ConsentContext.IsAdminConsent"))) {
+          return { sev: "Info", why: "tenant-wide admin consent - the grant lives on the service principal, review under Entra > Enterprise applications" };
+        }
+        const scopes = auditProp(ad, "ConsentAction.Permissions");
+        const matched = [];
+        let worstScope = null;
+        RISKY_SCOPES.forEach(function (rs) {
+          if (rs[0].test(scopes)) {
+            matched.push(rs[1]);
+            if (!worstScope || SEV_RANK[rs[2]] < SEV_RANK[worstScope]) worstScope = rs[2];
+          }
+        });
+        if (matched.length) {
+          return { sev: worstScope, why: "user-consented app granted " + matched.join(", ") };
+        }
+        if (scopes) return { sev: "Low", why: "user consent, no risky scopes requested" };
+        return { sev: "Low", why: "user consent, scopes not recorded in the audit entry" };
+      }
+      return { sev: base, why: "" };
+    }
+    const SEV_NAMES = ["Critical", "High", "Medium", "Low", "Info"];
+
+    // ---- Actor guard -------------------------------------------------------
+    // Never attribute a record to this account unless the account is the ACTOR.
+    // The UAL query is server-side filtered, but a filter that silently stops
+    // applying returns tenant-wide data that would otherwise be rendered as
+    // "this account did X". Verify per record rather than trusting the fetch.
+    const subject = String(ev.upn || "").toLowerCase();
+    function actorOf(r) {
+      const ad = r.auditData || {};
+      return String(r.userPrincipalName || ad.UserId || "").toLowerCase();
+    }
+    const allUal = ev.ualRecords || [];
+    const foreign = allUal.filter(function (r) {
+      const a = actorOf(r);
+      return a && subject && a !== subject;
+    });
+    const ualScoped = allUal.filter(function (r) {
+      const a = actorOf(r);
+      return !a || !subject || a === subject;
+    });
+
+    if (foreign.length) {
+      const actors = uniq(foreign.map(actorOf)).slice(0, 5);
+      add("Info", "Data quality",
+        "Audit records excluded: performed by other accounts",
+        foreign.length + " of " + allUal.length + " audit record(s) had a different actor and were NOT " +
+        "attributed to this account. Actor(s): " + actors.join(", ") +
+        (uniq(foreign.map(actorOf)).length > 5 ? " and others" : "") + ".",
+        "",
+        "These are tenant activity, not evidence about this account. If this count is large, the audit " +
+        "query is not being scoped - verify the userPrincipalNameFilters property is set on the query.",
+        "Triage self-check");
+    }
+
+    ualScoped.forEach(function (r) {
       const ad = r.auditData || {};
       const op = r.operation || ad.Operation || "";
       const t = r.createdDateTime || ad.CreationTime || "";
-      const ip = ad.ClientIP || ad.ClientIPAddress || ad.ActorIpAddress || "";
+      // clientIp is a top-level property on Graph auditLogRecord; only the
+      // imported/raw shapes carry it inside auditData. Read both.
+      const ip = r.clientIp || ad.ClientIP || ad.ClientIPAddress || ad.ActorIpAddress || "";
       let extra = "";
       if (Array.isArray(ad.Parameters)) {
         extra = ad.Parameters.filter(function (p) {
@@ -198,19 +315,36 @@
         }
       }
       if (/^(FileDownloaded|FileSyncDownloadedFull)$/.test(op)) { downloads.push(t); return; }
-      if (NOTABLE[op]) (hits[op] = hits[op] || []).push({ t: t, ip: ip, extra: extra });
+      if (NOTABLE[op]) {
+        const s = ualSeverity(op, r, ad);
+        (hits[op] = hits[op] || []).push({ t: t, ip: ip, extra: extra, sev: s.sev, why: s.why });
+      }
     });
     Object.keys(hits).forEach(function (op) {
       const h = hits[op];
       const meta = NOTABLE[op];
+      // The group carries the worst severity any single record earned, not the
+      // operation's nominal severity - otherwise 25 admin consents read High.
+      const worst = SEV_NAMES[Math.min.apply(null, h.map(function (x) { return SEV_RANK[x.sev]; }))];
       const ex = h.slice(0, 3).map(function (x) {
         return (x.t ? x.t.slice(5, 16).replace("T", " ") : "") + " " + (x.extra || "");
       }).join(" | ");
-      add(meta[0], "Audit log", "Audit log: " + op + " (" + h.length + "x)",
-        h.length + " occurrence(s). " + meta[1] + " IPs: " + uniq(h.map(function (x) { return x.ip; })).slice(0, 4).join(", ") +
-        ". Examples: " + ex,
+      const ips = uniq(h.map(function (x) { return x.ip; })).slice(0, 4).join(", ");
+      const downgraded = h.filter(function (x) { return SEV_RANK[x.sev] > SEV_RANK[meta[0]]; });
+      let note = "";
+      if (downgraded.length) {
+        const reasons = uniq(downgraded.map(function (x) { return x.why; })).filter(Boolean);
+        note = " " + downgraded.length + " of " + h.length + " scored below the nominal severity for this " +
+          "operation" + (reasons.length ? ": " + reasons.slice(0, 2).join("; ") : "") + ".";
+      }
+      add(worst, "Audit log", "Audit log: " + op + " (" + h.length + "x)",
+        h.length + " occurrence(s). " + meta[1] +
+        (ips ? " IPs: " + ips + "." : "") + note +
+        " Examples: " + ex,
         h[0].t,
-        "Review each occurrence; correlate the IPs with the sign-in findings.",
+        worst === "Info"
+          ? "No action indicated - retained for the evidence record."
+          : "Review each occurrence; correlate the IPs with the sign-in findings.",
         "Unified Audit Log");
     });
     // mass downloads per hour
@@ -231,16 +365,8 @@
     });
 
     // ================= OAuth grants =================
-    const RISKY_SCOPES = [
-      [/full_access_as_app|EWS\.AccessAsUser/i, "full mailbox access via EWS", "Critical"],
-      [/Mail\.ReadWrite|Mail\.Send/i, "read/write or send mail", "Critical"],
-      [/Mail\.Read(?!Write)|Mail\.ReadBasic/i, "read mail", "High"],
-      [/MailboxSettings\.ReadWrite/i, "modify mailbox settings (rules!)", "High"],
-      [/Directory\.ReadWrite\.All|RoleManagement\.ReadWrite/i, "write to the directory", "Critical"],
-      [/AppRoleAssignment\.ReadWrite\.All|Application\.ReadWrite\.All/i, "manage app permissions (privilege escalation)", "Critical"],
-      [/Files\.ReadWrite\.All|Sites\.ReadWrite\.All|Sites\.FullControl/i, "full file access", "High"],
-      [/User\.ReadWrite\.All/i, "modify all user accounts", "High"]
-    ];
+    // RISKY_SCOPES is defined once in the Unified Audit Log section above and
+    // shared with the consent severity logic there.
     (ev.oauthGrants || []).forEach(function (g) {
       const scope = g.scope || "";
       const matched = [];
