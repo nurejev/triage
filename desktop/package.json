@@ -1,0 +1,9 @@
+{
+  "name": "limon-triage-desktop",
+  "productName": "Triage",
+  "version": "0.34.0",
+  "description": "Limon-IT portable Microsoft 365 triage collector",
+  "main": "main.cjs",
+  "author": "Limon-IT",
+  "license": "UNLICENSED"
+}

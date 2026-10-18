@@ -1,0 +1,632 @@
+<title>Triage Flow Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f2f7f3; --surface: #ffffff; --ink: #12331f; --muted: #5f7a67; --border: #dbe7de;
+    --soft: #eaf3ec; --green: #1e4729; --green-ink: #ffffff; --lemon: #f7d65a; --lemon-ink: #12331f;
+    --red: #b63a39; --red-bg: #fff0ed; --blue: #23638d; --blue-bg: #edf5fc; --amber: #846211; --amber-bg: #fff8dd;
+    --code-bg: #e8f0ea; --shadow: 0 1px 2px rgba(18,51,31,.06), 0 8px 24px rgba(18,51,31,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1512; --surface: #161d19; --ink: #e6f0e8; --muted: #9bb3a3; --border: #2c3e32;
+      --soft: #1c2b21; --green: #b2dbb6; --green-ink: #0f1512; --lemon: #f7d65a; --lemon-ink: #12331f;
+      --red: #ffa19c; --red-bg: #3d2020; --blue: #8fc6e7; --blue-bg: #1a2e3b; --amber: #f7d65a; --amber-bg: #362e16;
+      --code-bg: #1c2b21; --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1512; --surface: #161d19; --ink: #e6f0e8; --muted: #9bb3a3; --border: #2c3e32;
+    --soft: #1c2b21; --green: #b2dbb6; --green-ink: #0f1512; --lemon: #f7d65a; --lemon-ink: #12331f;
+    --red: #ffa19c; --red-bg: #3d2020; --blue: #8fc6e7; --blue-bg: #1a2e3b; --amber: #f7d65a; --amber-bg: #362e16;
+    --code-bg: #1c2b21; --shadow: none;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.55; font-synthesis: none; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-block: 24px 64px; padding-inline: 20px; }
+  h1, h2, h3 { line-height: 1.2; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 700; letter-spacing: -.02em; }
+  h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin-top: 56px; }
+  h3 { font-size: 16px; font-weight: 600; }
+  p { margin: 10px 0 0; max-width: 72ch; }
+  .lede { font-size: 17px; color: var(--muted); max-width: 70ch; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 7px; padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 12px 0 0; }
+  pre code { background: none; padding: 0; }
+  figure { margin: 18px 0 0; }
+  figure svg { max-width: 100%; height: auto; display: block; color: var(--ink); }
+  .scroll { overflow-x: auto; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; max-width: 80ch; }
+  a { color: var(--blue); }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; box-shadow: var(--shadow); }
+
+  /* ---------- proposed header, rendered live ---------- */
+  .hero { margin-top: 22px; }
+  .appbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 12px 16px; }
+  .appbar .chips { margin-left: auto; }
+  .appbar .rail { flex-basis: 100%; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: -.02em; font-size: 18px; white-space: nowrap; }
+  .brand .mark { width: 22px; height: 22px; border-radius: 50%; background: var(--lemon); border: 3px solid var(--green); display: inline-block; }
+  .brand small { font-weight: 400; color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .rail { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; min-width: 0; overflow-x: auto; }
+  .rail li { flex: 1 1 0; min-width: 96px; }
+  .rail a { display: block; text-decoration: none; color: inherit; border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; background: var(--surface); }
+  .rail .n { font-size: 10px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; display: block; }
+  .rail b { font-size: 13px; font-weight: 600; display: block; white-space: nowrap; }
+  .rail .s { font-size: 11px; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail li.done a { border-color: var(--green); }
+  .rail li.done .n::after { content: " ✓"; color: var(--green); }
+  .rail li.now a { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+  .rail li.now .n, .rail li.now .s { color: var(--green-ink); opacity: .85; }
+  .rail li.todo a { opacity: .5; border-style: dashed; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .chip { border: 1px solid var(--border); background: var(--soft); border-radius: 999px; padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+  .chip b { font-weight: 600; }
+  .chip .ok { color: var(--green); font-weight: 700; }
+  .hero-note { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  .hero-note div { font-size: 13px; color: var(--muted); }
+  .hero-note b { color: var(--ink); display: block; font-weight: 600; }
+
+  /* ---------- wireframes ---------- */
+  .screens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+  .screens .wide { grid-column: 1 / -1; }
+  .frame { border-radius: 8px; overflow: hidden; font-size: 12px; }
+  .frame-head { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--soft); }
+  .frame-head .mini-rail { display: flex; gap: 3px; flex: 1; min-width: 0; }
+  .frame-head .mini-rail i { flex: 1; height: 6px; border-radius: 3px; background: var(--border); font-style: normal; }
+  .frame-head .mini-rail i.done { background: var(--green); opacity: .45; }
+  .frame-head .mini-rail i.now { background: var(--green); }
+  .frame-head .who { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .frame-title { padding: 12px 14px 0; }
+  .frame-title .eyebrow { font-size: 10px; }
+  .frame-title h3 { font-size: 17px; margin-top: 2px; }
+  .frame-title p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .frame-body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .btn { display: inline-block; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-weight: 600; font-size: 12px; background: var(--surface); }
+  .btn.primary { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+  .btn.big { display: block; padding: 12px 14px; font-size: 13px; }
+  .btn.ghost { border-color: transparent; color: var(--muted); font-weight: 500; }
+  .btn.disabled { opacity: .45; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row.between { justify-content: space-between; }
+  .field { border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; background: var(--surface); color: var(--muted); font-size: 12px; }
+  .field.on { border-color: var(--green); color: var(--ink); }
+  .field label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .svc { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  .svc b { display: block; }
+  .svc small { color: var(--muted); display: block; }
+  .svc .wait { color: var(--amber); font-weight: 600; }
+  .svc .ok { color: var(--green); font-weight: 600; }
+  .list { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .list div { display: flex; justify-content: space-between; gap: 8px; padding: 5px 9px; border-top: 1px solid var(--border); }
+  .list div:first-child { border-top: 0; }
+  .list .st { color: var(--muted); }
+  .list .st.run { color: var(--blue); font-weight: 600; }
+  .list .st.ok { color: var(--green); }
+  .list .st.warn { color: var(--amber); font-weight: 600; }
+  .bar { height: 8px; background: var(--soft); border-radius: 4px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 58%; background: var(--green); }
+  .note { background: var(--amber-bg); color: var(--amber); border-radius: 6px; padding: 6px 9px; font-size: 11px; }
+  .note.info { background: var(--blue-bg); color: var(--blue); }
+  .note.good { background: var(--soft); color: var(--green); }
+  .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .presets div { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 11px; }
+  .presets div b { display: block; font-size: 12px; }
+  .presets div.on { border-color: var(--green); background: var(--soft); }
+  .presets div.off { opacity: .45; }
+  .tabs { display: flex; gap: 14px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .tabs span { padding: 6px 0; color: var(--muted); }
+  .tabs span.on { color: var(--ink); font-weight: 600; border-bottom: 2px solid var(--green); }
+  .split { display: grid; grid-template-columns: 1.1fr .9fr; gap: 10px; }
+  .drawer { border: 1px solid var(--green); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
+  .sev { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: var(--red-bg); color: var(--red); }
+  .finding { display: flex; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--border); }
+  .finding:first-of-type { border-top: 0; }
+  .finding.sel { background: var(--soft); margin: 0 -8px; padding-inline: 8px; border-radius: 4px; }
+  .phases { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .phases div { border: 1px solid var(--border); border-radius: 5px; padding: 5px 6px; font-size: 10px; line-height: 1.3; }
+  .phases div b { display: block; font-size: 11px; }
+  .phases div.on { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+  .phases div.done { border-color: var(--green); }
+  .card { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  .card b { display: block; }
+  .card small { color: var(--muted); }
+  .check { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
+  .check i { width: 14px; height: 14px; border: 1.5px solid var(--border); border-radius: 3px; display: inline-block; font-style: normal; font-size: 10px; text-align: center; line-height: 12px; }
+  .check i.ok { background: var(--green); border-color: var(--green); color: var(--green-ink); }
+  .phone { max-width: 260px; }
+  .phone .frame-head { flex-direction: column; align-items: stretch; gap: 6px; }
+  .compact { display: flex; justify-content: space-between; border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; background: var(--surface); font-weight: 600; }
+
+  /* ---------- lists, tables ---------- */
+  ol.rules { padding-left: 0; list-style: none; counter-reset: r; margin: 18px 0 0; display: grid; gap: 10px; }
+  ol.rules li { counter-increment: r; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; padding: 12px 14px; }
+  ol.rules li::before { content: counter(r); font-weight: 700; font-size: 18px; color: var(--green); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  ol.rules b { display: block; font-weight: 600; }
+  ol.rules span { color: var(--muted); font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-top: 1px solid var(--border); }
+  th { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-top: 0; }
+  td:first-child { color: var(--muted); }
+  td b { font-weight: 600; }
+  .wp { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px; }
+  .wp div { padding: 12px 14px; }
+  .wp .eyebrow { color: var(--green); }
+  .wp b { display: block; margin-top: 4px; }
+  .wp p { font-size: 13px; color: var(--muted); }
+  .wp em { font-style: normal; font-size: 12px; color: var(--ink); display: block; margin-top: 8px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 22px; height: 0; border-top: 2px solid currentColor; vertical-align: middle; margin-right: 6px; }
+  .legend i.red { border-color: var(--red); border-top-style: dashed; }
+  .legend i.blue { border-color: var(--blue); }
+  .legend i.dash { border-top-style: dashed; }
+
+  @media (max-width: 860px) {
+    .appbar .chips { margin-left: 0; }
+    .chips { justify-content: flex-start; }
+    .hero-note, .presets, .wp { grid-template-columns: 1fr 1fr; }
+    .screens { grid-template-columns: 1fr; }
+    .split { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .hero-note, .presets, .wp { grid-template-columns: 1fr; }
+    .phases { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  a:focus-visible, .rail a:focus-visible { outline: 2px solid var(--lemon); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Limon-IT Triage · BETA 30 · workflow proposal · 16 Sep 2026</div>
+  <h1 style="margin-top:8px">One procedure, seven steps, always visible.</h1>
+  <p class="lede">The beta is a dashboard with a sidebar. An analyst under pressure needs a procedure: where am I, what do I do now, how do I get back, and will I lose what I have. This page shows today's navigation, the sign-in sequence that causes the "app keeps waiting" reports, and the seven-step flow that replaces both — with a wireframe per step.</p>
+
+  <!-- Proposed header, rendered live. Click a step to jump to its wireframe. -->
+  <section class="hero" aria-label="Proposed header">
+    <div class="eyebrow">The proposal itself: the header every screen gets (case at step 5)</div>
+    <div class="panel appbar" style="margin-top:8px">
+      <div class="brand"><span class="mark"></span>triage<small>by Limon-IT</small></div>
+      <ol class="rail" aria-label="Step rail">
+        <li class="done"><a href="#s1"><span class="n">1 Start</span><b>New investigation</b><span class="s">chosen</span></a></li>
+        <li class="done"><a href="#s2"><span class="n">2 Connect</span><b>Signed in</b><span class="s">analyst@contoso.nl</span></a></li>
+        <li class="done"><a href="#s3"><span class="n">3 Scope</span><b>One account</b><span class="s">jan.devries · 7 days · Standard</span></a></li>
+        <li class="done"><a href="#s4"><span class="n">4 Collect</span><b>11 / 12 complete</b><span class="s">1 partial</span></a></li>
+        <li class="now"><a href="#s5" aria-current="step"><span class="n">5 Review</span><b>Findings</b><span class="s">3 of 27 reviewed</span></a></li>
+        <li class="todo"><a href="#s6"><span class="n">6 Respond</span><b>Not started</b><span class="s">0 / 5 phases</span></a></li>
+        <li class="todo"><a href="#s7"><span class="n">7 Hand over</span><b>—</b><span class="s">after Respond</span></a></li>
+      </ol>
+      <div class="chips">
+        <span class="chip"><b>jan.devries@contoso.nl</b> · Contoso · 167 records · Saved 12:04</span>
+        <span class="chip">analyst@contoso.nl · Graph <span class="ok">✓</span> Exchange <span class="ok">✓</span> · Write: not armed</span>
+      </div>
+    </div>
+    <div class="hero-note">
+      <div><b>Where am I</b>The rail highlights the current step and shows each step's status in one line.</div>
+      <div><b>What do I do now</b>Every screen has one primary button — the step's exit — and one Back.</div>
+      <div><b>Will I lose this</b>The case chip shows the save state; Back/reload restore from autosave.</div>
+    </div>
+  </section>
+</div>
+<div class="wrap" style="padding-top:0">
+  <h2 id="today">1 · Today: nine doors, no corridor</h2>
+  <p>The sidebar (<code>desk.js:83-93</code>) shows all nine destinations from the first second; six of them render an empty state until a case exists. The real navigation happens through buttons inside dialogs and cards — and five of those hops land somewhere the person did not expect. Nothing is in the URL, so the browser's Back button leaves the site.</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1120 420" role="img" aria-label="Today's navigation: a sidebar with nine always-visible pages, dialogs beneath them, and red dashed arrows for the hops that disorient: Run opening a sign-in popup, the finding dialog jumping to Evidence or the runbook, runbook buttons that do nothing or go to Findings, a plan dialog that produces a file only an app menu can open, and browser Back leaving the site." style="min-width:760px">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+        <marker id="ar-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--red)"/></marker>
+      </defs>
+      <!-- sidebar bar -->
+      <rect x="26" y="20" width="1068" height="40" rx="6" style="fill:var(--soft);stroke:currentColor;stroke-width:1"/>
+      <text x="40" y="34" font-size="9" letter-spacing="1" fill="currentColor" opacity=".7">SIDEBAR · ALWAYS VISIBLE</text>
+      <g font-size="11" fill="currentColor" text-anchor="middle">
+        <text x="74" y="50">Start</text><text x="290" y="50">Overview</text><text x="398" y="50">Findings</text><text x="506" y="50">Timeline</text><text x="614" y="50">Evidence</text><text x="722" y="50">First 60 minutes</text><text x="830" y="50">Action log</text><text x="938" y="50">Portable collector</text><text x="1046" y="50">Help · coverage</text>
+      </g>
+      <!-- bar to pages -->
+      <g stroke="currentColor" stroke-width="1" opacity=".5">
+        <line x1="74" y1="60" x2="74" y2="100"/><line x1="290" y1="60" x2="290" y2="100"/><line x1="398" y1="60" x2="398" y2="100"/><line x1="506" y1="60" x2="506" y2="100"/><line x1="614" y1="60" x2="614" y2="100"/><line x1="722" y1="60" x2="722" y2="100"/><line x1="830" y1="60" x2="830" y2="100"/><line x1="938" y1="60" x2="938" y2="100"/><line x1="1046" y1="60" x2="1046" y2="100"/>
+      </g>
+      <!-- pages -->
+      <g style="fill:var(--surface);stroke:currentColor;stroke-width:1.2">
+        <rect x="26" y="100" width="96" height="44" rx="5"/><rect x="134" y="100" width="96" height="44" rx="5"/><rect x="242" y="100" width="96" height="44" rx="5"/><rect x="350" y="100" width="96" height="44" rx="5"/><rect x="458" y="100" width="96" height="44" rx="5"/><rect x="566" y="100" width="96" height="44" rx="5"/><rect x="674" y="100" width="96" height="44" rx="5"/><rect x="782" y="100" width="96" height="44" rx="5"/><rect x="890" y="100" width="96" height="44" rx="5"/><rect x="998" y="100" width="96" height="44" rx="5"/>
+      </g>
+      <g font-size="11.5" font-weight="600" fill="currentColor" text-anchor="middle">
+        <text x="74" y="126">Start</text><text x="182" y="126">Quick form</text><text x="290" y="126">Overview</text><text x="398" y="126">Findings</text><text x="506" y="126">Timeline</text><text x="614" y="126">Evidence</text><text x="722" y="126">First 60 min</text><text x="830" y="126">Action log</text><text x="938" y="126">Collector page</text><text x="1046" y="126">Help</text>
+      </g>
+      <!-- Start -> Quick form (only page not in the sidebar) -->
+      <line x1="122" y1="122" x2="132" y2="122" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="128" y="94" font-size="9" fill="currentColor" text-anchor="middle" opacity=".8">"Connect &amp; collect"</text>
+      <!-- dialogs -->
+      <g style="fill:var(--surface);stroke:currentColor;stroke-width:1.2;stroke-dasharray:4 3">
+        <rect x="26" y="220" width="96" height="44" rx="5"/><rect x="350" y="220" width="96" height="44" rx="5"/><rect x="566" y="220" width="96" height="44" rx="5"/><rect x="674" y="220" width="96" height="44" rx="5"/><rect x="890" y="220" width="96" height="44" rx="5"/><rect x="998" y="220" width="96" height="44" rx="5"/>
+      </g>
+      <rect x="134" y="220" width="96" height="44" rx="5" style="fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.2"/>
+      <g font-size="11" fill="currentColor" text-anchor="middle">
+        <text x="74" y="240">New-case</text><text x="74" y="254">panel</text>
+        <text x="182" y="240" style="fill:var(--blue)" font-weight="600">Microsoft</text><text x="182" y="254" style="fill:var(--blue)" font-weight="600">sign-in popup</text>
+        <text x="398" y="240">Finding</text><text x="398" y="254">dialog</text>
+        <text x="614" y="240">Record</text><text x="614" y="254">dialog</text>
+        <text x="722" y="240">Runbook cards</text><text x="722" y="254" font-size="9" opacity=".7">contain.js</text>
+        <text x="938" y="240">Plan dialog</text><text x="938" y="254" font-size="9" opacity=".7">full app form</text>
+        <text x="1046" y="240">Readiness ·</text><text x="1046" y="254">Customer dlgs</text>
+      </g>
+      <!-- intended edges -->
+      <g stroke="currentColor" stroke-width="1.3" marker-end="url(#ar)">
+        <line x1="74" y1="144" x2="74" y2="218"/><line x1="398" y1="144" x2="398" y2="218"/><line x1="614" y1="144" x2="614" y2="218"/><line x1="722" y1="144" x2="722" y2="218"/><line x1="1046" y1="144" x2="1046" y2="218"/>
+      </g>
+      <g font-size="9" fill="currentColor" opacity=".8">
+        <text x="80" y="185">New case</text><text x="404" y="185">click a finding</text><text x="620" y="185">click a record</text><text x="728" y="185">phase 2</text><text x="1052" y="185">top-right button</text>
+      </g>
+      <!-- disorienting edges -->
+      <g style="stroke:var(--red)" stroke-width="1.6" stroke-dasharray="5 4" fill="none" marker-end="url(#ar-red)">
+        <line x1="182" y1="144" x2="182" y2="218"/>
+        <line x1="446" y1="232" x2="566" y2="146"/>
+        <line x1="446" y1="250" x2="672" y2="146"/>
+        <polyline points="722,264 722,300 344,300 344,122 348,122"/>
+        <path d="M770,236 C806,222 806,262 770,248"/>
+        <line x1="938" y1="144" x2="938" y2="218"/>
+        <line x1="938" y1="264" x2="938" y2="338"/>
+              </g>
+      <g font-size="10" style="fill:var(--red)" font-weight="600">
+        <text x="190" y="185">Run → sign-in popup as a side effect</text>
+        <text x="452" y="262">Inspect source → jump</text>
+        <text x="730" y="170">Respond → jump, may throw</text>
+        <text x="530" y="314" text-anchor="middle">"Back to the report" → Findings</text>
+        <text x="736" y="282">"← Other account" → nothing</text>
+        <text x="946" y="185">the whole app form</text>
+        <text x="946" y="306">Save plan → JSON</text>
+              </g>
+      <!-- outside -->
+      <g style="fill:var(--red-bg);stroke:var(--red);stroke-width:1.2">
+        <rect x="26" y="340" width="560" height="44" rx="5" style="stroke-dasharray:5 4"/><rect x="890" y="340" width="204" height="44" rx="5"/>
+      </g>
+      <g font-size="11" style="fill:var(--red)" text-anchor="middle">
+        <text x="306" y="358" font-weight="600">Anywhere: browser Back or reload</text><text x="306" y="373" font-size="10">leaves the site; an unsaved case is lost — no history entries, no autosave (desk.js)</text>
+        <text x="992" y="358" font-weight="600">Plan file → app menu</text><text x="992" y="373" font-size="10">"Open collection plan…" · hidden</text>
+      </g>
+    </svg>
+    </div>
+    <div class="legend"><span><i></i>intended path</span><span><i class="red"></i>hop that disorients (verified in code)</span><span><i class="blue"></i>outside the app</span></div>
+    <figcaption>Every page is one click from every page; the only structure is the sidebar. Not drawn: <em>Start</em> with a case open shows the landing page again, and the top-right button changes meaning per surface (<em>Connect Microsoft 365</em> on the web, <em>Check desktop readiness</em> in the app, <em>Viewer guide</em> in the private viewer, <code>desk.js:251-257</code>).</figcaption>
+  </figure>
+</div>
+<div class="wrap" style="padding-top:0">
+  <h2 id="signin">2 · Sign-in: four browser windows, no screen for them</h2>
+  <p>In the desktop app, delegated sign-in still happens inside PowerShell (<code>collect.ps1:112</code> and <code>:185</code>, <code>response.ps1:13</code>). The browser opens by itself; the app shows one line of status text on the Overview page. The target makes every prompt a row on the <em>Connect</em> screen — button, waiting state with elapsed time, result — and reuses the session for Respond. The msal-node hand-off (WP-41) then removes windows without changing the screen.</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1120 560" role="img" aria-label="Two swim-lane timelines. Today: pressing Run full triage makes the app open the browser for Graph, then again for Exchange, and later again for response checks and a fourth time when arming, each announced only by a status line. Target: on the Connect step each sign-in is a row with a button and a waiting state; Collect needs no prompts; Respond reuses the session; only Arm opens a consent window." style="min-width:760px">
+      <defs>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <!-- TODAY -->
+      <text x="20" y="22" font-size="10" letter-spacing="1.5" font-weight="600" fill="currentColor" opacity=".7">TODAY · DESKTOP 0.30 · ONE CASE</text>
+      <g stroke="currentColor" stroke-width="1" opacity=".25"><line x1="120" y1="70" x2="1100" y2="70"/><line x1="120" y1="130" x2="1100" y2="130"/><line x1="120" y1="190" x2="1100" y2="190"/></g>
+      <g font-size="11" font-weight="600" fill="currentColor"><text x="20" y="74">You</text><text x="20" y="134">Triage app</text><text x="20" y="194">Browser</text><text x="20" y="207" font-size="9" font-weight="400" opacity=".7">Microsoft sign-in</text></g>
+      <!-- you -->
+      <g style="fill:var(--surface);stroke:currentColor;stroke-width:1.2">
+        <rect x="115" y="56" width="120" height="28" rx="4"/><rect x="305" y="56" width="60" height="28" rx="4"/><rect x="473" y="56" width="84" height="28" rx="4"/><rect x="700" y="56" width="130" height="28" rx="4"/><rect x="855" y="56" width="130" height="28" rx="4"/>
+      </g>
+      <g font-size="10.5" fill="currentColor" text-anchor="middle">
+        <text x="175" y="74">Run full triage</text><text x="335" y="74">sign in</text><text x="515" y="74">sign in again</text><text x="765" y="74">Connect account checks</text><text x="920" y="74">first action after Arm</text>
+      </g>
+      <!-- app: status lines -->
+      <g style="fill:var(--surface);stroke:currentColor;stroke-width:1.2">
+        <rect x="115" y="116" width="120" height="28" rx="4"/><rect x="250" y="116" width="170" height="28" rx="4"/><rect x="435" y="116" width="160" height="28" rx="4"/><rect x="610" y="116" width="80" height="28" rx="4"/><rect x="705" y="116" width="120" height="28" rx="4"/><rect x="840" y="116" width="160" height="28" rx="4"/>
+      </g>
+      <g font-size="10" fill="currentColor" text-anchor="middle">
+        <text x="175" y="134">"Checking readiness…"</text><text x="335" y="134">"Connect M365 in your browser…"</text><text x="515" y="134">Graph ✓ · "Connect Exchange…"</text><text x="650" y="134">Collecting…</text><text x="765" y="134">response.ps1 connect</text><text x="920" y="134">response.ps1 write reconnect</text>
+      </g>
+      <!-- browser windows -->
+      <g style="fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.4">
+        <rect x="280" y="176" width="110" height="28" rx="4"/><rect x="460" y="176" width="110" height="28" rx="4"/><rect x="710" y="176" width="110" height="28" rx="4"/><rect x="855" y="176" width="130" height="28" rx="4"/>
+      </g>
+      <g font-size="10.5" font-weight="600" style="fill:var(--blue)" text-anchor="middle">
+        <text x="335" y="194">1 · Graph sign-in</text><text x="515" y="194">2 · Exchange sign-in</text><text x="765" y="194">3 · Graph (response)</text><text x="920" y="194">4 · Graph (write scopes)</text>
+      </g>
+      <!-- arrows app -> browser (opens) and browser -> app (callback) -->
+      <g stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"><line x1="325" y1="144" x2="325" y2="174"/><line x1="505" y1="144" x2="505" y2="174"/><line x1="755" y1="144" x2="755" y2="174"/><line x1="910" y1="144" x2="910" y2="174"/></g>
+      <g stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#ar2)"><line x1="345" y1="176" x2="345" y2="146"/><line x1="525" y1="176" x2="525" y2="146"/><line x1="775" y1="176" x2="775" y2="146"/><line x1="930" y1="176" x2="930" y2="146"/></g>
+      <g stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"><line x1="175" y1="84" x2="175" y2="114"/><line x1="765" y1="84" x2="765" y2="114"/><line x1="920" y1="84" x2="920" y2="114"/></g>
+      <g font-size="9" fill="currentColor" opacity=".8"><text x="320" y="163" text-anchor="end">opens</text><text x="350" y="163">callback</text></g>
+      <text x="120" y="236" font-size="11" font-weight="600" style="fill:var(--red)">Four browser windows per case, each announced only by a status line on the Overview page (main.cjs:371-375) — while the person is looking at the browser.</text>
+
+      <!-- TARGET -->
+      <line x1="20" y1="262" x2="1100" y2="262" stroke="currentColor" stroke-width="1" opacity=".3"/>
+      <text x="20" y="292" font-size="10" letter-spacing="1.5" font-weight="600" fill="currentColor" opacity=".7">TARGET · STEP ② CONNECT OWNS EVERY PROMPT</text>
+      <g stroke="currentColor" stroke-width="1" opacity=".25"><line x1="120" y1="340" x2="1100" y2="340"/><line x1="120" y1="400" x2="1100" y2="400"/><line x1="120" y1="460" x2="1100" y2="460"/></g>
+      <g font-size="11" font-weight="600" fill="currentColor"><text x="20" y="344">You</text><text x="20" y="404">Triage app</text><text x="20" y="464">Browser</text></g>
+      <!-- you -->
+      <g style="fill:var(--surface);stroke:currentColor;stroke-width:1.2">
+        <rect x="135" y="326" width="110" height="28" rx="4"/><rect x="480" y="326" width="160" height="28" rx="4"/><rect x="870" y="326" width="70" height="28" rx="4"/>
+      </g>
+      <g font-size="10.5" fill="currentColor" text-anchor="middle">
+        <text x="190" y="344">Sign in — Graph</text><text x="560" y="344">Sign in — Exchange (optional)</text><text x="905" y="344">Arm</text>
+      </g>
+      <!-- app rows -->
+      <g style="fill:var(--surface);stroke:var(--green);stroke-width:1.4">
+        <rect x="95" y="386" width="190" height="28" rx="4"/><rect x="300" y="386" width="170" height="28" rx="4"/><rect x="505" y="386" width="110" height="28" rx="4"/><rect x="655" y="386" width="130" height="28" rx="4"/><rect x="795" y="386" width="220" height="28" rx="4"/>
+      </g>
+      <g font-size="10" fill="currentColor" text-anchor="middle">
+        <text x="190" y="404">Waiting in your browser · 0:12 · Cancel</text><text x="385" y="404">✓ analyst@contoso.nl · Contoso</text><text x="560" y="404">Waiting… · 0:05</text><text x="720" y="404">④ Collect · no prompts</text><text x="905" y="404">"This opens a Microsoft permissions window"</text>
+      </g>
+      <!-- browser -->
+      <rect x="135" y="446" width="110" height="28" rx="4" style="fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.4"/>
+      <rect x="505" y="446" width="110" height="28" rx="4" style="fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.4;stroke-dasharray:4 3"/>
+      <rect x="830" y="446" width="150" height="28" rx="4" style="fill:var(--blue-bg);stroke:var(--blue);stroke-width:1.4;stroke-dasharray:4 3"/>
+      <g font-size="10.5" font-weight="600" style="fill:var(--blue)" text-anchor="middle">
+        <text x="190" y="464">1 · Graph sign-in</text><text x="560" y="464">2 · Exchange</text><text x="905" y="464">3 · consent · once per tenant</text>
+      </g>
+      <g font-size="9" style="fill:var(--blue)" text-anchor="middle" opacity=".9"><text x="560" y="490">gone after WP-41 (one token cache)</text><text x="905" y="490">then silent</text></g>
+      <g stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"><line x1="190" y1="354" x2="190" y2="384"/><line x1="560" y1="354" x2="560" y2="384"/><line x1="905" y1="354" x2="905" y2="384"/><line x1="180" y1="414" x2="180" y2="444"/><line x1="550" y1="414" x2="550" y2="444"/><line x1="895" y1="414" x2="895" y2="444"/></g>
+      <g stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#ar2)"><line x1="200" y1="446" x2="200" y2="416"/><line x1="570" y1="446" x2="570" y2="416"/><line x1="915" y1="446" x2="915" y2="416"/></g>
+      <line x1="285" y1="400" x2="298" y2="400" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+      <text x="120" y="530" font-size="11" font-weight="600" style="fill:var(--green)">Every prompt is a row the person pressed: button, waiting state, result. Respond reuses the Connect session; Arm is the only step-up, and it says so first.</text>
+    </svg>
+    </div>
+    <figcaption>Today versus target for the desktop app with delegated sign-in. The web has one window today (the MSAL popup) but opens it as a side effect of <em>Run quick check</em> (<code>desk.js:1079</code>); on the web the target is the same Connect screen with a single card.</figcaption>
+  </figure>
+</div>
+<div class="wrap" style="padding-top:0">
+  <h2 id="target">3 · Target: seven steps, one rail</h2>
+  <p>Steps 1–4 are a wizard: one screen each, Back and Next. Steps 5 and 6 are working areas with tabs inside them — the Review views and the five first-hour phases that already exist. Step 7 is a checklist with the exports. Web and app differ only on Connect and Scope; from Collect onward the screens and the case file are identical.</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1120 300" role="img" aria-label="Seven step boxes in a row — Start, Connect, Scope, Collect, Review, Respond, Hand over — grouped as wizard (1–4), workspace (5–6) and checklist (7). Two lanes below, Web and App, show what differs at Connect and Scope and a merged band from Collect onward labelled identical from here on." style="min-width:760px">
+      <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <!-- brackets -->
+      <g stroke="currentColor" stroke-width="1" fill="none" opacity=".6"><polyline points="26,26 26,18 622,18 622,26"/><polyline points="634,26 634,18 926,18 926,26"/><polyline points="938,26 938,18 1078,18 1078,26"/></g>
+      <g font-size="9.5" letter-spacing="1.2" font-weight="600" fill="currentColor" text-anchor="middle" opacity=".8"><text x="324" y="13">WIZARD · ONE SCREEN EACH · BACK / NEXT</text><text x="780" y="13">WORKSPACE · TABS INSIDE</text><text x="1008" y="13">CHECKLIST</text></g>
+      <!-- steps -->
+      <g style="fill:var(--surface);stroke:var(--green);stroke-width:1.6">
+        <rect x="26" y="34" width="140" height="56" rx="6"/><rect x="178" y="34" width="140" height="56" rx="6"/><rect x="330" y="34" width="140" height="56" rx="6"/><rect x="482" y="34" width="140" height="56" rx="6"/><rect x="634" y="34" width="140" height="56" rx="6"/><rect x="786" y="34" width="140" height="56" rx="6"/><rect x="938" y="34" width="140" height="56" rx="6"/>
+      </g>
+      <g font-size="13" font-weight="700" fill="currentColor" text-anchor="middle">
+        <text x="96" y="57">① Start</text><text x="248" y="57">② Connect</text><text x="400" y="57">③ Scope</text><text x="552" y="57">④ Collect</text><text x="704" y="57">⑤ Review</text><text x="856" y="57">⑥ Respond</text><text x="1008" y="57">⑦ Hand over</text>
+      </g>
+      <g font-size="10" fill="currentColor" text-anchor="middle" opacity=".8">
+        <text x="96" y="76">New · Open · Sample</text><text x="248" y="76">Sign in — once</text><text x="400" y="76">Who · window · preset</text><text x="552" y="76">Progress · Stop</text><text x="704" y="76">Findings &amp; evidence</text><text x="856" y="76">Five phases · Arm</text><text x="1008" y="76">Exports · next case</text>
+      </g>
+      <g stroke="currentColor" stroke-width="1.4" marker-end="url(#ar3)"><line x1="166" y1="62" x2="176" y2="62"/><line x1="318" y1="62" x2="328" y2="62"/><line x1="470" y1="62" x2="480" y2="62"/><line x1="622" y1="62" x2="632" y2="62"/><line x1="774" y1="62" x2="784" y2="62"/><line x1="926" y1="62" x2="936" y2="62"/></g>
+      <!-- pills -->
+      <rect x="203" y="98" width="90" height="18" rx="9" style="fill:var(--lemon)"/><text x="248" y="110.5" font-size="10" font-weight="700" text-anchor="middle" style="fill:var(--lemon-ink)">sign-in · once</text>
+      <rect x="806" y="98" width="100" height="18" rx="9" style="fill:var(--lemon)"/><text x="856" y="110.5" font-size="10" font-weight="700" text-anchor="middle" style="fill:var(--lemon-ink)">step-up · Arm only</text>
+      <!-- lanes -->
+      <g font-size="9.5" letter-spacing="1.2" font-weight="600" fill="currentColor" opacity=".7"><text x="26" y="140">WEB · triage.limon-it.nl</text><text x="26" y="222">APP · macOS / Windows</text></g>
+      <g style="fill:var(--soft);stroke:currentColor;stroke-width:1" opacity=".9">
+        <rect x="26" y="146" width="140" height="56" rx="5"/><rect x="178" y="146" width="140" height="56" rx="5"/><rect x="330" y="146" width="140" height="56" rx="5"/>
+        <rect x="26" y="228" width="140" height="56" rx="5"/><rect x="178" y="228" width="140" height="56" rx="5"/><rect x="330" y="228" width="140" height="56" rx="5"/>
+      </g>
+      <rect x="482" y="146" width="596" height="56" rx="5" style="fill:var(--surface);stroke:var(--green);stroke-width:1.2;stroke-dasharray:5 4"/>
+      <rect x="482" y="228" width="596" height="56" rx="5" style="fill:var(--surface);stroke:var(--green);stroke-width:1.2;stroke-dasharray:5 4"/>
+      <g font-size="10.5" fill="currentColor" text-anchor="middle">
+        <text x="96" y="170">same</text><text x="96" y="184" opacity=".7">one "desktop app" link</text>
+        <text x="248" y="170">Microsoft popup</text><text x="248" y="184" opacity=".7">result card, read-only</text>
+        <text x="400" y="170">Graph presets only</text><text x="400" y="184" opacity=".7">desktop hand-off card</text>
+        <text x="780" y="170" font-weight="600">identical from here on</text><text x="780" y="184" opacity=".7">same screens, same drawer, same case file, same handover</text>
+        <text x="96" y="252">+ Continue last case</text><text x="96" y="266" opacity=".7">+ Open a plan</text>
+        <text x="248" y="252">readiness runs itself</text><text x="248" y="266" opacity=".7">Graph + Exchange rows</text>
+        <text x="400" y="252">+ Standard / Everything</text><text x="400" y="266" opacity=".7">evidence folder</text>
+        <text x="780" y="252" font-weight="600">identical from here on</text><text x="780" y="266" opacity=".7">Respond reuses the Connect session · Arm = browser step-up</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>The rail is the same on both surfaces; the tenant is derived from the sign-in or the certificate profile, so the GUID field on the app form (<code>desk.js:459</code>) disappears. The main site already has this skeleton (login → what do you need → who → collecting → report → contain, <code>index.html:46-210</code>).</figcaption>
+  </figure>
+
+  <h3 style="margin-top:28px">Routes</h3>
+  <p>State lives in the URL hash so Back, Forward and reload behave, on the web and in Electron (hash changes do not trigger <code>will-navigate</code>; <code>trusted()</code> in <code>main.cjs:78-85</code> must compare origin + path, not the full frame URL).</p>
+<pre><code>#/start
+#/connect
+#/scope
+#/collect
+#/case/&lt;caseId&gt;/review/overview
+#/case/&lt;caseId&gt;/review/findings?f=&lt;findingId&gt;         ← drawer open; Back closes it
+#/case/&lt;caseId&gt;/review/evidence?s=interactive&amp;r=12    ← source expanded, record in drawer
+#/case/&lt;caseId&gt;/respond/contain
+#/case/&lt;caseId&gt;/handover</code></pre>
+</div>
+<div class="wrap" style="padding-top:0">
+  <h2 id="screens">4 · One screen per step</h2>
+  <p>Wireframes with the real copy. Every frame has the same header (brand, rail, chips), one primary button and one Back. Existing render functions are reused: the coverage rows, the review form with its validation, the phase track, the action log.</p>
+
+  <div class="screens">
+    <!-- ① Start -->
+    <div class="frame panel" id="s1">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="mini-rail"><i class="now"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="who">not signed in</span></div>
+      <div class="frame-title"><div class="eyebrow">Step 1 of 7</div><h3>Start</h3><p>What do you need?</p></div>
+      <div class="frame-body">
+        <span class="btn primary big">New investigation →</span>
+        <span class="btn big">Open a case <small style="font-weight:400;color:var(--muted)"> · a case file, or one saved on this device</small></span>
+        <span class="btn big">Try the sample <small style="font-weight:400;color:var(--muted)"> · fictional tenant, nothing is real</small></span>
+        <div class="card"><b>Continue last case <span class="sev" style="background:var(--soft);color:var(--green)">APP</span></b><small>jan.devries@contoso.nl · Contoso · saved today 12:04</small></div>
+        <span class="btn ghost">Get the desktop app — mailbox rules, forwarding, delegates, message trace</span>
+      </div>
+    </div>
+
+    <!-- ② Connect web -->
+    <div class="frame panel" id="s2">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="mini-rail"><i class="done"></i><i class="now"></i><i></i><i></i><i></i><i></i><i></i></div><span class="who">web</span></div>
+      <div class="frame-title"><div class="eyebrow">Step 2 of 7 · web</div><h3>Connect</h3><p>Sign in with the analyst account that has read access to the tenant.</p></div>
+      <div class="frame-body">
+        <div class="svc"><div><b>Microsoft 365</b><small>A Microsoft window opens. Allow the pop-up if your browser blocks it.</small></div><span class="btn primary">Sign in with Microsoft</span></div>
+        <div class="svc" style="border-color:var(--green)"><div><b class="ok">✓ analyst@contoso.nl</b><small>Contoso · 7d3f…c2a1 · read-only permissions granted · <u>Disconnect</u></small></div><span class="ok">Connected</span></div>
+        <div class="note info">Nothing else on any later screen opens a sign-in window. Arming containment (step 6) asks for write permissions once, and says so first.</div>
+        <div class="row between"><span class="btn ghost">← Back</span><span class="btn primary">Next: choose the scope →</span></div>
+      </div>
+    </div>
+
+    <!-- ② Connect app -->
+    <div class="frame panel">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="mini-rail"><i class="done"></i><i class="now"></i><i></i><i></i><i></i><i></i><i></i></div><span class="who">app · macOS</span></div>
+      <div class="frame-title"><div class="eyebrow">Step 2 of 7 · desktop app</div><h3>Connect</h3><p>Sign in once. Each service is a row; press the button when you are ready.</p></div>
+      <div class="frame-body">
+        <div class="row"><span class="field on"><label>Sign in as</label>Analyst · delegated (passkey) ▾</span><span class="btn ghost">Manage customer profiles…</span></div>
+        <div class="note good">✓ Bundled PowerShell and collection modules ready — checked automatically</div>
+        <div class="svc" style="border-color:var(--green)"><div><b>Microsoft Graph · required</b><small class="ok">✓ analyst@contoso.nl · Contoso · 7d3f…c2a1</small></div><span class="ok">Connected</span></div>
+        <div class="svc"><div><b>Exchange Online · optional</b><small>Needed for mailbox rules, forwarding, delegates, message trace. Choose the same account.</small><small class="wait">Waiting for you in your browser… 0:12</small></div><span class="btn">Cancel</span></div>
+        <div class="note">Microsoft may ask for MFA or consent in the browser. Come back here when it says the window can be closed.</div>
+        <div class="row between"><span class="btn ghost">← Back</span><span class="btn primary">Next: choose the scope →</span></div>
+      </div>
+    </div>
+
+    <!-- ③ Scope -->
+    <div class="frame panel" id="s3">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="mini-rail"><i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i><i></i><i></i></div><span class="who">analyst@contoso.nl · Contoso</span></div>
+      <div class="frame-title"><div class="eyebrow">Step 3 of 7</div><h3>Scope</h3><p>Who, how far back, and how much evidence.</p></div>
+      <div class="frame-body">
+        <div class="row"><span class="btn primary">One account</span><span class="btn">Whole tenant</span><span class="field" style="margin-left:auto"><label>Lookback</label>Last 7 days ▾</span></div>
+        <div class="field on"><label>Affected account</label>jan.dev<span style="opacity:.5">|</span></div>
+        <div class="list" style="margin-top:-4px"><div style="background:var(--soft)"><span>jan.devries@contoso.nl</span><span class="st">Jan de Vries · Sales</span></div><div><span>jan.devos@contoso.nl</span><span class="st">Jan de Vos · Finance</span></div></div>
+        <div class="presets"><div><b>Quick</b>Graph core · ~3 min</div><div class="on"><b>Standard</b>+ mailbox snapshot · app</div><div><b>Everything</b>34 sources · may exceed 1 h · mail content</div><div><b>Custom</b>choose sources</div></div>
+        <div class="card"><b>▸ Where evidence is stored <span class="sev" style="background:var(--soft);color:var(--green)">APP</span></b><small>~/Triage evidence · change</small></div>
+        <div class="note info"><b>Web:</b> instead of Standard/Everything, a card "Continue in the desktop app: 1 Download · 2 Open · 3 Open a plan" with <b>Save plan</b>.</div>
+        <div class="row between"><span class="btn ghost">← Back</span><span class="btn primary">Start collection →</span></div>
+      </div>
+    </div>
+
+    <!-- ④ Collect -->
+    <div class="frame panel" id="s4">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="mini-rail"><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i><i></i></div><span class="who">jan.devries@contoso.nl · 7 days · Standard</span></div>
+      <div class="frame-title"><div class="eyebrow">Step 4 of 7</div><h3>Collecting evidence</h3><p>Keep this window open. Review opens by itself when collection ends.</p></div>
+      <div class="frame-body">
+        <div class="row"><span class="chip">Graph <span class="ok">✓</span></span><span class="chip">Exchange <span class="ok">✓</span></span><span class="chip">PowerShell · this computer</span></div>
+        <div class="bar"><i></i></div>
+        <div class="row between"><span><b>7 / 12</b> sources complete · 58%</span><span class="st run" style="color:var(--blue);font-weight:600">Collecting now · Unified Audit Log · query pending 0:45</span></div>
+        <div class="list">
+          <div><span>Interactive sign-ins</span><span class="st ok">✓ 75 records</span></div>
+          <div><span>Non-interactive sign-ins</span><span class="st ok">✓ 1,204 records</span></div>
+          <div><span>Unified Audit Log</span><span class="st run">↻ collecting</span></div>
+          <div><span>MFA registration</span><span class="st warn">! partial · resume after</span></div>
+          <div><span>Mailbox configuration snapshot</span><span class="st">◷ waiting</span></div>
+          <div><span>Directory role assignments</span><span class="st">◷ waiting</span></div>
+        </div>
+        <div class="row between"><span class="btn">Stop · keep what was collected</span><span class="btn ghost">▸ Collection details (PowerShell output)</span></div>
+      </div>
+    </div>
+
+    <!-- mobile -->
+    <div class="frame panel phone">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="compact"><span>Step 5 of 7 · Review</span><span>▾</span></div></div>
+      <div class="frame-body">
+        <div class="tabs"><span>Overview</span><span class="on">Findings</span><span>Timeline</span><span>Evidence</span></div>
+        <div class="finding"><span class="sev">Critical</span><span><b>Domain federation changed</b></span></div>
+        <div class="finding sel"><span class="sev">High</span><span><b>Authenticated SMTP</b></span></div>
+        <div class="finding"><span class="sev">High</span><span><b>Whole-folder mailbox sync</b></span></div>
+        <div class="note info">On a phone the rail is one line that opens as a sheet; the drawer takes the full screen; Back closes it.</div>
+        <span class="btn primary" style="text-align:center">Respond →</span>
+      </div>
+    </div>
+
+    <!-- ⑤ Review -->
+    <div class="frame panel wide" id="s5">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="mini-rail"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i></div><span class="who">jan.devries@contoso.nl · 167 records · Saved 12:04</span></div>
+      <div class="frame-title"><div class="row between"><div><div class="eyebrow">Step 5 of 7</div><h3>Review</h3><p>27 signals · 3 reviewed · 1 partial source (Unified Audit Log) — <u>resume</u></p></div><span class="btn primary">Respond →</span></div></div>
+      <div class="frame-body">
+        <div class="tabs"><span>Overview</span><span class="on">Findings</span><span>Timeline</span><span>Evidence</span></div>
+        <div class="split">
+          <div>
+            <div class="row"><span class="field" style="flex:1">Search account, finding or detail…</span><span class="field">All severities ▾</span></div>
+            <div class="finding"><span class="sev">Critical</span><span><b>Domain federation changed</b><br><small style="color:var(--muted)">adm.piet · EntraAuditLogs · 07-16 11:05</small></span></div>
+            <div class="finding sel"><span class="sev">High</span><span><b>Authenticated SMTP (legacy auth): 1 successful</b><br><small style="color:var(--muted)">jan.devries · EntraSignInLogs · 07-15 03:40 · investigating</small></span></div>
+            <div class="finding"><span class="sev">High</span><span><b>Whole-folder mailbox sync (MailItemsAccessed)</b><br><small style="color:var(--muted)">jan.devries · UAL · 07-15 03:30</small></span></div>
+            <div class="finding"><span class="sev" style="background:var(--amber-bg);color:var(--amber)">Medium</span><span><b>Sign-in from hosting ASN (AS16276 OVH)</b><br><small style="color:var(--muted)">jan.devries · EntraSignInLogs · 07-15 03:38</small></span></div>
+          </div>
+          <div class="drawer">
+            <div class="row between"><span class="eyebrow" style="color:var(--green)">Finding · drawer</span><span class="btn ghost">✕ Close (Back)</span></div>
+            <b><span class="sev">High</span> Authenticated SMTP (legacy auth): 1 successful</b>
+            <small style="color:var(--muted)">jan.devries@contoso.nl · EntraSignInLogs · 2026-07-15 03:40 UTC · Signal requires analyst review</small>
+            <div class="field on"><label>Review decision</label>investigating ▾</div>
+            <div class="field on"><label>Reason and supporting facts</label>SMTP AUTH from OVH range 30 s after MFA fatigue prompts; user confirms no mail client.</div>
+            <div class="field"><label>Evidence reference</label>interactive:12</div>
+            <div class="card"><b>Supporting evidence · 3 records</b><small>interactive:12 · 03:40 · 51.x.x.x · SMTP · Success<br>interactive:11 · 03:38 · 51.x.x.x · OfficeHome · MFA denied<br>ual:4 · 03:41 · MailItemsAccessed · Sync</small></div>
+            <div class="row between"><span class="btn primary">Save review</span><span class="btn">Contain this account →</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑥ Respond -->
+    <div class="frame panel wide" id="s6">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="mini-rail"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i><i></i></div><span class="who">jan.devries@contoso.nl · Graph ✓ Exchange ✓ · Write: not armed</span></div>
+      <div class="frame-title"><div class="row between"><div><div class="eyebrow">Step 6 of 7 · First 60 minutes</div><h3>Respond</h3><p>Five phases. Every check, decision and action stays with this case.</p></div><span class="btn">Hand over →</span></div></div>
+      <div class="frame-body">
+        <div class="phases"><div class="done"><b>1 · Confirm &amp; preserve</b>00–12 · reviewed</div><div class="on"><b>2 · Contain &amp; record</b>12–24 · now</div><div><b>3 · Establish impact</b>24–36</div><div><b>4 · Preserve &amp; export</b>36–48</div><div><b>5 · Communicate</b>48–60</div></div>
+        <div class="split">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="row"><span class="chip"><b>Affected account</b> jan.devries@contoso.nl · <u>change</u></span></div>
+            <div class="svc" style="border-color:var(--green)"><div><b>Response session</b><small class="ok">✓ reuses your Connect sign-in · analyst@contoso.nl</small></div><span class="ok">Connected</span></div>
+            <div class="svc"><div><b>Arm containment</b><small>This opens a Microsoft permissions window (once per tenant). Actions still confirm one by one.</small></div><span class="btn primary">Arm</span></div>
+            <div class="card"><b>1 · Revoke sign-in sessions <span class="sev" style="background:var(--amber-bg);color:var(--amber)">flagged by triage</span></b><small>Token theft first: invalidates refresh tokens.</small><div class="row" style="margin-top:6px"><span class="btn disabled">Revoke sessions</span><span class="check"><i></i>Deliberately skipped</span></div></div>
+            <div class="card"><b>5 · Mailbox rules, forwarding &amp; delegates</b><small>Snapshot collected 12:01 · 1 enabled forwarding rule → external · 2 full-access delegates</small><div class="row" style="margin-top:6px"><span class="btn">Inspect rule (drawer)</span><span class="btn">Record decision</span></div></div>
+            <div class="row between"><span class="btn ghost">← Phase 1</span><span class="btn primary">Next phase: Establish impact →</span></div>
+          </div>
+          <div class="card"><b>Case action log · UTC</b><small>12:07 analyst · finding-review · Authenticated SMTP: investigating [interactive:12]<br>12:04 analyst · phase-outcome · Confirm &amp; preserve: reviewed [interactive:1]<br>12:02 Desktop collector · source-result · Mailbox snapshot: complete, 14 records</small><div class="row" style="margin-top:8px"><span class="btn">＋ Note or decision</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑦ Hand over -->
+    <div class="frame panel" id="s7">
+      <div class="frame-head"><span class="brand" style="font-size:13px"><span class="mark" style="width:12px;height:12px;border-width:2px"></span>triage</span><div class="mini-rail"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i></div><span class="who">jan.devries@contoso.nl · Saved 12:41</span></div>
+      <div class="frame-title"><div class="eyebrow">Step 7 of 7</div><h3>Hand over</h3><p>What the next owner gets, and what is still open.</p></div>
+      <div class="frame-body">
+        <div class="check"><i class="ok">✓</i><span>27 signals · <b>24 reviewed</b> · 3 unreviewed → <u>review them</u></span></div>
+        <div class="check"><i class="ok">✓</i><span>First 60 minutes · <b>5 / 5</b> phases reviewed</span></div>
+        <div class="check"><i style="border-color:var(--amber);color:var(--amber)">!</i><span>1 partial source · Unified Audit Log query still pending — recorded as a gap</span></div>
+        <div class="list">
+          <div><span><b>Case file</b> · JSON, integrity-checked</span><span class="st ok">✓ saved-cases/a5c9…json</span></div>
+          <div><span><b>Handover</b> · Markdown for the ticket</span><span class="btn">Download</span></div>
+          <div><span><b>Action log</b> · CSV</span><span class="btn">Download</span></div>
+        </div>
+        <div class="row between"><span class="btn ghost">← Respond</span><span class="btn primary">Start next investigation →</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="wrap" style="padding-top:0">
+  <h2 id="rules">5 · The navigation contract</h2>
+  <p>Ten rules every screen obeys. The work package references them by number.</p>
+  <ol class="rules">
+    <li class="panel"><div><b>The rail is on every screen.</b><span>Current step highlighted; future steps disabled with the reason on hover; completed steps navigate back, with a warning when that discards a collection.</span></div></li>
+    <li class="panel"><div><b>One primary button per screen.</b><span>The step's exit. One Back. Everything else is secondary or a text link.</span></div></li>
+    <li class="panel"><div><b>State lives in the URL hash.</b><span>Back, Forward and reload work; reload restores the case from autosave. Electron keeps <code>will-navigate</code> denied; <code>trusted()</code> compares origin + path.</span></div></li>
+    <li class="panel"><div><b>Dialogs never navigate.</b><span>They confirm or collect a short form. No button inside a dialog changes the page under it.</span></div></li>
+    <li class="panel"><div><b>Details open in a drawer.</b><span>A finding, a record, a rule. The drawer is a route (<code>?f=</code>, <code>?r=</code>); closing it is Back; scroll position is kept.</span></div></li>
+    <li class="panel"><div><b>Sign-in happens on Connect only.</b><span>The write step-up happens on Arm only. Both are rows: button, waiting state with elapsed time, result. Never a status line, never a side effect of another button.</span></div></li>
+    <li class="panel"><div><b>Autosave, and say so.</b><span>Every case mutation is written (debounced) to IndexedDB on the web or the evidence folder in the app. The case chip shows <em>Saved 12:04</em> or <em>Unsaved changes</em>; <code>beforeunload</code> warns only when unsaved.</span></div></li>
+    <li class="panel"><div><b>No empty pages.</b><span>A step that cannot be shown yet is disabled, not rendered with an empty state.</span></div></li>
+    <li class="panel"><div><b>One header, both surfaces.</b><span>Brand · rail · case chip · session chip (account · tenant · Graph/Exchange · Write) · theme. The static breadcrumb goes.</span></div></li>
+    <li class="panel"><div><b>Web and app differ on Connect and Scope only.</b><span>How you sign in and which evidence exists. From Collect on, the screens and the case file are identical.</span></div></li>
+  </ol>
+
+  <h2 id="names">6 · One name per thing</h2>
+  <table>
+    <thead><tr><th>Today (all found in desk.js / first-hour.js / contain.js)</th><th>Target</th></tr></thead>
+    <tbody>
+      <tr><td>Quick web check · Quick web triage · Run quick check · Connect &amp; collect · Full app triage · Run full triage · Collect · full triage</td><td><b>Start collection</b> — the button on Scope; the difference is the evidence preset</td></tr>
+      <tr><td>Portable collector · Open collector · Prepare a collection plan · Prepare a desktop collection</td><td><b>Desktop app</b> — a card on Scope (web) and one line on Start</td></tr>
+      <tr><td>Connect Microsoft 365 · Check desktop readiness · Connect account checks</td><td><b>Sign in</b> on Connect; readiness runs itself; Respond reuses the session</td></tr>
+      <tr><td>First 60 minutes (nav) · Continue the runbook · Response &amp; first-hour checks · Respond</td><td><b>Respond</b> — step 6; <em>First 60 minutes</em> stays as its title</td></tr>
+      <tr><td>Open evidence · Choose evidence · Open a collected case · Open saved case</td><td><b>Open a case</b> — on Start; always the list, also with one saved case</td></tr>
+      <tr><td>Inspect evidence · All sources · Inspect supporting source</td><td><b>Evidence</b> — a Review tab, and a section inside the finding drawer</td></tr>
+      <tr><td>How it works · Guide · Help · coverage</td><td><b>Help</b> — one link in the header; the coverage contract lives inside it</td></tr>
+      <tr><td>Export case · Save on this device · Save to evidence folder · Export handover ↗ · Handover report</td><td><b>Save</b> is automatic (the chip shows it); <b>Case file</b>, <b>Handover</b>, <b>Action log</b> are the three exports on Hand over</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="wp">7 · Work package, in one glance</h2>
+  <p>Details, files and acceptance per item are in <code>review/2026-09-16/WORK-PACKAGE-WORKFLOW.md</code>. The frame comes first because every later screen assumes it.</p>
+  <div class="wp">
+    <div class="panel"><div class="eyebrow">Phase A · 2½ days</div><b>The frame</b><p>Hash router and history (rule 3), step rail (rule 1), Start, Connect (web card; app rows with <code>connect()</code> split from <code>collect()</code>), Scope with the account picker and presets, the single-purpose Collect screen.</p><em>WP-A1 … WP-A6</em></div>
+    <div class="panel"><div class="eyebrow">Phase B · 1½ days</div><b>Review and Respond</b><p>Review tabs and the finding drawer with evidence inside it (rules 4–5); Respond entered from Review, embedded runbook without the main-site header, one handover; Hand over checklist.</p><em>WP-B1 … WP-B3</em></div>
+    <div class="panel"><div class="eyebrow">Phase C · 1 day</div><b>Never lose work</b><p>Autosave and the save state (rule 7); header chips (rule 9); tests for Back closing a drawer, reload restoring a case, disabled steps.</p><em>WP-C1 … WP-C3</em></div>
+    <div class="panel"><div class="eyebrow">Phase D · ½ day</div><b>Words</b><p>Naming sweep (section 6), the user guide rewritten around the seven steps, the three stale guides retired, in-app Help.</p><em>WP-D1 … WP-D2 · WP-40/41 unchanged</em></div>
+  </div>
+  <p style="margin-top:28px;font-size:13px;color:var(--muted)">Sources read: <code>BETA/index.html</code>, <code>BETA/js/desk.js</code>, <code>desk-model.js</code>, <code>first-hour.js</code>, <code>coverage.js</code>, <code>graph.js</code>, <code>collect.js</code>, <code>evidence.js</code>, <code>desktop/main.cjs</code>, <code>desktop/collector/collect.ps1</code>, <code>response.ps1</code>, <code>index.html</code> and <code>js/contain.js</code> (main site), <code>BETA/docs/*.md</code>, <code>test-results/*.png</code> — working tree of 16 Sep 2026, BETA 30 / desktop 0.30.0.</p>
+</div>

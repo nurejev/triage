@@ -1,0 +1,48 @@
+{
+  "powershell": {
+    "darwin-arm64": {
+      "version": "7.6.2",
+      "file": "powershell-7.6.2-osx-arm64.tar.gz",
+      "url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.2/powershell-7.6.2-osx-arm64.tar.gz",
+      "sha256": "4b10e8a8e3dba067cf68c09bd92ee137ccac00b7c05ed31a0ae136309ef107b6"
+    },
+    "win32-x64": {
+      "version": "7.6.2",
+      "file": "PowerShell-7.6.2-win-x64.zip",
+      "url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.2/PowerShell-7.6.2-win-x64.zip",
+      "sha256": "32e0dd26752483ba3f0e40e9ae44150643cbff469c13210c93295d158bfd7b26"
+    }
+  },
+  "modules": {
+    "Microsoft.Graph.Authentication": {
+      "version": "2.37.0",
+      "file": "Microsoft.Graph.Authentication.2.37.0.zip",
+      "url": "https://www.powershellgallery.com/api/v2/package/Microsoft.Graph.Authentication/2.37.0",
+      "sha256": "1633b8f96de0492ff694d89c0d7c41248ff2474245c66bbd78993ee81dc340ae"
+    },
+    "ExchangeOnlineManagement": {
+      "version": "3.10.0",
+      "file": "ExchangeOnlineManagement.3.10.0.zip",
+      "url": "https://www.powershellgallery.com/api/v2/package/ExchangeOnlineManagement/3.10.0",
+      "sha256": "a5e729bfc1edd8139a8a751f2d9413fb03f6f8b4794a4ea48b9f0d9c9b042797"
+    },
+    "PowerShellGet": {
+      "version": "2.2.5",
+      "file": "PowerShellGet.2.2.5.zip",
+      "url": "https://www.powershellgallery.com/api/v2/package/PowerShellGet/2.2.5",
+      "sha256": "6b8cebf2a464eaeb31b0a6d627355c30d9d1899dba0ce3bdd0d4e7afca148673"
+    },
+    "PackageManagement": {
+      "version": "1.4.8.1",
+      "file": "PackageManagement.1.4.8.1.zip",
+      "url": "https://www.powershellgallery.com/api/v2/package/PackageManagement/1.4.8.1",
+      "sha256": "7e1f8a75b6bc8a83d8abff79f6690fc1dfbd534fd3e5733d97e19bcb5954c13e"
+    },
+    "Az.Accounts": {
+      "version": "5.3.3",
+      "file": "Az.Accounts.5.3.3.zip",
+      "url": "https://www.powershellgallery.com/api/v2/package/Az.Accounts/5.3.3",
+      "sha256": "44c624a3cb87c7b1a2c0a29e7d6491d31c1f27349de8cd986d3d68be98c7e8e9"
+    }
+  }
+}

@@ -13,13 +13,20 @@ window.TRIAGE_AUTH = {
     "User.Read.All",
     "AuditLog.Read.All",
     "Directory.Read.All",
-    "Policy.Read.All",
+    "RoleManagement.Read.Directory",
     "IdentityRiskyUser.Read.All",
     "IdentityRiskEvent.Read.All",
     "UserAuthenticationMethod.Read.All",
     "AuditLogsQuery.Read.All"
   ],
-  containScopes: [],   // BETA is analysis-only; no write path
+  // Containment (write) scopes — requested only when the analyst arms the Respond runbook, never at sign-in.
+  containScopes: [
+    "User.RevokeSessions.All",
+    "User.ReadWrite.All",
+    "User-PasswordProfile.ReadWrite.All",
+    "UserAuthenticationMethod.ReadWrite.All",
+    "DelegatedPermissionGrant.ReadWrite.All",
+  ],
   // Optional: pin the MSAL reply URL if a deployment registers its own. Left
   // unset, sign-in reuses the site ROOT redirect URI (see js/graph.js), which
   // is what the app registration already has.

@@ -1,3 +1,14 @@
+> **Beta 24 local candidate (2026-09-16):** full selectable portable collection, constrained browser quick triage, connected first-hour response and explicit coverage contract. Start with [the test checklist](review/2026-09-16/BETA-24-TEST-CHECKLIST.md) and [coverage limits](BETA/docs/COVERAGE.md). No Docker is required. Live tenant and Windows acceptance remain pending.
+
+# Current beta: portable collection without Docker
+
+**Beta 23 / desktop 0.23.0:** analyzers tuned for real tenants (no more High on home ISPs or first-party apps), session-replay and PIM/service-principal coverage, one saved file per case, parallel Graph/Exchange collection and a new app icon. Beta 22 added customer certificate profiles, the registration setup wizard and connection-stage timeout diagnostics. See [customer connections and testing](BETA/docs/CUSTOMER-CONNECTIONS.md). Local builds are not automatically published.
+
+Run `npm run web` and open **http://localhost:8080/BETA/**. Run `npm run desktop:start` to open the native development app. The website and portable collector require no Docker container or collection backend.
+
+Beta 9 fixes the Mac bundle signature and puts **Save & start new case** in the centre of the quick-triage workspace. See [the beta guide](BETA/README.md) for exact commands, first-launch details and build instructions, and [validation](BETA/docs/VALIDATION.md) for evidence and limits. The sections below retain the earlier production application's reference documentation; its Docker instructions do not apply to the current beta.
+
+
 # Limon-IT M365 Triage (browser edition)
 
 Free, browser-based incident response triage for Microsoft 365 - by
@@ -66,7 +77,7 @@ the tenant, actions route through a single `gwrite()` helper, and the whole
 elevation is dropped on sign-out or refresh along with the rest of the session.
 Deploy read-only with `create-appreg.ps1 -ReadOnly` if you never want the option.
 
-## Run it in Docker
+## Legacy production Docker reference (not used by the current beta)
 
 You need a container runtime first. On macOS, either
 [Docker Desktop](https://www.docker.com/products/docker-desktop/)
@@ -202,7 +213,7 @@ workflow prints the build number it ships.
 | User.Read.All | UPN search & user profile |
 | AuditLog.Read.All | sign-in logs, directory audits |
 | Directory.Read.All | resolve apps/roles |
-| Policy.Read.All | Conditional Access context |
+| Policy.Read.All | Conditional Access context (main site only; the beta requests RoleManagement.Read.Directory for PIM eligibility instead) |
 | IdentityRiskyUser.Read.All / IdentityRiskEvent.Read.All | Identity Protection |
 | UserAuthenticationMethod.Read.All | registered MFA methods |
 | AuditLogsQuery.Read.All | Unified Audit Log (async query API) |

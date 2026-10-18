@@ -1,0 +1,65 @@
+name: release
+# Builds the portable desktop apps on a version tag and attaches them to a GitHub Release.
+# Release assets may be up to 2 GB each and are not subject to repository/Pages/LFS size limits.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: darwin-arm64
+            script: desktop:package:mac
+            archive: Triage-macOS-arm64.zip
+          - os: windows-latest
+            target: win32-x64
+            script: desktop:package:win
+            archive: Triage-Windows-x64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - run: python3 desktop/scripts/prepare-runtime.py ${{ matrix.target }}
+      - run: npm run ${{ matrix.script }}
+      - name: Hash
+        shell: bash
+        run: |
+          cd BETA/downloads
+          if command -v shasum >/dev/null; then shasum -a 256 "${{ matrix.archive }}" > "${{ matrix.archive }}.sha256"; else sha256sum "${{ matrix.archive }}" > "${{ matrix.archive }}.sha256"; fi
+          cat "${{ matrix.archive }}.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            BETA/downloads/${{ matrix.archive }}
+            BETA/downloads/${{ matrix.archive }}.sha256
+          if-no-files-found: error
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: SHA256SUMS
+        run: |
+          cd dist && cat *.sha256 > SHA256SUMS.txt && rm *.sha256 && cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

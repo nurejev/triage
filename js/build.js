@@ -12,9 +12,161 @@
 //        "fixed"    - something was wrong and now is not
 // Newest release first.
 // ======================================================================
-window.TRIAGE_BUILD = 14;
-window.TRIAGE_BUILD_DATE = "2026-08-28";
+window.TRIAGE_BUILD = 38;
+window.TRIAGE_BUILD_DATE = "2026-09-17";
 window.TRIAGE_CHANGELOG = [
+  {
+    build: 38, date: "2026-09-17", title: "Runbook can live inside the beta",
+    items: [
+      { kind: "improved", tool: "Containment", text: "The first-hour runbook can be embedded in the beta's Respond step without its own header (opts.embedded). No visible change on this site; cache-busters refreshed so browsers fetch the updated contain.js." },
+    ],
+  },
+  {
+    build: 37, date: "2026-09-16", title: "Stop scanning and reuse response sessions",
+    items: [
+      { kind: "fixed", tool: "Response", text: "Stop queued blast-radius checks and discard late results while retaining completed evidence." },
+    ],
+  },
+  {
+    build: 36, date: "2026-09-16", title: "Unified first-hour workspace support",
+    items: [
+      { kind: "improved", tool: "Response", text: "Phase workspace adapter retains existing response safeguards and distinguishes offline evidence from connected checks." },
+      { kind: "fixed", tool: "Communication", text: "Downloading a communication template records a draft without marking communication complete." },
+    ],
+  },
+  {
+    build: 35, date: "2026-09-16", title: "Shared response case context",
+    items: [
+      { kind: "fixed", tool: "Response", text: "Retain canonical account identity in subject views and expose response log events to the Beta workspace." },
+    ],
+  },
+  {
+    build: 34, date: "2026-09-15", title: "Customer certificate connections",
+    items: [
+      { kind: "new", tool: "Portable collector", text: "Existing customer certificate profiles and a reviewed app-registration setup wizard." },
+      { kind: "improved", tool: "Connections", text: "Preserve connection errors and identify authentication versus account-verification waits." },
+    ],
+  },
+  {
+    build: 33, date: "2026-09-15", title: "Restore full Exchange sign-in chooser",
+    items: [
+      { kind: "fixed", tool: "Triage desktop", text: "Leave Exchange username unset so the full Microsoft sign-in chooser remains available for passkey users; verify the operator after sign-in." },
+    ],
+  },
+  {
+    build: 32, date: "2026-09-15", title: "Connect Microsoft 365 before collection",
+    items: [
+      { kind: "improved", tool: "Triage desktop", text: "Connect required Graph and Exchange sessions at the start and reuse the operator account for Exchange." },
+    ],
+  },
+  {
+    build: 31, date: "2026-09-15", title: "Show the active collection and analysis engine",
+    items: [
+      { kind: "improved", tool: "Execution", text: "Clearly label PowerShell collection, browser JavaScript checks and local JavaScript analysis; retain the collection method with saved cases." },
+    ],
+  },
+  {
+    build: 30, date: "2026-09-15", title: "Keep global OAuth consent out of user findings",
+    items: [
+      { kind: "fixed", tool: "OAuth", text: "Only grants linked to the selected account contribute user OAuth findings; tenant-wide consent remains available as evidence and in tenant reviews." },
+    ],
+  },
+  {
+    build: 29, date: "2026-09-15", title: "Visible finding review validation",
+    items: [
+      { kind: "fixed", tool: "Reviews", text: "Show missing reasons and invalid evidence references inside the shared review dialog, preserve drafts, and keep modal errors visible." },
+    ],
+  },
+  {
+    build: 28, date: "2026-09-15", title: "macOS download first-launch note",
+    items: [
+      { kind: "improved", tool: "Downloads", text: "Added per-app quarantine guidance and the Triage xattr command beside the portable download." },
+    ],
+  },
+  {
+    build: 27, date: "2026-09-15", title: "Fix directory roles and MFA registration collection",
+    items: [
+      { kind: "fixed", tool: "Collection", text: "Directory roles use one supported expansion; single-user MFA registration uses its dedicated endpoint in web and portable checks." },
+    ],
+  },
+  {
+    build: 26, date: "2026-09-15", title: "Shared portable and web collection screens",
+    items: [
+      { kind: "improved", tool: "Collector", text: "Portable collection now opens the shared live overview with clickable evidence, source progress and expandable collection output." },
+    ],
+  },
+  {
+    build: 25, date: "2026-09-15", title: "Clear collection coverage and progress",
+    items: [
+      { kind: "improved", tool: "Evidence", text: "Show selected-source progress, distinct collection states and readable record counts. Keep active and incomplete sources visible." },
+    ],
+  },
+  {
+    build: 24, date: "2026-09-15", title: "System theme and automatic switching",
+    items: [
+      { kind: "new", tool: "Theme", text: "Choose System, Light or Dark. System follows operating-system appearance changes while preserving form drafts." },
+    ],
+  },
+  {
+    build: 23, date: "2026-09-15", title: "Clickable evidence and OAuth collection",
+    items: [
+      { kind: "fixed", tool: "Evidence", text: "Open source records directly from the complete row, including source errors and empty-state explanations." },
+      { kind: "fixed", tool: "OAuth collection", text: "Collect user and tenant-wide delegated grants with separate equality queries and retained paging checkpoints." },
+    ],
+  },
+  {
+    build: 22, date: "2026-09-15", title: "Quick check account and run action",
+    items: [
+      { kind: "improved", tool: "Quick web check", text: "Autofill the connected username and place Run quick check beside it, preserving manually entered targets." },
+    ],
+  },
+  {
+    build: 21, date: "2026-09-15", title: "Beta 9 local launch and case workflow corrections",
+    items: [
+      { kind: "fixed", tool: "Beta", text: "Serve locally without Docker, repair Mac signing and make the next-case action prominent." },
+    ],
+  },
+  {
+    build: 20, date: "2026-09-15", title: "Triage beta 8 shared evidence support",
+    items: [
+      { kind: "improved", tool: "Evidence", text: "Normalize native role-assignment snapshots while retaining the original source records." },
+    ],
+  },
+  {
+    build: 19, date: "2026-09-15", title: "Beta 7 — one investigation workspace",
+    items: [
+      { kind: "improved", tool: "Beta workspace", text: "Consistent user and tenant navigation, findings layout and shared first-60-minutes guidance." },
+    ],
+  },
+  {
+    build: 18, date: "2026-09-15", title: "Phase 1 and 2: case integrity and shared investigation workspace",
+    items: [
+      { kind: "fixed", tool: "Evidence", text: "Explicit coverage, strict subject imports and session-bound response identity." },
+      { kind: "improved", tool: "Containment", text: "Scoped Exchange authorization, durable intent records and honest verification states." },
+      { kind: "new", tool: "Beta workspace", text: "Shared cases, tenant-to-user handoff, device-save controls and shorter navigation." },
+    ],
+  },
+  {
+    build: 17, date: "2026-09-15", title: "Quick-user response in the new beta layout",
+    items: [
+      { kind: "new", tool: "Beta", text: "Quick-user checks and the full containment runbook now use the new sidebar layout; full tenant triage has its own workspace." },
+      { kind: "improved", tool: "Beta", text: "Matched ENCA Beta theme colors and added separate user guides plus an Azure hosting assessment." },
+    ],
+  },
+  {
+    build: 16, date: "2026-09-15", title: "Beta collection progress and user guide",
+    items: [
+      { kind: "improved", tool: "Beta", text: "Active collection has a distinct spinner, highlighted row and current-source message." },
+      { kind: "new", tool: "Beta", text: "End-user walkthrough for collecting, reviewing and saving cases, with a downloadable guide." },
+    ],
+  },
+  {
+    build: 15, date: "2026-09-15", title: "Beta evidence workspace and safer Docker packaging",
+    items: [
+      { kind: "new", tool: "Beta", text: "Investigation workspace, resumable evidence collection, verified bundles and optional read-only Exchange collector. Open /BETA/ for the preview." },
+      { kind: "fixed", tool: "Docker", text: "Only approved site assets enter the web image; credentials, audit data and review files are excluded." },
+    ],
+  },
   {
     build: 14, date: "2026-08-28", title: "Audit findings are scoped to the account again",
     items: [

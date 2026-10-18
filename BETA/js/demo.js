@@ -16,7 +16,7 @@
       status: { errorCode: err || 0 }, location: { city: city, countryOrRegion: cc },
       autonomousSystemNumber: opts.asn || 8455, userType: "Member",
       deviceDetail: { deviceId: opts.devId || "", operatingSystem: "Windows 11", isCompliant: opts.compliant },
-      authenticationProtocol: opts.proto || "", userAgent: opts.ua || "" }, {});
+      authenticationProtocol: opts.proto || "", userAgent: opts.ua || "", sessionId: opts.session || "", isInteractive: opts.interactive !== false }, {});
   }
 
   function evidence() {
@@ -31,10 +31,10 @@
 
     // --- jan.devries: AiTM takeover ---
     // OfficeHome sign-ins with no device (AiTM fingerprint) from Nigeria
-    for (let i = 0; i < 6; i++) ev.signIns.push(si(V, "2026-07-15T03:0" + i + ":00Z", "154.16.10.88", "Nigeria", "Lagos", 0, { app: "OfficeHome", appId: "4765445b-32c6-49b0-83e6-1d93765276ca", asn: 328543 }));
+    for (let i = 0; i < 6; i++) ev.signIns.push(si(V, "2026-07-15T03:0" + i + ":00Z", "154.16.10.88", "Nigeria", "Lagos", 0, { app: "OfficeHome", appId: "4765445b-32c6-49b0-83e6-1d93765276ca", asn: 328543, session: "9c1f4e2a-aitm-relay-session" }));
     // Two successful sign-ins from different IPs 12s apart (AiTM relay)
-    ev.signIns.push(si(V, "2026-07-15T03:10:00Z", "84.83.10.25", "Netherlands", "Utrecht", 0, {}));
-    ev.signIns.push(si(V, "2026-07-15T03:10:12Z", "154.16.10.88", "Nigeria", "Lagos", 0, { asn: 328543 }));
+    ev.signIns.push(si(V, "2026-07-15T03:10:00Z", "84.83.10.25", "Netherlands", "Utrecht", 0, { session: "9c1f4e2a-aitm-relay-session" }));
+    ev.signIns.push(si(V, "2026-07-15T03:10:12Z", "154.16.10.88", "Nigeria", "Lagos", 0, { asn: 328543, session: "9c1f4e2a-aitm-relay-session" }));
     // Legacy SMTP exfil
     ev.signIns.push(si(V, "2026-07-15T03:40:00Z", "154.16.10.88", "Nigeria", "Lagos", 0, { client: "Authenticated SMTP", asn: 328543 }));
 

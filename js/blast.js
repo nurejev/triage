@@ -34,7 +34,7 @@
     // non-interactive and service-principal ones need the beta event filter.
     let filter = "userPrincipalName eq " + q(c.target.userPrincipalName) +
       " and createdDateTime ge " + iso(c.days);
-    if (nonInteractive) filter += " and (signInEventTypes/any(t: t eq 'nonInteractiveUser'))";
+    filter += " and signInEventTypes/any(t:t eq '"+(nonInteractive?"nonInteractiveUser":"interactiveUser")+"')";
     const rows = await G.gall(A.graphBase + "/auditLogs/signIns?$top=500&$filter=" +
       encodeURIComponent(filter), 12);
     return (cache[key] = rows);
@@ -43,7 +43,7 @@
     if (cache.audits) return cache.audits;
     if (c.demo) return (cache.audits = window.TriageDemoBlast.audits());
     // Reuse what triage already pulled when it covers the same window.
-    if (c.evidence && (c.evidence.directoryAudits || []).length && c.evidence.days >= c.days)
+    if (window.TriageCase?.sourceReady(c.evidence,'audits',c.days))
       return (cache.audits = c.evidence.directoryAudits);
     const rows = await G.gall(A.graphV1 + "/auditLogs/directoryAudits?$top=500&$filter=" +
       encodeURIComponent("activityDateTime ge " + iso(c.days) +
@@ -53,16 +53,18 @@
   // Unified Audit Log. Expensive (async Microsoft query, minutes), so it is
   // shared by the three checks that need it and never run implicitly.
   function ualAvailable(c) {
-    return !!(c.demo || cache.ual || (c.evidence && (c.evidence.ualRecords || []).length));
+    return !!(c.demo || (cache.ual && cache.ualDays >= c.days) || window.TriageCase?.sourceReady(c.evidence,'ual',c.days));
   }
   function ualRecords(c) {
-    if (cache.ual) return cache.ual;
+    if (!ualAvailable(c)) throw Error('UAL not collected completely for the requested window. Load the evidence before running this check.');
+    if (cache.ual && cache.ualDays >= c.days) return cache.ual;
     if (c.demo) return (cache.ual = window.TriageDemoBlast.ual());
     return (c.evidence && c.evidence.ualRecords) || [];
   }
   async function loadUal(c, onStatus) {
     if (c.demo) { cache.ual = window.TriageDemoBlast.ual(); return cache.ual; }
     const recs = await G.ualQuery(c.target.userPrincipalName, iso(c.days), new Date().toISOString(), onStatus);
+    cache.ualDays = c.days;
     cache.ual = recs.map(function (r) {
       return { createdDateTime: r.createdDateTime, operation: r.operation,
         userPrincipalName: r.userPrincipalName, auditData: r.auditData || {} };
@@ -78,9 +80,9 @@
     if (c.mailbox) return (cache.mb = c.mailbox);
     const B = window.TriageBackend;
     if (!B || !B.available()) throw new Error("Needs the Exchange backend, or check it in Exchange Online PowerShell.");
-    const [r, f] = await Promise.all([
-      B.rulesList(c.target.userPrincipalName), B.forwardingGet(c.target.userPrincipalName)]);
-    return (cache.mb = { rules: r.rules || [], forwarding: f });
+    const snapshot=await B.mailboxSnapshot(c.target.userPrincipalName);
+    if(!Array.isArray(snapshot.rules) || !snapshot.forwarding)throw Error('Invalid mailbox snapshot response');
+    return (cache.mb=snapshot);
   }
 
   // ------------------------------------------------------------- the checks --
@@ -122,9 +124,9 @@
       }
     },
     {
-      n: 2, key: "signin-noninteractive", title: "Sign-in logs (non-interactive / SP)", mode: "graph", evid: ["signin"],
-      where: "Entra > Sign-in logs > Non-interactive, Service principal",
-      what: "Tokens used by apps the user consented to; service principal activity tied to the user.",
+      n: 2, key: "signin-noninteractive", title: "Sign-in logs (non-interactive user)", mode: "graph", evid: ["signin"],
+      where: "Entra > Sign-in logs > Non-interactive",
+      what: "Tokens used by apps the user consented to; workload/service-principal sign-ins are outside this check.",
       run: async function (c) {
         const rows = await signIns(c, true);
         const apps = {};

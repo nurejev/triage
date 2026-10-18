@@ -1,0 +1,19 @@
+{
+  "errors": [],
+  "mainDemoFindings": 15,
+  "betaDemoFindings": 38,
+  "afterExit": {
+    "screen": "screen-login",
+    "retainedTarget": {
+      "userPrincipalName": "jan.devries@contoso-demo.com",
+      "displayName": "Jan Devries",
+      "id": "demo-jan.devries"
+    },
+    "reportSubject": "jan.devries@contoso-demo.com",
+    "retainedEvidenceRows": 15
+  },
+  "mobile": {
+    "viewport": 390,
+    "documentWidth": 549
+  }
+}

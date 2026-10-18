@@ -1,0 +1,25 @@
+const fs=require('fs');const path=require('path');
+const {chromium}=require('/Users/mihaimonte/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+(async()=>{
+ const browser=await chromium.launch({headless:true,executablePath:'/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'});
+ const page=await browser.newPage({viewport:{width:1440,height:1050},colorScheme:'light'});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/*',route=>/^http:\/\/127\.0\.0\.1:8765\//.test(route.request().url())?route.continue():route.abort());
+ await page.goto('http://127.0.0.1:8765/?demo=1');
+ if(await page.locator('#newModal.open').count())await page.locator('#newClose').click();
+ await page.screenshot({path:path.join(__dirname,'current-home.png'),fullPage:true});
+ await page.locator('#modeTriageBtn').click();await page.locator('#upnInput').fill('jan.devries@contoso-demo.com');await page.locator('#startBtn').waitFor();
+ await page.waitForFunction(()=>!document.getElementById('startBtn').disabled);await page.locator('#startBtn').click();
+ await page.locator('#screen-report.active').waitFor();await page.screenshot({path:path.join(__dirname,'current-report.png'),fullPage:true});
+ const findings=await page.locator('#frows .frow').count();
+ await page.locator('#containFromReportBtn').click();await page.screenshot({path:path.join(__dirname,'current-containment.png'),fullPage:true});
+ await page.locator('#signOutBtn').click();
+ const afterExit=await page.evaluate(()=>({screen:document.querySelector('.screen.active').id,retainedTarget:window.TriageContain.target,reportSubject:document.getElementById('repUpn').textContent,retainedEvidenceRows:document.querySelectorAll('#frows .frow').length}));
+ await page.goto('http://127.0.0.1:8765/BETA/?demo=1');await page.locator('#modeScanBtn').click();await page.locator('#startScanBtn').click();await page.locator('#screen-report.active').waitFor();
+ await page.screenshot({path:path.join(__dirname,'current-beta.png'),fullPage:true});
+ const betaFindings=await page.locator('#betaFrows .frow').count();
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(__dirname,'current-beta-mobile.png'),fullPage:true});
+ const mobile=await page.evaluate(()=>({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth}));
+ const result={errors,mainDemoFindings:findings,betaDemoFindings:betaFindings,afterExit,mobile};fs.writeFileSync(path.join(__dirname,'browser-results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
+ await browser.close();
+})().catch(e=>{console.error(e);process.exitCode=1});

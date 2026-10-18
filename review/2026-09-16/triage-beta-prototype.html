@@ -1,0 +1,2869 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"></head>
+<body>
+<title>Triage Beta Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;750&display=swap">
+<style>
+/* ===== BETA 30 desk.css, verbatim ===== */
+:root {
+  --bg: #f2f7f3;
+  --surface: #fff;
+  --ink: #12331f;
+  --muted: #5f7a67;
+  --border: #dbe7de;
+  --soft: #eaf3ec;
+  --green: #1e4729;
+  --lemon: #f7d65a;
+  --red: #b63a39;
+  --red-bg: #fff0ed;
+  --amber: #846211;
+  --amber-bg: #fff8dd;
+  --blue: #23638d;
+  --blue-bg: #edf5fc;
+  --neutral: #647079;
+  --neutral-bg: #f0f2f4;
+  --radius: 7px;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  font-synthesis: none;
+}
+[data-theme="dark"] {
+  --bg: #0f1512;
+  --surface: #161d19;
+  --ink: #e6f0e8;
+  --muted: #9bb3a3;
+  --border: #2c3e32;
+  --soft: #1c2b21;
+  --green: #b2dbb6;
+  --red: #ffa19c;
+  --red-bg: #3d2020;
+  --amber: #f7d65a;
+  --amber-bg: #362e16;
+  --blue: #8fc6e7;
+  --blue-bg: #1a2e3b;
+  --neutral: #a9b4bd;
+  --neutral-bg: #252c30;
+}
+* {
+  box-sizing: border-box;
+}
+.collection-details > summary {
+  padding: 18px 22px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.collection-details > summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 12px;
+}
+.collection-details .command {
+  margin: 0 22px 22px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 5px;
+  padding: 9px 13px;
+  font-weight: 550;
+}
+button:hover {
+  border-color: var(--muted);
+  background: var(--soft);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+a {
+  color: var(--green);
+  text-underline-offset: 3px;
+}
+button.primary,
+.primary {
+  background: var(--green);
+  color: var(--surface);
+  border: 1px solid var(--green);
+}
+[data-theme="dark"] button.primary {
+  background: var(--lemon);
+  border-color: var(--lemon);
+  color: #12331f;
+}
+button.lemon {
+  background: var(--lemon);
+  color: #12331f;
+  border-color: var(--lemon);
+}
+button.text-button {
+  border: 0;
+  background: none;
+  padding: 3px 0;
+  color: var(--muted);
+  text-align: left;
+  font-size: 12px;
+}
+.shell {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  min-height: 100vh;
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 26px 17px;
+}
+.brand {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  text-decoration: none;
+  margin-bottom: 43px;
+}
+.brand img {
+  width: 39px;
+  height: 39px;
+}
+.brand > span {
+  font-weight: 750;
+  letter-spacing: -1px;
+  font-size: 25px;
+  line-height: 1;
+}
+.brand small {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  margin-top: 7px;
+}
+.beta {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 8px;
+  letter-spacing: 0.7px;
+  margin: 0 0 18px auto;
+  padding: 3px 5px;
+  background: var(--lemon);
+  color: #12331f;
+  border-radius: 3px;
+}
+.only-dark {
+  display: none;
+}
+[data-theme="dark"] .only-dark {
+  display: block;
+}
+[data-theme="dark"] .only-light {
+  display: none;
+}
+.side-label {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  margin: 0 11px 12px;
+  font-weight: 650;
+}
+nav {
+  display: grid;
+  gap: 5px;
+}
+nav button {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  background: none;
+  border: 1px solid transparent;
+  text-align: left;
+  font-size: 13px;
+  padding: 11px 12px;
+  color: var(--muted);
+}
+nav button[aria-current="page"] {
+  background: var(--soft);
+  border-color: var(--border);
+  color: var(--green);
+}
+nav .nav-icon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 400;
+}
+nav .count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+}
+nav hr {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 15px 0;
+}
+.side-bottom {
+  margin-top: auto;
+  padding: 30px 10px 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.side-bottom p {
+  line-height: 1.7;
+}
+.side-bottom button {
+  display: block;
+  margin-top: 12px;
+}
+.local-dot:before {
+  content: "";
+  display: inline-block;
+  background: #639954;
+  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+}
+.workspace {
+  min-width: 0;
+}
+.topbar {
+  padding: 17px 34px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 72px;
+}
+.breadcrumb {
+  font-size: 11px;
+  color: var(--muted);
+}
+.breadcrumb span {
+  margin: 0 12px;
+  color: #a8b7ac;
+}
+.top-actions,
+.row-actions {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.top-actions button {
+  font-size: 11px;
+}
+.theme-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.theme-control select {
+  width: auto;
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 11px;
+  margin: 0;
+}
+.badge {
+  display: inline-block;
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge.complete,
+.badge.verified,
+.badge.benign {
+  color: var(--green);
+  background: var(--soft);
+}
+.badge.High,
+.badge.Critical,
+.badge.failed {
+  color: var(--red);
+  background: var(--red-bg);
+  border-color: transparent;
+}
+.badge.Medium,
+.badge.partial,
+.badge.unavailable,
+.badge.pending {
+  color: var(--amber);
+  background: var(--amber-bg);
+  border-color: transparent;
+}
+.badge.running,
+.badge.imported,
+.badge.Low {
+  color: var(--blue);
+  background: var(--blue-bg);
+  border-color: transparent;
+}
+.casebar {
+  padding: 11px 34px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  align-items: center;
+}
+.casebar strong {
+  margin-right: 10px;
+}
+.casebar .row-actions button {
+  font-size: 10px;
+  padding: 4px 8px;
+}
+main {
+  padding: 33px 34px 44px;
+  max-width: 1580px;
+  margin: auto;
+  min-height: calc(100vh - 176px);
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+h1 {
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  margin-bottom: 9px;
+  font-weight: 650;
+}
+h2 {
+  font-size: 16px;
+  letter-spacing: -0.25px;
+  margin-bottom: 5px;
+}
+h3 {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.7px;
+  color: var(--muted);
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+.subtitle {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+  max-width: 710px;
+  margin-bottom: 0;
+}
+.page-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 27px;
+}
+.page-head .row-actions {
+  justify-content: flex-end;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 1fr);
+  gap: 19px;
+}
+.grid-even {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 19px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 17px;
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+  overflow: hidden;
+}
+.panel-body {
+  padding: 23px;
+}
+.panel-head {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.panel-head p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+.panel-head h2 {
+  font-size: 14px;
+}
+.panel-foot {
+  padding: 13px 22px;
+  background: var(--soft);
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+.hero-card {
+  padding: 25px;
+  position: relative;
+}
+.hero-card p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+  min-height: 64px;
+}
+.hero-card .path-number {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 30px;
+  display: block;
+}
+.hero-card h2 {
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.hero-card.primary-path {
+  border-top: 3px solid var(--green);
+  padding-top: 23px;
+}
+.hero-card .path-icon {
+  float: right;
+  font-size: 28px;
+  color: var(--green);
+}
+.hero-card ul {
+  font-size: 12px;
+  color: var(--muted);
+  padding-left: 16px;
+  line-height: 2;
+  margin: 20px 0 28px;
+}
+.hero-card button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+}
+.welcome-strip {
+  margin: 23px 0 30px;
+  padding: 20px 23px;
+  background: var(--green);
+  color: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 19px;
+  border-radius: 7px;
+}
+[data-theme="dark"] .welcome-strip {
+  background: #1e4729;
+  color: #e6f0e8;
+}
+.welcome-strip p {
+  font-size: 12px;
+  opacity: 0.8;
+  margin: 3px 0 0;
+}
+.welcome-strip .big-symbol {
+  font-size: 27px;
+  color: var(--lemon);
+}
+.welcome-strip button {
+  margin-left: auto;
+}
+.section-gap {
+  margin-top: 22px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 23px;
+}
+.stat {
+  padding: 18px 21px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+.stat-label {
+  font-size: 10px;
+  color: var(--muted);
+}
+.stat strong {
+  display: block;
+  font-size: 30px;
+  font-weight: 550;
+  letter-spacing: -1px;
+  margin: 5px 0 0;
+}
+.stat small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.stat.attention strong {
+  color: var(--red);
+}
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+label.field {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 15px;
+}
+.quick-account-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.quick-account-row label.field {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.quick-account-row button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+.execution-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 13px 15px;
+  margin: 16px 0;
+  --execution-ink: var(--neutral);
+  --execution-bg: var(--neutral-bg);
+}
+.execution-card[data-engine="powershell"] {
+  --execution-ink: var(--blue);
+  --execution-bg: var(--blue-bg);
+}
+.execution-card[data-engine="browser-js"],
+.execution-card[data-engine="analysis-js"] {
+  --execution-ink: var(--amber);
+  --execution-bg: var(--amber-bg);
+}
+.execution-symbol {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  background: var(--execution-bg);
+  color: var(--execution-ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+.execution-copy strong {
+  display: block;
+  font-size: 13px;
+}
+.execution-copy p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.execution-stage {
+  background: var(--execution-bg);
+  color: var(--execution-ink);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 650;
+}
+#execution-status {
+  padding: 12px 34px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  z-index: 4;
+}
+#execution-status[hidden] {
+  display: none;
+}
+#execution-status[data-active="true"] {
+  position: sticky;
+  top: 0;
+}
+#execution-status .execution-card {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+@media (max-width: 760px) {
+  #execution-status {
+    padding: 12px 18px;
+  }
+  .execution-card {
+    gap: 9px;
+  }
+  .execution-stage {
+    align-self: start;
+  }
+}
+.account-hint {
+  margin-top: -5px;
+  margin-bottom: 20px;
+}
+@media (max-width: 480px) {
+  .quick-account-row {
+    grid-template-columns: 1fr;
+  }
+}
+input,
+select,
+textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 10px 11px;
+  outline: none;
+}
+textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--lemon);
+  outline-offset: 2px;
+  border-color: var(--green);
+}
+label.check {
+  display: flex;
+  gap: 10px;
+  align-items: start;
+  font-size: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+label.check input {
+  width: 15px;
+  accent-color: var(--green);
+  margin-top: 4px;
+}
+label.check span {
+  flex: 1;
+}
+label.check small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.form-note,
+.muted {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.notice {
+  padding: 13px 16px;
+  border-left: 3px solid var(--lemon);
+  background: var(--amber-bg);
+  color: var(--amber);
+  font-size: 12px;
+  border-radius: 3px;
+  margin: 16px 0;
+}
+.notice.error {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-bg);
+}
+.source-row {
+  scroll-margin-top: 16px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto 14px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  align-items: center;
+  gap: 11px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.source-group:last-child > .source-row {
+  border-bottom: 0;
+}
+.source-row:hover,
+.source-row[aria-expanded="true"] {
+  background: var(--soft);
+}
+.source-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.source-label strong {
+  font-weight: 650;
+  font-size: 12px;
+}
+.source-state-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--neutral);
+  background: var(--neutral-bg);
+  font-size: 16px;
+  font-weight: 700;
+}
+.source-result {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+.source-status {
+  color: var(--neutral);
+  background: var(--neutral-bg);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.source-row[data-state="complete"] .source-state-icon,
+.source-row[data-state="complete"] .source-status {
+  color: var(--green);
+  background: var(--soft);
+}
+.source-row[data-state="running"] {
+  background: var(--blue-bg);
+  box-shadow: inset 3px 0 var(--blue);
+}
+.source-row[data-state="running"] .source-status {
+  color: var(--blue);
+  background: var(--surface);
+}
+.readiness-checking {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.readiness-checking::before {
+  content: "";
+  flex: 0 0 22px;
+  height: 22px;
+  box-sizing: border-box;
+}
+.source-row[data-state="running"] .source-state-icon,
+.readiness-checking::before {
+  width: 22px;
+  height: 22px;
+  margin: 3px;
+  background: transparent;
+  border: 2px solid var(--border);
+  border-top-color: var(--blue);
+  border-right-color: var(--blue);
+  animation: collection-spin 1s linear infinite;
+}
+.readiness-checking::before { border-radius: 50%; }
+.source-row:is([data-state="failed"], [data-state="unavailable"]) {
+  box-shadow: inset 3px 0 var(--red);
+}
+.source-row:is([data-state="failed"], [data-state="unavailable"])
+  .source-state-icon,
+.source-row:is([data-state="failed"], [data-state="unavailable"])
+  .source-status {
+  color: var(--red);
+  background: var(--red-bg);
+  border-color: transparent;
+}
+.source-row:is(
+    [data-state="partial"],
+    [data-state="cancelled"],
+    [data-state="interrupted"]
+  )
+  .source-state-icon,
+.source-row:is(
+    [data-state="partial"],
+    [data-state="cancelled"],
+    [data-state="interrupted"]
+  )
+  .source-status {
+  color: var(--amber);
+  background: var(--amber-bg);
+}
+.source-row[data-state="imported"] .source-state-icon,
+.source-row[data-state="imported"] .source-status {
+  color: var(--blue);
+  background: var(--blue-bg);
+}
+@keyframes collection-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .source-row[data-state="running"] .source-state-icon,
+  .readiness-checking::before {
+    animation: none;
+  }
+}
+.coverage-summary {
+  padding: 19px 20px 17px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.collection-coverage .panel-head .text-button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.coverage-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.coverage-eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+.coverage-heading p {
+  margin: 3px 0 12px;
+  font-size: 12px;
+}
+.coverage-heading strong {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+}
+.coverage-percent {
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--green);
+}
+.coverage-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+.coverage-meter span {
+  display: block;
+  height: 100%;
+  background: var(--green);
+}
+.coverage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+}
+.coverage-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--neutral);
+  font-size: 10px;
+  font-weight: 600;
+}
+.coverage-key i {
+  font-style: normal;
+  font-size: 13px;
+}
+.coverage-key[data-state="complete"] {
+  color: var(--green);
+}
+.coverage-key:is([data-state="running"], [data-state="imported"]) {
+  color: var(--blue);
+}
+.coverage-key:is([data-state="failed"], [data-state="unavailable"]) {
+  color: var(--red);
+}
+.coverage-key:is(
+  [data-state="partial"],
+  [data-state="cancelled"],
+  [data-state="interrupted"]
+) {
+  color: var(--amber);
+}
+.coverage-current {
+  color: var(--blue);
+  background: var(--blue-bg);
+  border-radius: 4px;
+  margin: 13px 0 0;
+  padding: 9px 11px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.coverage-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 20px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.coverage-footer span {
+  display: block;
+  margin-top: 3px;
+}
+.source-arrow {
+  font-size: 19px;
+  width: 18px;
+  text-align: center;
+  color: var(--green);
+}
+.source-details {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+}
+.source-detail-head {
+  margin-bottom: 15px;
+}
+.source-detail-head h3 {
+  margin: 0 0 6px;
+}
+.source-metadata {
+  margin: 12px 0;
+  font-size: 11px;
+}
+.source-metadata summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.source-record-list .finding {
+  padding-left: 0;
+  padding-right: 0;
+}
+.source-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.source-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+.finding {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 13px;
+  padding: 16px 21px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
+  align-items: start;
+  font-weight: 400;
+}
+.finding:last-child {
+  border-bottom: 0;
+}
+.finding strong {
+  font-size: 12px;
+  display: block;
+  font-weight: 600;
+}
+.finding small {
+  font-size: 10px;
+  color: var(--muted);
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.finding .arrow {
+  color: var(--muted);
+}
+.empty {
+  padding: 45px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.empty .empty-icon {
+  font-size: 34px;
+  margin-bottom: 15px;
+  color: var(--green);
+}
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.filter-bar input {
+  flex: 1;
+  min-width: 150px;
+}
+.filter-bar select {
+  width: auto;
+  max-width: 200px;
+  font-size: 12px;
+}
+.timeline-row,
+.log-row {
+  display: grid;
+  grid-template-columns: 136px 1fr;
+  gap: 18px;
+  border-bottom: 1px solid var(--border);
+  padding: 15px 21px;
+  font-size: 12px;
+}
+.timeline-row time,
+.log-row time {
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.timeline-row strong,
+.log-row strong {
+  display: block;
+  font-size: 12px;
+}
+.timeline-row small,
+.log-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 4px;
+}
+.phase-track {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  margin-bottom: 25px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.phase-track button {
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  text-align: left;
+  padding: 16px 13px;
+  background: var(--surface);
+  font-size: 11px;
+}
+.phase-track button:last-child {
+  border: 0;
+}
+.phase-track button[aria-current="step"] {
+  background: var(--green);
+  color: var(--surface);
+}
+[data-theme="dark"] .phase-track button[aria-current="step"] {
+  background: #1e4729;
+  color: #e6f0e8;
+}
+.phase-track small {
+  display: block;
+  font-size: 9px;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+.phase-track b {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 10px;
+}
+.run-step {
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  display: flex;
+  gap: 10px;
+}
+.run-step b {
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 9px;
+  flex-shrink: 0;
+}
+.run-step p {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 4px 0 0;
+}
+.command {
+  padding: 13px 16px;
+  background: var(--bg);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  max-height: 270px;
+  overflow: auto;
+}
+.flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 25px 0;
+  font-size: 11px;
+}
+.flow > div {
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  text-align: center;
+  flex: 1;
+}
+.flow small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+}
+.flow > span {
+  color: var(--muted);
+}
+.os-buttons {
+  display: flex;
+  gap: 9px;
+  margin: 20px 0;
+}
+.os-buttons button {
+  flex: 1;
+}
+.progress {
+  height: 5px;
+  background: var(--soft);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+.progress div {
+  height: 100%;
+  background: var(--green);
+  transition: width 0.2s;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+}
+th {
+  text-align: left;
+  color: var(--muted);
+  background: var(--soft);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+}
+td,
+th {
+  padding: 12px 17px;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  max-width: 420px;
+  overflow-wrap: anywhere;
+}
+.small-link {
+  font-size: 11px;
+}
+.record-ref {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+}
+footer {
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 34px;
+  color: var(--muted);
+  font-size: 9px;
+  gap: 15px;
+}
+footer span:first-child {
+  letter-spacing: 1px;
+}
+#notification {
+  position: fixed;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  width: max-content;
+  background: var(--green);
+  color: var(--surface);
+  border-radius: 6px;
+  padding: 13px 20px;
+  z-index: 10;
+  font-size: 12px;
+}
+[data-theme="dark"] #notification {
+  background: var(--lemon);
+  color: #12331f;
+}
+#notification[data-error="true"] {
+  background: var(--red);
+  color: var(--surface);
+}
+dialog {
+  width: min(820px, calc(100vw - 30px));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0;
+  max-height: 88vh;
+}
+dialog::backdrop {
+  background: #071c136b;
+}
+.dialog-head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 17px 23px;
+  z-index: 1;
+}
+.dialog-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.dialog-head button {
+  padding: 5px 10px;
+}
+#detail-content {
+  padding: 24px;
+}
+.dialog-notification {
+  padding: 12px 16px;
+  border-left: 3px solid var(--red);
+  border-radius: 4px;
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 13px;
+}
+#dialog-notification {
+  margin: 20px 24px 0;
+}
+.field-error {
+  color: var(--red);
+  font-size: 12px;
+}
+.oauth-scope-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 22px;
+  font-size: 12px;
+}
+.oauth-scope-note > div {
+  flex: 1 1 260px;
+}
+.oauth-scope-note strong {
+  font-size: 13px;
+}
+.oauth-scope-note p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.field [aria-invalid="true"] {
+  border-color: var(--red);
+}
+pre.raw {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  max-height: 390px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  padding: 17px;
+  border-radius: 5px;
+  background: var(--bg);
+}
+.toolbar-note {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 9px;
+}
+.split-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.stack {
+  display: grid;
+  gap: 18px;
+}
+.page-size {
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+}
+.pill {
+  display: inline-block;
+  padding: 4px 7px;
+  background: var(--soft);
+  font-size: 10px;
+  border-radius: 3px;
+  margin: 3px;
+}
+.native-title {
+  color: var(--muted);
+  font-size: 11px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.native-title i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #acc3b1;
+}
+.native-title span {
+  margin-left: 10px;
+}
+@media (min-width: 1600px) {
+  main {
+    padding-top: 45px;
+  }
+  .grid-3 {
+    gap: 23px;
+  }
+  .hero-card {
+    padding: 30px;
+  }
+  .hero-card.primary-path {
+    padding-top: 28px;
+  }
+}
+@media (max-width: 1050px) {
+  .shell {
+    grid-template-columns: 183px minmax(0, 1fr);
+  }
+  .sidebar {
+    padding: 24px 12px;
+  }
+  .brand > span {
+    font-size: 22px;
+  }
+  .brand img {
+    width: 32px;
+  }
+  .topbar,
+  main,
+  .casebar {
+    padding-left: 23px;
+    padding-right: 23px;
+  }
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .hero-card {
+    padding: 18px;
+  }
+  .hero-card.primary-path {
+    padding-top: 16px;
+  }
+  .hero-card h2 {
+    font-size: 17px;
+  }
+  .hero-card p {
+    min-height: 88px;
+  }
+  .stats {
+    gap: 10px;
+  }
+  .stat {
+    padding: 15px;
+  }
+  .top-actions .badge {
+    display: none;
+  }
+  .phase-track button {
+    padding: 13px 9px;
+  }
+}
+@media (max-width: 760px) {
+  .shell {
+    display: block;
+  }
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 16px 18px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    margin: 0 0 17px;
+    width: 185px;
+  }
+  .side-label,
+  .side-bottom {
+    display: none;
+  }
+  nav {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    margin: 0 -18px;
+    padding: 0 12px 12px;
+  }
+  nav button {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 8px;
+  }
+  nav .nav-icon,
+  nav .count,
+  nav hr {
+    display: none;
+  }
+  .topbar {
+    padding: 12px 18px;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .breadcrumb {
+    font-size: 10px;
+    flex-basis: 100%;
+  }
+  .top-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 7px;
+  }
+  .breadcrumb span {
+    margin: 0 5px;
+  }
+  .top-actions button {
+    font-size: 10px;
+    padding: 7px;
+  }
+  .casebar {
+    padding: 9px 18px;
+    align-items: start;
+    flex-wrap: wrap;
+  }
+  main {
+    padding: 25px 18px;
+  }
+  .page-head {
+    align-items: start;
+    flex-direction: column;
+    gap: 15px;
+  }
+  h1 {
+    font-size: 27px;
+  }
+  .grid-3,
+  .grid-even {
+    grid-template-columns: 1fr;
+  }
+  .hero-card p {
+    min-height: 0;
+  }
+  .hero-card ul {
+    margin: 10px 0 19px;
+  }
+  .hero-card .path-number {
+    margin-bottom: 15px;
+  }
+  .welcome-strip {
+    align-items: start;
+    flex-wrap: wrap;
+    padding: 17px;
+  }
+  .welcome-strip button {
+    margin-left: 0;
+  }
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .phase-track {
+    grid-template-columns: 1fr;
+  }
+  .phase-track button {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .phase-track small,
+  .phase-track b {
+    margin: 0;
+  }
+  .phase-track small {
+    min-width: 62px;
+  }
+  .phase-track b {
+    min-width: 103px;
+  }
+  .panel-body {
+    padding: 18px;
+  }
+  .panel-head {
+    padding: 15px 18px;
+  }
+  .source-row {
+    padding: 12px 15px;
+    gap: 8px;
+  }
+  .field-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .timeline-row,
+  .log-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 14px 16px;
+  }
+  .finding {
+    padding: 14px;
+    gap: 9px;
+  }
+  .finding .badge {
+    font-size: 9px;
+  }
+  .page-head .row-actions {
+    justify-content: start;
+  }
+  footer {
+    padding: 15px 18px;
+    flex-wrap: wrap;
+  }
+  footer span:nth-child(2) {
+    display: none;
+  }
+  .flow {
+    gap: 5px;
+    font-size: 10px;
+  }
+  .flow > div {
+    padding: 8px 5px;
+  }
+  #detail-content {
+    padding: 17px;
+  }
+  .os-buttons {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
+/* The next investigation starts where the user is working. */
+.new-case-panel {
+  max-width: 740px;
+  margin: 50px auto 85px;
+  padding: 44px;
+  text-align: center;
+  overflow: visible;
+}
+.new-case-symbol {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 22px;
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--green);
+  font-size: 34px;
+}
+.new-case-panel h2 {
+  font-size: 28px;
+  letter-spacing: -0.7px;
+  margin-bottom: 13px;
+}
+.new-case-panel .subtitle {
+  max-width: 480px;
+  margin: 0 auto 24px;
+}
+.current-case-summary {
+  display: grid;
+  gap: 5px;
+  padding: 18px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow-wrap: anywhere;
+  text-align: left;
+  margin: 22px 0;
+}
+.current-case-summary span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.new-case-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.new-case-actions .primary {
+  padding: 13px 25px;
+  font-size: 15px;
+}
+.new-case-panel > .row-actions {
+  justify-content: center;
+  gap: 28px;
+  margin-top: 22px;
+}
+@media (max-width: 760px) {
+  .new-case-panel {
+    margin: 16px auto 35px;
+    padding: 26px 18px;
+  }
+  .new-case-panel h2 {
+    font-size: 24px;
+  }
+  .new-case-actions {
+    display: grid;
+  }
+  .new-case-panel > .row-actions {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 760px) {
+  .source-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto 12px;
+  }
+  .source-label {
+    grid-column: auto;
+  }
+  .source-result {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .source-label {
+    grid-column: 2 / 4;
+  }
+  .source-arrow {
+    grid-column: 4;
+    grid-row: 1 / 3;
+  }
+  .source-state-icon {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+  .coverage-summary {
+    padding: 16px;
+  }
+  .source-details {
+    padding: 16px;
+  }
+}
+
+.macos-download-note {
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--lemon);
+  border-radius: var(--radius);
+  background: var(--soft);
+}
+.macos-download-note h3 {
+  margin: 0 0 10px;
+}
+.macos-download-note p {
+  margin: 10px 0;
+}
+.macos-download-note .command {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 12px;
+}
+.macos-download-note summary {
+  cursor: pointer;
+  font-weight: 550;
+}
+
+.service-connections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0 4px;
+}
+.service-connection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 12px;
+}
+.service-connection strong,
+.service-connection small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.service-connection small {
+  color: var(--muted);
+  margin-top: 4px;
+}
+.service-connection .badge {
+  flex-shrink: 0;
+}
+
+.connection-picker {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+/* Brand is a button (not a link) so it never reloads the page and drops an open case. */
+.brand { background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+/* Review dispositions: confirmed / investigating / exception must read differently from unreviewed. */
+.badge.confirmed { background: #b42318; color: #fff; }
+.badge.investigating { background: #b54708; color: #fff; }
+.badge.exception, .badge.false-positive { background: #475467; color: #fff; }
+.badge.unreviewed { background: transparent; border: 1px dashed currentColor; }
+.badge.in-progress { background: #175cd3; color: #fff; }
+.badge.Info { background: #e4e7ec; color: #344054; }
+:root[data-theme="dark"] .badge.Info { background: #2b3a31; color: #d0d5dd; }
+
+/* "by Limon-IT" stays on one line at every sidebar width. */
+.brand span { white-space: nowrap; }
+.brand small { white-space: nowrap; }
+
+/* ==== Containment runbook styles, scoped from css/app.css (js/contain.js + js/blast.js render these) ==== */
+#screen-contain .muted {color: var(--muted);}
+#screen-contain .mini {font-size: 12px;}
+#screen-contain .num {font-variant-numeric: tabular-nums;}
+#screen-contain .hspacer {margin-left: auto;}
+#screen-contain .demo-pill {flex: none; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  border-radius: 999px; padding: 3px 10px;
+  background: var(--lemon); color: #12331f; border: 1px solid var(--lemon-deep);}
+#screen-contain .demo-banner {display: flex; align-items: center; gap: 16px; flex-wrap: wrap;}
+#screen-contain .demo-banner .mini {flex: 1 1 320px;}
+#screen-contain .btn {border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  border-radius: 10px; padding: 8px 14px; font: inherit; cursor: pointer;}
+#screen-contain .btn:hover {background: var(--soft);}
+#screen-contain .btn:disabled {opacity: .45; cursor: default;}
+#screen-contain .btn.primary {background: var(--green); border-color: var(--green); color: #fff; font-weight: 600;}
+#screen-contain .btn.primary:hover {background: var(--accent2); border-color: var(--accent2);}
+#screen-contain .btn.lemon {background: var(--lemon); border-color: var(--lemon-deep); color: #12331f; font-weight: 600;}
+#screen-contain .btn.lemon:hover {background: var(--lemon-deep);}
+#screen-contain .btn.small {padding: 4px 10px; font-size: 12px; border-radius: 8px;}
+#screen-contain .btn.danger {background: var(--sev-critical); border-color: var(--sev-critical); color: #fff; font-weight: 600;}
+#screen-contain .btn.danger:hover {background: #b32f2f; border-color: #b32f2f;}
+#screen-contain .btn.danger:disabled:hover {background: var(--sev-critical);}
+#screen-contain .card {background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 20px 22px; margin: 0 0 16px;}
+#screen-contain .optrow {display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 16px;}
+#screen-contain .optgroup {display: contents;}
+#screen-contain .mc-tag {font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 10px; letter-spacing: .02em;}
+#screen-contain .mc-tag.ro {background: var(--soft); color: var(--accent2);}
+#screen-contain .mc-tag.rw {background: rgba(208, 59, 59, .12); color: var(--sev-critical);}
+#screen-contain .steps {list-style: none; padding: 0; margin: 0;}
+#screen-contain .steps li {padding: 7px 0; border-bottom: 1px dashed var(--border); display: flex; gap: 10px; align-items: baseline;}
+#screen-contain .steps li:last-child {border-bottom: 0;}
+#screen-contain .steps .st {width: 22px; flex: none; text-align: center;}
+#screen-contain .steps .ok {color: var(--good);}
+#screen-contain .steps .run {color: var(--lemon-deep);}
+#screen-contain .steps .skip {color: var(--muted);}
+#screen-contain .steps .fail {color: var(--sev-critical);}
+#screen-contain .steps .note {color: var(--muted); font-size: 12px; margin-left: auto;}
+#screen-contain .sevbar {display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; margin: 6px 0 4px;}
+#screen-contain .sevbar div {min-width: 4px;}
+#screen-contain .sev {display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; white-space: nowrap;}
+#screen-contain .dot {width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none;}
+#screen-contain .filters {display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px;}
+#screen-contain .chip {border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+  cursor: pointer; font-size: 12px; background: transparent; color: var(--muted); user-select: none;}
+#screen-contain .chip.on {background: var(--soft); border-color: var(--accent2); color: var(--ink); font-weight: 600;}
+#screen-contain .ftable {width: 100%; border-collapse: collapse;}
+#screen-contain .ftable th {text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .04em; padding: 6px 10px; border-bottom: 1px solid var(--border);}
+#screen-contain .ftable td {padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top;}
+#screen-contain .detail-row td {background: var(--bg); color: var(--muted); font-size: 13px;}
+#screen-contain .detail-row .rec {margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--lemon-deep);
+  background: var(--surface); border-radius: 0 8px 8px 0; color: var(--ink);}
+#screen-contain .detail-row .src {font-size: 11px; margin-top: 6px;}
+#screen-contain .empty {text-align: center; padding: 30px; color: var(--muted);}
+#screen-contain .exportrow {display: flex; gap: 8px; flex-wrap: wrap;}
+#screen-contain .banner {background: var(--soft); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 14px; font-size: 13px;}
+#screen-contain .banner.warn {border-color: var(--lemon-deep);}
+#screen-contain .kv {display: grid; grid-template-columns: 180px 1fr; gap: 4px 14px; font-size: 13px;}
+#screen-contain .kv dt {color: var(--muted);}
+#screen-contain .kv dd {margin: 0;}
+@media print {#screen-contain .filters, #screen-contain .exportrow {display: none !important;}
+#screen-contain .detail-row {display: table-row !important;}
+#screen-contain .card {box-shadow: none;}}
+@media (max-width: 640px) {#screen-contain .kv {grid-template-columns: 1fr;}}
+#screen-contain .accent {color: var(--accent2);}
+#screen-contain .cl-rel {margin-bottom: 20px;}
+#screen-contain .cl-h {display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-bottom: 6px;
+  border-bottom: 2px solid var(--green); margin-bottom: 8px;}
+#screen-contain .cl-list {list-style: none; margin: 0; padding: 0;}
+#screen-contain .cl-i {display: flex; gap: 10px; align-items: flex-start; padding: 6px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.6;}
+#screen-contain .cl-i:last-child {border-bottom: 0;}
+#screen-contain .cl-k {font-size: 11px; font-weight: 700; padding: 1px 9px; border-radius: 999px;
+  white-space: nowrap; flex: none; margin-top: 2px;}
+#screen-contain .cl-k.new {background: var(--soft); color: var(--accent2);}
+#screen-contain .cl-k.improved {background: rgba(223, 179, 43, .18); color: var(--lemon-deep);}
+#screen-contain .cl-k.fixed {background: var(--bg); color: var(--muted); border: 1px solid var(--border);}
+.modal-bg {position: fixed; inset: 0; background: rgba(18, 51, 31, .45); z-index: 100;
+  display: none; align-items: center; justify-content: center; padding: 20px;}
+.modal-bg.open {display: flex;}
+.modal {background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px 22px; max-width: 680px; width: 100%;}
+.modal h3 {margin: 0 0 6px; font-size: 16px;}
+.modal-row {display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px;}
+#screen-contain .arm {border-left: 4px solid var(--sev-critical);}
+#screen-contain .arm.on {border-left-color: var(--good); background: var(--soft);}
+#screen-contain .cstep {border-left: 4px solid var(--border);}
+#screen-contain .cstep.done {border-left-color: var(--good);}
+#screen-contain .cstep.running {border-left-color: var(--lemon-deep);}
+#screen-contain .cstep.failed {border-left-color: var(--sev-critical);}
+#screen-contain .cstep.skipped {border-left-color: var(--muted); opacity: .75;}
+#screen-contain .cs-head {display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;}
+#screen-contain .cs-head h2 {margin: 0;}
+#screen-contain .cs-n {width: 26px; height: 26px; border-radius: 50%; flex: none; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--soft); color: var(--accent2); border: 1px solid var(--border);}
+#screen-contain .cstep.done .cs-n {background: var(--good); color: #fff; border-color: var(--good);}
+#screen-contain .cs-pill {font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  background: var(--bg); color: var(--muted); border: 1px solid var(--border);}
+#screen-contain .cs-pill.done {background: var(--soft); color: var(--good); border-color: var(--good);}
+#screen-contain .cs-pill.running {color: var(--lemon-deep); border-color: var(--lemon-deep);}
+#screen-contain .cs-pill.failed {background: rgba(208, 59, 59, .12); color: var(--sev-critical); border-color: var(--sev-critical);}
+#screen-contain .cs-flag {font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 10px;
+  background: rgba(223, 179, 43, .18); color: var(--lemon-deep); cursor: help;}
+#screen-contain .cs-why {font-size: 13px; margin: 0 0 12px;}
+#screen-contain .cs-note {color: var(--muted);}
+#screen-contain .cs-note:empty {display: none;}
+#screen-contain .cs-actions {display: flex; gap: 10px; align-items: center; flex-wrap: wrap;}
+#screen-contain .cs-check {font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; cursor: pointer;}
+#screen-contain .cs-out:empty {display: none;}
+#screen-contain .cs-out {margin-top: 14px;}
+#screen-contain .cs-ps {margin-top: 12px;}
+#screen-contain .cs-ps summary {cursor: pointer; font-size: 12px; color: var(--muted);}
+#screen-contain .cs-ps pre.code {margin-top: 8px;}
+#screen-contain .pwdbox {border: 1px solid var(--lemon-deep); background: var(--soft); border-radius: 12px; padding: 12px 14px;}
+#screen-contain .pwdrow {display: flex; gap: 10px; align-items: center; margin-top: 8px;}
+#screen-contain .pwdrow code {font: 15px/1.4 "SFMono-Regular", "Consolas", Menlo, monospace; letter-spacing: .04em;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+  word-break: break-all;}
+#screen-contain .scope {display: inline-block; border: 1px solid var(--border); border-radius: 6px; padding: 0 6px;
+  margin: 1px 0; font: 11px/1.6 "SFMono-Regular", "Consolas", Menlo, monospace; color: var(--muted);}
+#screen-contain .scope.risky {border-color: var(--sev-critical); color: var(--sev-critical); font-weight: 700;}
+#screen-contain .cl-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px;}
+#screen-contain .cl-item {display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 12.5px;}
+#screen-contain .cl-item:hover {background: var(--soft);}
+#screen-contain .cl-item.on {border-color: var(--good); background: var(--soft);}
+#screen-contain .cl-item input {margin-top: 3px; flex: none;}
+#screen-contain .cl-item b {display: block;}
+#screen-contain .cl-where {display: block; color: var(--accent2); font-size: 11.5px; margin: 1px 0;}
+#screen-contain .cl-what {display: block; color: var(--muted);}
+#screen-contain .cl-grid.blast {grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));}
+#screen-contain .cl-item.blast {display: block; cursor: default;}
+#screen-contain .cl-item.blast:hover {background: var(--surface);}
+#screen-contain .cl-item.blast.on {background: var(--soft);}
+#screen-contain .cl-item.blast.failed {border-color: var(--sev-critical);}
+#screen-contain .bl-head {display: flex; gap: 10px; align-items: flex-start; cursor: pointer;}
+#screen-contain .bl-head input {margin-top: 3px; flex: none;}
+#screen-contain .cl-item.blast .cl-what {margin: 6px 0 0 24px;}
+#screen-contain .bl-res {margin: 8px 0 0 24px;}
+#screen-contain .bl-sum {font-weight: 600;}
+#screen-contain .bl-sum.hot {color: var(--sev-critical);}
+#screen-contain .bl-tbl {width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11.5px;}
+#screen-contain .bl-tbl td {padding: 2px 6px 2px 0; vertical-align: top; border-bottom: 1px solid var(--border);}
+#screen-contain .bl-tbl td:first-child {color: var(--muted); white-space: nowrap; width: 40%;}
+#screen-contain .bl-caveat {margin-top: 6px; border-left: 2px solid var(--lemon-deep); padding-left: 8px;}
+#screen-contain .bl-why {margin: 6px 0 0 24px; font-style: italic;}
+#screen-contain .bl-actions {display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0 24px; align-items: center;}
+#screen-contain .lg-ok {color: var(--good); font-weight: 600;}
+#screen-contain .lg-fail {color: var(--sev-critical); font-weight: 600;}
+#screen-contain .lg-note {color: var(--muted);}
+#screen-contain { display: none; } #screen-contain.active { display: block; padding: 0 0 40px; }
+
+/* Containment variable palette (from css/app.css), scoped so desk tokens are untouched. */
+#screen-contain, #confirmModal {
+  --ink: #12331f;
+  --green: #1e4729;
+  --green-deep: #12331f;
+  --accent2: #3f7a24;
+  --lemon: #f7d65a;
+  --lemon-deep: #dfb32b;
+  --muted: #5f7a67;
+  --border: #dbe7de;
+  --surface: #ffffff;
+  --bg: #f2f7f3;
+  --soft: #eaf3ec;
+  /* the soft top-right wash on the login card - TUNO's token, same value */
+  --glow: #cdeed4;
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(18, 51, 31, .10);
+  /* severity (status) colors - icon + label always accompany these */
+  --sev-critical: #d03b3b;
+  --sev-high: #ec835a;
+  --sev-medium: #dfb32b;
+  --sev-low: #2a78d6;
+  --sev-info: #5f7a67;
+  --good: #3f7a24;
+}
+[data-theme="dark"] #screen-contain, [data-theme="dark"] #confirmModal {
+  --ink: #e6f0e8;
+  --green: #7fc98f;
+  --green-deep: #0b120e;
+  --accent2: #8fd977;
+  --muted: #8ba394;
+  --border: #24312a;
+  --surface: #161d19;
+  --bg: #0f1512;
+  --soft: #1c2620;
+  --glow: #1e472955;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  --sev-medium: #fab219;
+  --sev-low: #3987e5;
+}
+#screen-contain { color: var(--ink); font-size: 14px; }
+
+/* Structured investigation and coverage tables share the flat workspace theme. */
+.table-scroll{overflow:auto}.coverage-table{border-collapse:collapse;width:100%;text-align:left}.coverage-table th,.coverage-table td{padding:12px;border-bottom:1px solid var(--border);vertical-align:top}.evidence-facts{display:grid;grid-template-columns:minmax(100px,1fr) 3fr;gap:10px}.evidence-facts dt{font-weight:700}.evidence-facts dd{margin:0;overflow-wrap:anywhere}.source-search{margin:16px;width:calc(100% - 32px)}#screen-contain[hidden]{display:none!important}
+
+/* Response uses the shared workspace spacing without inheriting form input widths. */
+main.response-heading{min-height:0;padding-bottom:12px}
+#screen-contain.active{max-width:1580px;margin:auto;padding:0 34px 44px}
+#screen-contain input[type=checkbox]{width:auto;min-width:14px;padding:0;flex:0 0 auto}
+#screen-contain .cl-item{display:block;min-width:0}
+#screen-contain .bl-head span{min-width:0;overflow-wrap:anywhere}
+#screen-contain .cl-grid,#screen-contain .cl-grid.blast{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))}
+@media(max-width:700px){#screen-contain.active{padding:0 16px 30px}}
+
+#navigation .nav-collection{border:1px solid var(--border);background:var(--soft);margin-bottom:12px;align-items:center;gap:10px;white-space:normal}
+.nav-collection strong,.nav-collection small{display:block;text-align:left}
+.nav-collection strong{font-size:12px}.nav-collection small{font-size:11px;font-weight:400;margin-top:4px;color:var(--muted)}
+.nav-collect-dot{width:9px;height:9px;border-radius:50%;background:var(--green);flex:0 0 9px;animation:collection-pulse 1.4s ease-in-out infinite}
+@keyframes collection-pulse{50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.nav-collect-dot{animation:none}}
+.split-label{flex-wrap:wrap}
+/* Unified first-hour investigation: one phase, one set of controls, one case log. */
+.hour-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:22px;align-items:start}.hour-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.hour-engine{display:flex;gap:12px;align-items:center;background:var(--soft);border:1px solid var(--border);padding:14px;border-radius:7px;margin-bottom:16px}.hour-engine>b{background:var(--surface);padding:8px;border-radius:5px;font-size:12px}.hour-engine strong{font-size:12px}.hour-engine p{font-size:11px;color:var(--muted);margin:3px 0}.hour-engine>button{margin-left:auto;font-size:11px}.hour-check{padding:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border)}.hour-check:last-child{border:0}.hour-check h3{font-size:14px}.hour-check p{font-size:12px;color:var(--muted);margin:4px 0 0}.hour-check button{font-size:11px;flex-shrink:0}.hour-log{position:sticky;top:16px}.hour-log h2{font-size:15px}.hour-log .log-row{display:block;padding:12px 0}.hour-log .log-row time{display:block;font-size:10px;margin-bottom:5px}.hour-log .log-row strong,.hour-log .log-row span{font-size:11px}.hour-log .panel-body>button{width:100%;font-size:11px;margin-top:10px}.hour-log #hour-events{max-height:440px;overflow:auto}.hour-next{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:11px;margin-top:18px}.hour-rule{padding:14px 0;border-bottom:1px solid var(--border)}.hour-rule p{font-size:12px;overflow-wrap:anywhere}.hour-mailbox h2{font-size:16px}.hour-mailbox .panel-body{padding:20px}.hour-mailbox button{font-size:12px}.phase-workspace #containHead{display:none}#hour-response-slot #screen-contain.active{padding:0;max-width:none;margin-top:16px}#screen-contain .card[hidden],#screen-contain .panel[hidden]{display:none!important}#hour-response-slot #screen-contain .card{box-shadow:none;border-radius:7px}#hour-response-slot #screen-contain h2{font-size:16px}#hour-response-slot #screen-contain .cs-n{display:none}.hour-layout .page-head{margin-bottom:16px}
+@media(max-width:1150px){.hour-layout{grid-template-columns:minmax(0,1fr)}.hour-log{position:static}.hour-log #hour-events{max-height:280px}}@media(max-width:650px){.hour-engine,.hour-check,.hour-heading{flex-wrap:wrap}.hour-engine>button{margin-left:0}.hour-next{align-items:flex-start}.hour-mailbox .panel-head{flex-wrap:wrap}}
+
+/* ===== prototype additions (the only new rules) ===== */
+body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+.proto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 16px; font-size: 11px; color: var(--muted); border-bottom: 1px dashed var(--border); background: var(--bg); }
+.proto b { letter-spacing: 1.5px; font-size: 9px; color: var(--ink); }
+.proto .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.proto .seg button { border: 0; border-radius: 0; background: transparent; padding: 3px 11px; font-size: 11px; color: var(--muted); }
+.proto .seg button[aria-pressed="true"] { background: var(--green); color: var(--surface); }
+.proto .spacer { flex: 1; }
+/* step numbers in the existing nav-icon slot */
+nav .nav-icon.step { width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 50%; font-size: 10px; font-weight: 700; color: var(--muted); }
+nav .nav-icon.step[data-state="done"] { border-color: var(--green); color: var(--green); }
+nav .nav-icon.step[data-state="now"] { background: var(--green); border-color: var(--green); color: var(--surface); }
+[data-theme="dark"] nav .nav-icon.step[data-state="now"] { color: #0f1512; }
+nav .nav-icon.step[data-state="todo"] { border-style: dashed; }
+nav button[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+nav button .nav-text { display: block; min-width: 0; flex: 1; }
+nav button .nav-text small { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+nav button[aria-current="page"] .nav-text small { color: var(--green); opacity: .8; }
+nav button.sub { padding: 7px 12px 7px 43px; font-size: 12px; }
+nav button.sub[aria-current="page"] { background: transparent; border-color: transparent; color: var(--green); font-weight: 650; }
+/* finding drawer: the dialog's head, docked as a column */
+.drawer-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: 19px; align-items: start; }
+.drawer { position: sticky; top: 16px; }
+.drawer .dialog-head { position: static; }
+.drawer .dialog-body { padding: 20px 22px; }
+.drawer .dialog-body .subtitle { max-width: none; }
+.drawer .evidence-facts { font-size: 12px; }
+.service-connections.rows .service-connection { flex: 1 1 100%; }
+.service-connection > div:first-child { flex: 1; min-width: 0; }
+.svc-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.svc-actions button { font-size: 11px; white-space: nowrap; }
+.service-connection[data-state="ready"] { border-color: var(--green); }
+.service-connection[data-state="failed"] { border-color: var(--red); }
+.service-connection small.wait { color: var(--amber); font-weight: 600; }
+.service-connection small.okline { color: var(--green); font-weight: 600; }
+.service-connection small.badline { color: var(--red); font-weight: 600; }
+.spin { display: inline-block; width: 11px; height: 11px; border: 2px solid var(--border); border-top-color: var(--amber); border-radius: 50%; animation: collection-spin 1s linear infinite; vertical-align: -2px; margin-right: 6px; }
+.presets label.check input[type="radio"] { width: 14px; }
+.notice.good { border-color: var(--green); background: var(--soft); color: var(--green); }
+.notice.info { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); }
+.hour-check .row-actions { flex-shrink: 0; }
+#confirmModal .kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 14px; font-size: 13px; margin: 12px 0; }
+#confirmModal .kv dt { color: var(--muted); }
+#confirmModal .kv dd { margin: 0; overflow-wrap: anywhere; }
+#confirmModal .btn { border-radius: 8px; padding: 9px 14px; }
+#confirmModal .btn.danger { background: var(--sev-critical); border-color: var(--sev-critical); color: #fff; font-weight: 600; }
+#confirmModal .mini { font-size: 12px; }
+.checkmark { display: inline-grid; place-items: center; width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 4px; font-size: 10px; flex-shrink: 0; }
+.checkmark.ok { background: var(--green); border-color: var(--green); color: var(--surface); }
+.checkmark.warn { border-color: var(--amber); color: var(--amber); }
+.hour-check.compact { padding: 13px 18px; }
+.hour-check .who { display: flex; gap: 12px; align-items: center; min-width: 0; }
+#screen-contain .cs-actions .cs-check input { width: auto; }
+@media (max-width: 900px) { .drawer-layout { grid-template-columns: minmax(0, 1fr); } .drawer { position: static; } }
+@media (max-width: 760px) { nav button .nav-text small { display: none; } nav button.sub { padding: 8px; } }
+</style>
+
+<div class="proto" id="proto"></div>
+<div class="shell">
+  <aside class="sidebar">
+    <button type="button" class="brand" data-act="brand" aria-label="Triage home"><img src="data:image/svg+xml;base64,PCEtLSBUUklBR0UgbWFyaywgbGlnaHQuIEJ1aWx0IGxpa2UgdGhlIG90aGVyIExpbW9uLUlUIHByb2R1Y3QgbWFya3MgKFRVTk8sIEVOQ0EpOgogICAgIHRyYW5zcGFyZW50LCBzbyBpdCBjYXJyaWVzIG9uIGFueSBoZWFkZXIgY29sb3VyIHdpdGhvdXQgYSB0aWxlIGJlaGluZCBpdC4KICAgICBUd28gZnJhbWluZ3MgY29tZSBmcm9tIG9uZSBkcmF3aW5nIGF0IDEwMjQgLSB0aGlzIG9uZSBrZWVwcyB0aGUgb3JiaXQgcmluZzsKICAgICBhc3NldHMvZmF2aWNvbi5zdmcgY3JvcHMgdG8gdGhlIGlubmVyIGRpc2MsIGJlY2F1c2UgYSBicm93c2VyIHRhYiByZW5kZXJzIGl0CiAgICAgYXQgMTYtMzJweCBhbmQgdGhlIHJpbmcgaXMgb25seSBub2lzZSB0aGVyZS4gU291cmNlIGFydHdvcmsgaXMKICAgICBhc3NldHMvaWNvbnMvdHJpYWdlLWxpZ2h0LnN2ZyBvbiB0aGUgTGltb24tSVQgc2l0ZSwgdmlld0JveCAiMCAwIDEwMjQgMTAyNCIsCiAgICAgd2l0aCB0aGUgYmFja2dyb3VuZCByZWN0IGRlbGliZXJhdGVseSBub3QgcGFpbnRlZCBoZXJlLiAtLT4KPHN2ZyB3aWR0aD0iODU2IiBoZWlnaHQ9Ijg1NiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSI4NCA4NCA4NTYgODU2Ij4KPGRlZnM+CiAgPGZpbHRlciBpZD0iZ2xvdyIgeD0iLTE1MCUiIHk9Ii0xNTAlIiB3aWR0aD0iNDAwJSIgaGVpZ2h0PSI0MDAlIj4KICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjYiIHJlc3VsdD0iYiIvPgogICAgPGZlTWVyZ2U+PGZlTWVyZ2VOb2RlIGluPSJiIi8+PGZlTWVyZ2VOb2RlIGluPSJTb3VyY2VHcmFwaGljIi8+PC9mZU1lcmdlPgogIDwvZmlsdGVyPgogIDxmaWx0ZXIgaWQ9InNvZnRnbG93IiB4PSItODAlIiB5PSItODAlIiB3aWR0aD0iMjYwJSIgaGVpZ2h0PSIyNjAlIj4KICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjEwIiByZXN1bHQ9ImIiLz4KICAgIDxmZU1lcmdlPjxmZU1lcmdlTm9kZSBpbj0iYiIvPjxmZU1lcmdlTm9kZSBpbj0iU291cmNlR3JhcGhpYyIvPjwvZmVNZXJnZT4KICA8L2ZpbHRlcj4KICA8cmFkaWFsR3JhZGllbnQgaWQ9ImJnZyIgY3g9IjUwJSIgY3k9IjQyJSIgcj0iNzUlIj4KICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZmZmZmYiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNmNGY3ZWUiLz4KICA8L3JhZGlhbEdyYWRpZW50PgogIDxsaW5lYXJHcmFkaWVudCBpZD0iZ29sZGciIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmMGNmNTUiLz48c3RvcCBvZmZzZXQ9IjU1JSIgc3RvcC1jb2xvcj0iI2RmYjMyYiIvPgogICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjYTg4NzFjIi8+CiAgPC9saW5lYXJHcmFkaWVudD48L2RlZnM+CjxjaXJjbGUgY3g9IjUxMiIgY3k9IjUxMiIgcj0iMzMwIiBmaWxsPSIjY2ZlMGI0IiBvcGFjaXR5PSIwLjEwIi8+PGNpcmNsZSBjeD0iNTEyIiBjeT0iNTEyIiByPSIyMzAiIGZpbGw9IiNiN2QzOGUiIG9wYWNpdHk9IjAuMDgiLz4KPGNpcmNsZSBjeD0iNTEyIiBjeT0iNTEyIiByPSI0MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzlkYmI3YSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtZGFzaGFycmF5PSIyIDE0IiBvcGFjaXR5PSIwLjkiLz48Y2lyY2xlIGN4PSI1MTIiIGN5PSI1MTIiIHI9IjQwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZGZiMzJiIiBzdHJva2Utd2lkdGg9IjEuNSIgb3BhY2l0eT0iMC4zNSIvPgo8Y2lyY2xlIGN4PSI1MTIuMCIgY3k9IjExMi4wIiByPSI5IiBmaWxsPSIjM2Y3YTI0IiBmaWx0ZXI9InVybCgjZ2xvdykiLz48Y2lyY2xlIGN4PSI4NTguNCIgY3k9IjMxMi4wIiByPSI5IiBmaWxsPSIjM2Y3YTI0IiBmaWx0ZXI9InVybCgjZ2xvdykiLz48Y2lyY2xlIGN4PSI4NTguNCIgY3k9IjcxMi4wIiByPSI5IiBmaWxsPSIjM2Y3YTI0IiBmaWx0ZXI9InVybCgjZ2xvdykiLz48Y2lyY2xlIGN4PSI1MTIuMCIgY3k9IjkxMi4wIiByPSI5IiBmaWxsPSIjM2Y3YTI0IiBmaWx0ZXI9InVybCgjZ2xvdykiLz48Y2lyY2xlIGN4PSIxNjUuNiIgY3k9IjcxMi4wIiByPSI5IiBmaWxsPSIjM2Y3YTI0IiBmaWx0ZXI9InVybCgjZ2xvdykiLz48Y2lyY2xlIGN4PSIxNjUuNiIgY3k9IjMxMi4wIiByPSI5IiBmaWxsPSIjM2Y3YTI0IiBmaWx0ZXI9InVybCgjZ2xvdykiLz4KPGNpcmNsZSBjeD0iNTEyIiBjeT0iNTEyIiByPSIzMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2RmYjMyYiIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjQiLz48Y2lyY2xlIGN4PSI1MTIiIGN5PSI1MTIiIHI9IjI2NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjY2ZlMGI0IiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNTUiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTEyLDUwNSkiPgogIDxnIGZpbHRlcj0idXJsKCNzb2Z0Z2xvdykiPjxjaXJjbGUgcj0iMjE1IiBmaWxsPSIjZTlmMGRkIiBzdHJva2U9InVybCgjZ29sZGcpIiBzdHJva2Utd2lkdGg9IjE2Ii8+PC9nPgo8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTEyLC0xMDQpIHNjYWxlKDEuNSkiIG9wYWNpdHk9IjAuMjgiPjxjaXJjbGUgcj0iMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzNmN2EyNCIgc3Ryb2tlLXdpZHRoPSI3Ii8+PGNpcmNsZSByPSI5IiBmaWxsPSJub25lIiBzdHJva2U9IiMzZjdhMjQiIHN0cm9rZS13aWR0aD0iNiIvPjxsaW5lIHgxPSIyNC4wIiB5MT0iMC4wIiB4Mj0iMzYuMCIgeTI9IjAuMCIgc3Ryb2tlPSIjM2Y3YTI0IiBzdHJva2Utd2lkdGg9IjEwIi8+PGxpbmUgeDE9IjE3LjAiIHkxPSIxNy4wIiB4Mj0iMjUuNSIgeTI9IjI1LjUiIHN0cm9rZT0iIzNmN2EyNCIgc3Ryb2tlLXdpZHRoPSIxMCIvPjxsaW5lIHgxPSIwLjAiIHkxPSIyNC4wIiB4Mj0iMC4wIiB5Mj0iMzYuMCIgc3Ryb2tlPSIjM2Y3YTI0IiBzdHJva2Utd2lkdGg9IjEwIi8+PGxpbmUgeDE9Ii0xNy4wIiB5MT0iMTcuMCIgeDI9Ii0yNS41IiB5Mj0iMjUuNSIgc3Ryb2tlPSIjM2Y3YTI0IiBzdHJva2Utd2lkdGg9IjEwIi8+PGxpbmUgeDE9Ii0yNC4wIiB5MT0iMC4wIiB4Mj0iLTM2LjAiIHkyPSIwLjAiIHN0cm9rZT0iIzNmN2EyNCIgc3Ryb2tlLXdpZHRoPSIxMCIvPjxsaW5lIHgxPSItMTcuMCIgeTE9Ii0xNy4wIiB4Mj0iLTI1LjUiIHkyPSItMjUuNSIgc3Ryb2tlPSIjM2Y3YTI0IiBzdHJva2Utd2lkdGg9IjEwIi8+PGxpbmUgeDE9Ii0wLjAiIHkxPSItMjQuMCIgeDI9Ii0wLjAiIHkyPSItMzYuMCIgc3Ryb2tlPSIjM2Y3YTI0IiBzdHJva2Utd2lkdGg9IjEwIi8+PGxpbmUgeDE9IjE3LjAiIHkxPSItMTcuMCIgeDI9IjI1LjUiIHkyPSItMjUuNSIgc3Ryb2tlPSIjM2Y3YTI0IiBzdHJva2Utd2lkdGg9IjEwIi8+PC9nPgo8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTgsLTI0KSI+PGNpcmNsZSBjeD0iMCIgY3k9IjAiIHI9IjExMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ1cmwoI2dvbGRnKSIgc3Ryb2tlLXdpZHRoPSIyMCIvPjxwYXRoIGQ9Ik0tNzAsNCBMLTM0LDQgTC0xNCwtNDYgTDEyLDU0IEwzNCw0IEw3MCw0IiBmaWxsPSJub25lIiBzdHJva2U9IiNkZmIzMmIiIHN0cm9rZS13aWR0aD0iMTUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxsaW5lIHgxPSI4MiIgeTE9IjgyIiB4Mj0iMTUwIiB5Mj0iMTUwIiBzdHJva2U9InVybCgjZ29sZGcpIiBzdHJva2Utd2lkdGg9IjMwIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L2c+CiAgPGNpcmNsZSBjeD0iMTE4IiBjeT0iLTExOCIgcj0iMTMiIGZpbGw9IiMzZjdhMjQiIGZpbHRlcj0idXJsKCNnbG93KSIvPgo8L2c+Cjwvc3ZnPg==" class="only-light" alt=""><img src="data:image/svg+xml;base64,PCEtLSBUUklBR0UgbWFyaywgZGFyay4gQnVpbHQgbGlrZSB0aGUgb3RoZXIgTGltb24tSVQgcHJvZHVjdCBtYXJrcyAoVFVOTywgRU5DQSk6CiAgICAgdHJhbnNwYXJlbnQsIHNvIGl0IGNhcnJpZXMgb24gYW55IGhlYWRlciBjb2xvdXIgd2l0aG91dCBhIHRpbGUgYmVoaW5kIGl0LgogICAgIFR3byBmcmFtaW5ncyBjb21lIGZyb20gb25lIGRyYXdpbmcgYXQgMTAyNCAtIHRoaXMgb25lIGtlZXBzIHRoZSBvcmJpdCByaW5nOwogICAgIGFzc2V0cy9mYXZpY29uLnN2ZyBjcm9wcyB0byB0aGUgaW5uZXIgZGlzYywgYmVjYXVzZSBhIGJyb3dzZXIgdGFiIHJlbmRlcnMgaXQKICAgICBhdCAxNi0zMnB4IGFuZCB0aGUgcmluZyBpcyBvbmx5IG5vaXNlIHRoZXJlLiBTb3VyY2UgYXJ0d29yayBpcwogICAgIGFzc2V0cy9pY29ucy90cmlhZ2UtZGFyay5zdmcgb24gdGhlIExpbW9uLUlUIHNpdGUsIHZpZXdCb3ggIjAgMCAxMDI0IDEwMjQiLAogICAgIHdpdGggdGhlIGJhY2tncm91bmQgcmVjdCBkZWxpYmVyYXRlbHkgbm90IHBhaW50ZWQgaGVyZS4gLS0+Cjxzdmcgd2lkdGg9Ijg1NiIgaGVpZ2h0PSI4NTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iODQgODQgODU2IDg1NiI+CjxkZWZzPgogIDxmaWx0ZXIgaWQ9Imdsb3ciIHg9Ii0xNTAlIiB5PSItMTUwJSIgd2lkdGg9IjQwMCUiIGhlaWdodD0iNDAwJSI+CiAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSI2IiByZXN1bHQ9ImIiLz4KICAgIDxmZU1lcmdlPjxmZU1lcmdlTm9kZSBpbj0iYiIvPjxmZU1lcmdlTm9kZSBpbj0iU291cmNlR3JhcGhpYyIvPjwvZmVNZXJnZT4KICA8L2ZpbHRlcj4KICA8ZmlsdGVyIGlkPSJzb2Z0Z2xvdyIgeD0iLTgwJSIgeT0iLTgwJSIgd2lkdGg9IjI2MCUiIGhlaWdodD0iMjYwJSI+CiAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxMCIgcmVzdWx0PSJiIi8+CiAgICA8ZmVNZXJnZT48ZmVNZXJnZU5vZGUgaW49ImIiLz48ZmVNZXJnZU5vZGUgaW49IlNvdXJjZUdyYXBoaWMiLz48L2ZlTWVyZ2U+CiAgPC9maWx0ZXI+CiAgPHJhZGlhbEdyYWRpZW50IGlkPSJiZ2ciIGN4PSI1MCUiIGN5PSI0MiUiIHI9Ijc1JSI+CiAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMGIxNTA4Ii8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDUwYTA0Ii8+CiAgPC9yYWRpYWxHcmFkaWVudD4KICA8bGluZWFyR3JhZGllbnQgaWQ9ImdvbGRnIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+CiAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZjZkZDZhIi8+PHN0b3Agb2Zmc2V0PSI1NSUiIHN0b3AtY29sb3I9IiNlOGMxMzIiLz4KICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2E4ODcxYyIvPgogIDwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPgo8Y2lyY2xlIGN4PSI1MTIiIGN5PSI1MTIiIHI9IjMzMCIgZmlsbD0iIzRhOGMyYSIgb3BhY2l0eT0iMC4xMCIvPjxjaXJjbGUgY3g9IjUxMiIgY3k9IjUxMiIgcj0iMjMwIiBmaWxsPSIjOGZjZTNjIiBvcGFjaXR5PSIwLjA4Ii8+CjxjaXJjbGUgY3g9IjUxMiIgY3k9IjUxMiIgcj0iNDAwIiBmaWxsPSJub25lIiBzdHJva2U9IiM1YTdhMmEiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWRhc2hhcnJheT0iMiAxNCIgb3BhY2l0eT0iMC45Ii8+PGNpcmNsZSBjeD0iNTEyIiBjeT0iNTEyIiByPSI0MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U4YzEzMiIgc3Ryb2tlLXdpZHRoPSIxLjUiIG9wYWNpdHk9IjAuMzUiLz4KPGNpcmNsZSBjeD0iNTEyLjAiIGN5PSIxMTIuMCIgcj0iOSIgZmlsbD0iI2M4ZTg0YSIgZmlsdGVyPSJ1cmwoI2dsb3cpIi8+PGNpcmNsZSBjeD0iODU4LjQiIGN5PSIzMTIuMCIgcj0iOSIgZmlsbD0iI2M4ZTg0YSIgZmlsdGVyPSJ1cmwoI2dsb3cpIi8+PGNpcmNsZSBjeD0iODU4LjQiIGN5PSI3MTIuMCIgcj0iOSIgZmlsbD0iI2M4ZTg0YSIgZmlsdGVyPSJ1cmwoI2dsb3cpIi8+PGNpcmNsZSBjeD0iNTEyLjAiIGN5PSI5MTIuMCIgcj0iOSIgZmlsbD0iI2M4ZTg0YSIgZmlsdGVyPSJ1cmwoI2dsb3cpIi8+PGNpcmNsZSBjeD0iMTY1LjYiIGN5PSI3MTIuMCIgcj0iOSIgZmlsbD0iI2M4ZTg0YSIgZmlsdGVyPSJ1cmwoI2dsb3cpIi8+PGNpcmNsZSBjeD0iMTY1LjYiIGN5PSIzMTIuMCIgcj0iOSIgZmlsbD0iI2M4ZTg0YSIgZmlsdGVyPSJ1cmwoI2dsb3cpIi8+CjxjaXJjbGUgY3g9IjUxMiIgY3k9IjUxMiIgcj0iMzIwIiBmaWxsPSJub25lIiBzdHJva2U9IiNlOGMxMzIiIHN0cm9rZS13aWR0aD0iMiIgb3BhY2l0eT0iMC40Ii8+PGNpcmNsZSBjeD0iNTEyIiBjeT0iNTEyIiByPSIyNjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzRhOGMyYSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjU1Ii8+CjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDUxMiw1MDUpIj4KICA8ZyBmaWx0ZXI9InVybCgjc29mdGdsb3cpIj48Y2lyY2xlIHI9IjIxNSIgZmlsbD0iIzJmNWMxYSIgc3Ryb2tlPSJ1cmwoI2dvbGRnKSIgc3Ryb2tlLXdpZHRoPSIxNiIvPjwvZz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTExMiwtMTA0KSBzY2FsZSgxLjUpIiBvcGFjaXR5PSIwLjI4Ij48Y2lyY2xlIHI9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4ZmNlM2MiIHN0cm9rZS13aWR0aD0iNyIvPjxjaXJjbGUgcj0iOSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOGZjZTNjIiBzdHJva2Utd2lkdGg9IjYiLz48bGluZSB4MT0iMjQuMCIgeTE9IjAuMCIgeDI9IjM2LjAiIHkyPSIwLjAiIHN0cm9rZT0iIzhmY2UzYyIgc3Ryb2tlLXdpZHRoPSIxMCIvPjxsaW5lIHgxPSIxNy4wIiB5MT0iMTcuMCIgeDI9IjI1LjUiIHkyPSIyNS41IiBzdHJva2U9IiM4ZmNlM2MiIHN0cm9rZS13aWR0aD0iMTAiLz48bGluZSB4MT0iMC4wIiB5MT0iMjQuMCIgeDI9IjAuMCIgeTI9IjM2LjAiIHN0cm9rZT0iIzhmY2UzYyIgc3Ryb2tlLXdpZHRoPSIxMCIvPjxsaW5lIHgxPSItMTcuMCIgeTE9IjE3LjAiIHgyPSItMjUuNSIgeTI9IjI1LjUiIHN0cm9rZT0iIzhmY2UzYyIgc3Ryb2tlLXdpZHRoPSIxMCIvPjxsaW5lIHgxPSItMjQuMCIgeTE9IjAuMCIgeDI9Ii0zNi4wIiB5Mj0iMC4wIiBzdHJva2U9IiM4ZmNlM2MiIHN0cm9rZS13aWR0aD0iMTAiLz48bGluZSB4MT0iLTE3LjAiIHkxPSItMTcuMCIgeDI9Ii0yNS41IiB5Mj0iLTI1LjUiIHN0cm9rZT0iIzhmY2UzYyIgc3Ryb2tlLXdpZHRoPSIxMCIvPjxsaW5lIHgxPSItMC4wIiB5MT0iLTI0LjAiIHgyPSItMC4wIiB5Mj0iLTM2LjAiIHN0cm9rZT0iIzhmY2UzYyIgc3Ryb2tlLXdpZHRoPSIxMCIvPjxsaW5lIHgxPSIxNy4wIiB5MT0iLTE3LjAiIHgyPSIyNS41IiB5Mj0iLTI1LjUiIHN0cm9rZT0iIzhmY2UzYyIgc3Ryb2tlLXdpZHRoPSIxMCIvPjwvZz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTE4LC0yNCkiPjxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSIxMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnb2xkZykiIHN0cm9rZS13aWR0aD0iMjAiLz48cGF0aCBkPSJNLTcwLDQgTC0zNCw0IEwtMTQsLTQ2IEwxMiw1NCBMMzQsNCBMNzAsNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZThjMTMyIiBzdHJva2Utd2lkdGg9IjE1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48bGluZSB4MT0iODIiIHkxPSI4MiIgeDI9IjE1MCIgeTI9IjE1MCIgc3Ryb2tlPSJ1cmwoI2dvbGRnKSIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9nPgogIDxjaXJjbGUgY3g9IjExOCIgY3k9Ii0xMTgiIHI9IjEzIiBmaWxsPSIjYzhlODRhIiBmaWx0ZXI9InVybCgjZ2xvdykiLz4KPC9nPgo8L3N2Zz4=" class="only-dark" alt=""><span>triage<small>by Limon-IT</small></span><b class="beta">BETA 31</b></button>
+    <div class="side-label">WORKFLOW</div>
+    <nav id="navigation" aria-label="Main navigation"></nav>
+    <div class="side-bottom">
+      <div class="local-dot">Evidence stays with you</div>
+      <p>Sign in once. Collect with approved access.<br>Review locally. Hand over a case file.</p>
+      <button type="button" data-act="help" class="text-button">How it works ↗</button>
+    </div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <div class="breadcrumb" id="breadcrumb">Limon-IT <span>/</span> Incident workspace</div>
+      <div class="top-actions">
+        <label class="theme-control"><span>Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+        <span id="connection" class="badge">Not connected</span><button type="button" id="signin" data-act="topbar-session">Sign in</button>
+      </div>
+    </header>
+    <div id="casebar" class="casebar"></div>
+    <div id="execution-status" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+    <main id="main" tabindex="-1"></main>
+    <footer><span>TRIAGE / LIMON-IT</span><span>Read-only collection · Evidence before conclusions</span><button type="button" data-act="help" class="text-button">Build 31 · Guide</button></footer>
+  </div>
+</div>
+<div id="notification" role="status" aria-live="polite" hidden></div>
+<div class="modal-bg" id="confirmModal"><div class="modal"><h3 id="cfTitle"></h3><div id="cfBody"></div><div class="modal-row"><button type="button" class="btn" id="cfCancel">Cancel</button><button type="button" class="btn danger" id="cfOk">Run</button></div></div></div>
+<dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><h2 id="detail-title">Details</h2><button type="button" data-act="close-dialog" aria-label="Close details">✕</button></div><div id="detail-content"></div></dialog>
+
+<script>
+(function () {
+  "use strict";
+  // =====================================================================
+  //  Data — fictional Contoso case (nothing here is real)
+  // =====================================================================
+  const CATALOG = [
+    ["interactive", "Interactive sign-ins", "graph"], ["nonInteractive", "Non-interactive sign-ins", "graph"],
+    ["audits", "Directory changes", "graph"], ["riskyUsers", "Current risky users", "graph"], ["riskDetections", "Risk detections", "graph"],
+    ["users", "User inventory", "graph"], ["oauth", "Delegated OAuth grants", "graph"], ["mfa", "MFA registration", "graph"],
+    ["admins", "Directory role assignments", "graph"], ["devices", "Device inventory", "graph"], ["servicePrincipals", "Application identities", "graph"],
+    ["ual", "Unified Audit Log", "graph"], ["exchange", "Mailbox configuration snapshot", "exchange"], ["transportRules", "Transport rules", "exchange"],
+    ["messageTrace", "Message trace", "exchange"], ["mailboxAudit", "Mailbox audit log", "exchange"], ["conditionalAccess", "Conditional Access policies", "graph"],
+    ["securityAlerts", "Security alerts", "graph"], ["messages", "Email content", "graph"], ["attachments", "Email attachments", "graph"],
+  ];
+  const LABEL = Object.fromEntries(CATALOG.map(c => [c[0], c[1]]));
+  const PRESETS = {
+    quick: ["interactive", "nonInteractive", "audits", "riskyUsers", "riskDetections", "users", "oauth", "mfa"],
+    standard: ["interactive", "nonInteractive", "audits", "riskyUsers", "riskDetections", "users", "oauth", "mfa", "admins", "devices", "servicePrincipals", "ual", "exchange"],
+    everything: CATALOG.map(c => c[0]),
+  };
+  const COUNTS = { interactive: 75, nonInteractive: 1204, audits: 5, riskyUsers: 2, riskDetections: 3, users: 1, oauth: 3, mfa: 1, admins: 2, devices: 3, servicePrincipals: 212, ual: 391, exchange: 14, transportRules: 6, messageTrace: 118, mailboxAudit: 63, conditionalAccess: 9, securityAlerts: 2, messages: 240, attachments: 31 };
+  const USERS = [
+    ["jan.devries@contoso.nl", "Jan de Vries", "Sales"], ["jan.devos@contoso.nl", "Jan de Vos", "Finance"], ["janneke.bos@contoso.nl", "Janneke Bos", "HR"],
+    ["adm.piet@contoso.nl", "Piet Admin", "IT"], ["anna.koning@contoso.nl", "Anna Koning", "Marketing"], ["sanne.visser@contoso.nl", "Sanne Visser", "Legal"],
+  ];
+  const FINDINGS = [
+    { id: "F1", sev: "Critical", title: "Domain federation changed (possible AADFS / Golden SAML persistence)", user: "adm.piet@contoso.nl", analyzer: "EntraAuditLogs", time: "2026-07-16 11:05 UTC", src: "audits", refs: ["audits:2"], detail: "Set federation settings on domain was executed by adm.piet from 51.x.x.x, an IP not seen for this account in 90 days. Federation changes allow an attacker to mint tokens for any user." },
+    { id: "F2", sev: "Critical", title: "Device-code authentication to Microsoft Authentication Broker (PRT phishing)", user: "adm.piet@contoso.nl", analyzer: "EntraSignInLogs", src: "interactive", time: "2026-07-16 11:00 UTC", refs: ["interactive:3"], detail: "A device-code sign-in to the Authentication Broker app completed from a hosting ASN five minutes before the federation change." },
+    { id: "F3", sev: "Critical", title: "Risky user: high (atRisk)", user: "jan.devries@contoso.nl", analyzer: "RiskyUsers", src: "riskyUsers", time: "2026-07-15 03:15 UTC", refs: ["riskyUsers:1"], detail: "Identity Protection raised the user to high risk after anonymous-IP and unfamiliar-features detections." },
+    { id: "F4", sev: "High", title: "Authenticated SMTP (legacy auth): 1 sign-in, 1 successful", user: "jan.devries@contoso.nl", analyzer: "EntraSignInLogs", src: "interactive", time: "2026-07-15 03:40 UTC", refs: ["interactive:12", "interactive:11"], detail: "SMTP AUTH succeeded from 51.x.x.x (AS16276 OVH) 30 seconds after two MFA prompts were denied. Legacy authentication bypasses MFA." },
+    { id: "F5", sev: "High", title: "Whole-folder mailbox sync (MailItemsAccessed — Sync): 3", user: "jan.devries@contoso.nl", analyzer: "UAL", src: "ual", time: "2026-07-15 03:30 UTC", refs: ["ual:4", "ual:5"], detail: "Three Sync operations downloaded the Inbox and Sent Items from a client not seen before for this mailbox." },
+    { id: "F6", sev: "High", title: "Add-MailboxPermission ×1 — mailbox permission added", user: "jan.devries@contoso.nl", analyzer: "UAL", src: "ual", time: "2026-07-15 03:26 UTC", refs: ["ual:2"], detail: "FullAccess on jan.devries was granted to svc-scan@contoso.nl by adm.piet." },
+    { id: "F7", sev: "High", title: "Session replay: one session ID seen from two networks", user: "jan.devries@contoso.nl", analyzer: "EntraSignInLogs", src: "nonInteractive", time: "2026-07-15 03:38 UTC", refs: ["nonInteractive:40"], detail: "sessionId 9c1e… refreshed tokens from KPN (NL) and OVH (FR) within 4 minutes — a stolen session cookie fits this pattern." },
+    { id: "F8", sev: "Medium", title: "Sign-in from hosting ASN (AS16276 OVH)", user: "jan.devries@contoso.nl", analyzer: "EntraSignInLogs", src: "interactive", time: "2026-07-15 03:38 UTC", refs: ["interactive:11"], detail: "Interactive OfficeHome sign-in from a hosting provider; no managed device." },
+    { id: "F9", sev: "Medium", title: "Inbox rule forwards to an external address", user: "jan.devries@contoso.nl", analyzer: "ExchangeSnapshot", src: "exchange", time: "Current state", refs: ["exchange:3"], detail: "Rule \".\" forwards every message to jan.devries.mail@outlook-relay.net and marks it read." },
+    { id: "F10", sev: "Medium", title: "Phone-only MFA registration", user: "jan.devries@contoso.nl", analyzer: "MFA", src: "mfa", time: "Current state", refs: ["mfa:1"], detail: "The only registered method is SMS; no authenticator app or passkey." },
+    { id: "F11", sev: "Low", title: "Dormant admin: no interactive sign-in for 62 days", user: "adm.backup@contoso.nl", analyzer: "Admins", src: "admins", time: "Current state", refs: ["admins:2"], detail: "Global Administrator without recent activity — review whether the role is still needed." },
+    { id: "F12", sev: "Info", title: "OAuth grant: Microsoft Teams (offline_access, User.Read)", user: "jan.devries@contoso.nl", analyzer: "OAuthPermissions", src: "oauth", time: "Current state", refs: ["oauth:1"], detail: "Baseline first-party grant; listed for completeness." },
+  ];
+  const RECORDS = {
+    "interactive:3": { "Operation / event": "Sign-in · Microsoft Authentication Broker", "Account": "adm.piet@contoso.nl", "Time (UTC)": "2026-07-16 11:00:12", "IP address": "51.x.x.x · AS16276 OVH", "Application": "Microsoft Authentication Broker", "Result": "Success · deviceCode", "Device": "none" },
+    "interactive:11": { "Operation / event": "Sign-in · OfficeHome", "Account": "jan.devries@contoso.nl", "Time (UTC)": "2026-07-15 03:38:44", "IP address": "51.x.x.x · AS16276 OVH", "Application": "OfficeHome", "Result": "MFA denied (500121)", "Device": "none · Windows 10 · Chrome 128" },
+    "interactive:12": { "Operation / event": "Sign-in · SMTP AUTH", "Account": "jan.devries@contoso.nl", "Time (UTC)": "2026-07-15 03:40:03", "IP address": "51.x.x.x · AS16276 OVH", "Application": "Office 365 Exchange Online", "Client": "Authenticated SMTP (legacy)", "Result": "Success" },
+    "nonInteractive:40": { "Operation / event": "Token refresh · Outlook", "Account": "jan.devries@contoso.nl", "Time (UTC)": "2026-07-15 03:36:10", "IP address": "84.x.x.x · AS1136 KPN", "sessionId": "9c1e5a…", "Result": "Success" },
+    "audits:2": { "Operation / event": "Set federation settings on domain", "Initiated by": "adm.piet@contoso.nl", "Time (UTC)": "2026-07-16 11:05:31", "Target": "contoso.nl", "Changes": "IssuerUri, SigningCertificate, PassiveLogOnUri" },
+    "riskyUsers:1": { "User": "jan.devries@contoso.nl", "riskLevel": "high", "riskState": "atRisk", "riskLastUpdated": "2026-07-15 03:15:00", "Detections": "anonymizedIPAddress, unfamiliarFeatures" },
+    "ual:2": { "Operation": "Add-MailboxPermission", "UserId": "adm.piet@contoso.nl", "CreationTime": "2026-07-15 03:26:48", "ObjectId": "jan.devries@contoso.nl", "Parameters": "User=svc-scan@contoso.nl; AccessRights=FullAccess; InheritanceType=All" },
+    "ual:4": { "Operation": "MailItemsAccessed", "UserId": "jan.devries@contoso.nl", "CreationTime": "2026-07-15 03:30:02", "MailAccessType": "Sync", "ClientInfoString": "Client=REST;Client=RESTSystem;;", "Folders": "Inbox (1,204 items)" },
+    "ual:5": { "Operation": "MailItemsAccessed", "UserId": "jan.devries@contoso.nl", "CreationTime": "2026-07-15 03:31:19", "MailAccessType": "Sync", "ClientInfoString": "Client=REST;Client=RESTSystem;;", "Folders": "Sent Items (388 items)" },
+    "exchange:3": { "Command": "Get-InboxRule", "Mailbox": "jan.devries@contoso.nl", "Name": ".", "Enabled": "True", "ForwardTo": "jan.devries.mail@outlook-relay.net", "MarkAsRead": "True", "Priority": "1" },
+    "mfa:1": { "userPrincipalName": "jan.devries@contoso.nl", "isMfaRegistered": "True", "methodsRegistered": "mobilePhone", "defaultMfaMethod": "sms", "isPasswordlessCapable": "False" },
+    "admins:2": { "Role": "Global Administrator", "Principal": "adm.backup@contoso.nl", "Kind": "active", "lastSignIn": "2026-05-15 08:12:00" },
+    "oauth:1": { "clientId": "Microsoft Teams", "principalId": "jan.devries@contoso.nl", "consentType": "Principal", "scope": "offline_access User.Read" },
+  };
+  const PHASES = [
+    ["preserve", "Confirm & preserve", "00–12"], ["contain", "Contain & record", "12–24"], ["scope", "Establish impact", "24–36"],
+    ["evidence", "Preserve & export", "36–48"], ["handover", "Communicate & hand over", "48–60"],
+  ];
+  const STEPS = [
+    ["preserve", "Preserve investigation evidence", "gate", "Export the case before changing anything; remediation destroys evidence."],
+    ["revoke", "Revoke sign-in sessions", "action", "First, because most compromises are token theft: this invalidates the refresh tokens so the stolen session cannot be renewed."],
+    ["disable", "Disable the account", "action", "Disable, never delete. Blocks new sign-ins and closes the access-token window for CAE-capable workloads."],
+    ["password", "Reset the password", "action", "A throwaway password generated here, shown once, never sent anywhere but Microsoft Graph."],
+    ["methods", "Review and strip authentication methods", "methods", "If the attacker registered a phone or authenticator, the password reset hands the account straight back to them."],
+    ["rules", "Mailbox rules, forwarding & delegates", "rules", "Hidden rules and forwarding survive a password reset. Collected by the app; changes need the reviewed PowerShell steps."],
+    ["oauth", "Revoke OAuth consent grants", "oauth", "A malicious app holding Mail.ReadWrite plus offline_access does not need the password or the session."],
+  ];
+  const IMPACT = ["Other accounts from the same IPs", "Sign-ins with the same user agent", "Mailbox rules created tenant-wide", "OAuth grants added in the window", "Role changes in the window", "MFA method changes", "New devices registered", "Files downloaded from SharePoint / OneDrive", "Teams messages sent externally", "Password resets by admins", "Guest users invited", "Transport rules changed", "Domains added or federated"];
+  const TENANTS = { "contoso.com": ["Contoso", "7d3f2c1a-5b6e-4f70-9a8d-1c2b3e4f5a6b"], "contoso.nl": ["Contoso", "7d3f2c1a-5b6e-4f70-9a8d-1c2b3e4f5a6b"], "fabrikam.com": ["Fabrikam", "0b1c2d3e-4f50-4617-8293-a4b5c6d7e8f9"], "northwind.nl": ["Northwind Traders", "9e8d7c6b-5a49-4382-b716-05f4e3d2c1b0"] };
+
+  // =====================================================================
+  //  State, persistence, router
+  // =====================================================================
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const KEY = "triage-beta-proto-v1";
+  const fresh = () => ({
+    surface: "app", tenantMode: "org", domain: "", tenant: null, signAs: "delegated", ready: null,
+    svc: { graph: { state: "idle" }, exchange: { state: "idle" }, response: { state: "idle" } },
+    scope: { mode: "user", upn: "", days: 7, preset: "standard", custom: PRESETS.standard.slice() },
+    kase: null, saved: [], filter: "", severity: "all",
+  });
+  let S = fresh();
+  try { const raw = localStorage.getItem(KEY); if (raw) { const v = JSON.parse(raw); if (v && v.svc) S = Object.assign(fresh(), v); } } catch (e) { /* storage unavailable */ }
+  // transient states never survive a reload: a waiting sign-in restarts, a running collection is marked interrupted
+  for (const k of Object.keys(S.svc)) if (["waiting", "checking"].includes(S.svc[k].state)) S.svc[k] = { state: "idle" };
+  if (S.ready === "checking") S.ready = null;
+  if (S.kase && S.kase.collecting) { S.kase.collecting = false; for (const s of S.kase.sources) if (s.state === "running" || s.state === "queued") s.state = "partial"; S.kase.collectionDone = true; }
+  let saveTimer = null;
+  function persist(immediate) {
+    if (S.kase) { S.kase.dirty = true; }
+    renderChrome();
+    clearTimeout(saveTimer);
+    const write = () => { try { if (S.kase) { S.kase.dirty = false; S.kase.savedAt = new Date().toISOString(); } localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } renderChrome(); };
+    if (immediate) write(); else saveTimer = setTimeout(write, 1500);
+  }
+  function parseRoute() {
+    const h = location.hash.replace(/^#\/?/, "");
+    const [path, qs] = h.split("?");
+    const q = Object.fromEntries(new URLSearchParams(qs || ""));
+    const p = path.split("/").filter(Boolean);
+    if (p[0] === "case") return { step: p[2] || "review", caseId: p[1], tab: p[3] || (p[2] === "respond" ? "preserve" : "overview"), ...q };
+    return { step: p[0] || "start", ...q };
+  }
+  function hashFor(r) {
+    const q = new URLSearchParams(); for (const k of ["f", "r", "s", "state"]) if (r[k]) q.set(k, r[k]);
+    const qs = q.toString() ? "?" + q.toString() : "";
+    if (["review", "respond", "handover"].includes(r.step)) return "#/case/" + (r.caseId || S.kase?.id || "none") + "/" + r.step + (r.step === "handover" ? "" : "/" + (r.tab || (r.step === "respond" ? "preserve" : "overview"))) + qs;
+    return "#/" + r.step + qs;
+  }
+  let route = parseRoute();
+  function navigate(r, replace) {
+    const target = hashFor({ ...r, caseId: r.caseId || S.kase?.id });
+    if (replace) history.replaceState(null, "", target); else if (target !== location.hash) history.pushState(null, "", target);
+    route = parseRoute(); render();
+  }
+  window.addEventListener("popstate", () => { route = parseRoute(); render(); });
+
+  // Which steps can be visited, and why not
+  const connected = () => S.svc.graph.state === "ready";
+  function stepState(id) {
+    const k = S.kase;
+    const order = ["start", "connect", "scope", "collect", "review", "respond", "handover"];
+    const cur = order.indexOf(route.step);
+    const i = order.indexOf(id);
+    const gate = {
+      start: [true, ""],
+      connect: [true, ""],
+      scope: [connected(), "Sign in first"],
+      collect: [!!k, "Choose the scope first"],
+      review: [!!k && k.collectionDone, "After collection"],
+      respond: [!!k && k.collectionDone, "After collection"],
+      handover: [!!k && k.collectionDone && k.respondVisited, "After Respond"],
+    }[id];
+    if (k && k.collecting && id !== "collect") return { cls: "todo", reason: "Collection is running" };
+    if (id === route.step) return { cls: "now", reason: "" };
+    if (!gate[0]) return { cls: "todo", reason: gate[1] };
+    const done = { start: !!k || connected(), connect: connected(), scope: !!k, collect: !!(k && k.collectionDone), review: !!(k && k.reviewVisited), respond: !!(k && k.respondVisited), handover: !!(k && k.handedOver) }[id];
+    return { cls: done ? "done" : (i < cur ? "done" : ""), reason: "" };
+  }
+  function stepStatus(id) {
+    const k = S.kase, g = S.svc.graph;
+    switch (id) {
+      case "start": return k ? (k.scope === "tenant" ? "Whole tenant" : k.subject) : (connected() ? "New investigation" : "Choose what to do");
+      case "connect": return g.state === "ready" ? g.account + " · " + (S.tenant?.name || "My organisation") : g.state === "waiting" ? "Waiting in your browser…" : "Not signed in";
+      case "scope": return k ? (k.scope === "tenant" ? "Whole tenant" : k.subject) + " · " + k.days + " days · " + k.presetLabel : connected() ? "Who, window, evidence" : "—";
+      case "collect": { if (!k) return "—"; const c = k.sources.filter(s => s.state === "complete").length; return k.collecting ? "collecting " + c + " / " + k.sources.length : c + " / " + k.sources.length + " complete" + (k.partial ? " · " + k.partial + " partial" : ""); }
+      case "review": { if (!k || !k.collectionDone) return "—"; const n = Object.values(k.dispositions).filter(d => d.state !== "unreviewed").length; return n + " of " + k.findings.length + " reviewed"; }
+      case "respond": { if (!k || !k.collectionDone) return "—"; const n = Object.keys(k.phaseOutcomes).length; return (k.armed ? "armed · " : "") + n + " / 5 phases"; }
+      case "handover": return k && k.handedOver ? "Handed over" : k && k.respondVisited ? "Ready when you are" : "After Respond";
+    }
+  }
+  function guard() {
+    if (route.step === "newcase") { if (!S.kase) { route = { step: "start" }; history.replaceState(null, "", hashFor(route)); } return; }
+    // redirect a route the person may not visit yet
+    const st = stepState(route.step === "start" && S.kase ? "review" : route.step);
+    if (route.step === "start" && S.kase && !S.kase.collecting) { route = { step: "review", tab: "overview", caseId: S.kase.id }; history.replaceState(null, "", hashFor(route)); return; }
+    if (st.cls === "todo" && route.step !== "start") {
+      const fallback = S.kase ? (S.kase.collecting ? { step: "collect" } : S.kase.collectionDone ? { step: "review", tab: "overview" } : { step: "scope" }) : connected() ? { step: "scope" } : { step: "connect" };
+      toast(st.reason + " — " + ({ connect: "opening Connect", scope: "opening Scope", collect: "opening Collect", review: "opening Review" })[fallback.step]);
+      route = { ...fallback, caseId: S.kase?.id }; history.replaceState(null, "", hashFor(route));
+    }
+    if (["review", "respond", "handover"].includes(route.step) && S.kase && route.caseId !== S.kase.id) { route.caseId = S.kase.id; history.replaceState(null, "", hashFor(route)); }
+  }
+
+  // =====================================================================
+  //  Toast, dialogs (the BETA's own elements: #notification, <dialog id="detail">, #confirmModal)
+  // =====================================================================
+  let toastTimer;
+  function toast(text, error) { const n = $("#notification"); n.textContent = text; n.dataset.error = String(!!error); n.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (n.hidden = true), error ? 9000 : 5000); }
+  function dialog(title, html) { $("#detail-title").textContent = title; $("#detail-content").innerHTML = html; const d = $("#detail"); if (!d.open) d.showModal(); }
+  function closeDialog() { const d = $("#detail"); if (d.open) d.close(); $("#confirmModal").classList.remove("open"); }
+  let confirmAction = null;
+  function confirmModal(title, html, okLabel, onOk) { $("#cfTitle").textContent = title; $("#cfBody").innerHTML = html; $("#cfOk").textContent = okLabel; confirmAction = onOk; $("#confirmModal").classList.add("open"); $("#cfCancel").focus(); }
+  window.addEventListener("keydown", e => { if (e.key === "Escape") { if ($("#confirmModal").classList.contains("open")) { closeDialog(); e.preventDefault(); } else if (!$("#detail").open && (route.f || route.r)) navigate({ ...route, f: "", r: "" }); } });
+
+  // =====================================================================
+  //  Chrome: sidebar (the step rail), topbar, casebar, execution strip
+  // =====================================================================
+  const STEP_NAMES = [["start", "Start"], ["connect", "Connect"], ["scope", "Scope"], ["collect", "Collect"], ["review", "Review"], ["respond", "Respond"], ["handover", "Hand over"]];
+  const SUBS = [["overview", "Overview"], ["findings", "Findings"], ["timeline", "Timeline"], ["evidence", "Evidence"]];
+  const elapsed = (since) => { const s = Math.max(0, Math.round((Date.now() - since) / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+  const cov = (k) => { const c = k.sources.filter(s => s.state === "complete").length; return { c, n: k.sources.length, pct: k.sources.length ? Math.round(c / k.sources.length * 100) : 0, gaps: k.sources.length - c }; };
+  const engine = () => S.surface === "app" ? "powershell" : "browser-js";
+  function executionCard(eng, stage, title, detail) {
+    const symbol = eng === "powershell" ? "PS" : eng === "viewer" ? "◫" : "JS";
+    const labels = { ready: "Ready", collecting: "Collecting", connecting: "Connecting", cancelling: "Cancelling", analyzing: "Analyzing", viewing: "Viewing" };
+    return `<div class="execution-card" data-engine="${eng}" data-stage="${stage}"><span class="execution-symbol" aria-hidden="true">${symbol}</span><div class="execution-copy"><strong>${esc(title)}</strong><p>${esc(detail)}</p></div><span class="execution-stage">${labels[stage]}</span></div>`;
+  }
+  function connectionRows(withActions) {
+    const cls = withActions ? "service-connections rows" : "service-connections";
+    const rows = [["graph", "Microsoft Graph", "Sign-ins, directory, risk, OAuth, MFA, audit log", true]];
+    if (S.surface === "app") rows.push(["exchange", "Exchange Online", "Mailbox rules, forwarding, delegates, message trace · optional", false]);
+    const labels = { idle: "Not connected", waiting: "Waiting for you", cert: "Authenticating", ready: "Ready", failed: "Not connected", collecting: "Collecting" };
+    return `<div class="${cls}" aria-label="Microsoft 365 connections">${rows.map(([key, title, sub, required]) => {
+      const s = S.svc[key]; const st = S.kase?.collecting && s.state === "ready" ? "collecting" : s.state;
+      const line = s.state === "ready" ? `<small class="okline">✓ ${esc(s.account)} · ${esc(s.tenantName)}</small>` : s.state === "waiting" ? `<small class="wait"><span class="spin"></span>Waiting for you in your browser… <span data-elapsed="${key}">${elapsed(s.since)}</span></small>` : s.state === "cert" ? `<small class="wait"><span class="spin"></span>Authenticating with the customer certificate — no browser opens</small>` : s.state === "failed" ? `<small class="badline">✕ ${esc(s.error)}</small>` : `<small>${esc(sub)}</small>`;
+      const badge = `<span class="badge ${st === "failed" ? "failed" : st === "ready" ? "complete" : st === "collecting" ? "running" : st === "waiting" || st === "cert" ? "pending" : ""}">${labels[st] || "Waiting"}</span>`;
+      const action = !withActions ? "" : s.state === "ready" ? "" : s.state === "waiting" ? `<button type="button" data-act="cancel-signin" data-svc="${key}">Cancel</button>` : s.state === "cert" ? "" : `<button type="button" class="${required ? "primary" : ""}" data-act="signin" data-svc="${key}" ${S.tenantMode === "customer" && !S.tenant && S.signAs !== "profile" ? "disabled" : ""}>${s.state === "failed" ? "Try again" : required ? "Sign in" : "Sign in · optional"}</button>`;
+      return `<div class="service-connection" data-service="${key}" data-state="${esc(s.state)}"><div><strong>${title}${required ? "" : ' <span class="muted">· optional</span>'}</strong>${line}</div><span class="svc-actions">${badge}${action}</span></div>`;
+    }).join("")}</div>`;
+  }
+  function stepStatus(id) {
+    const k = S.kase, g = S.svc.graph;
+    switch (id) {
+      case "start": return k ? "Case open" : connected() ? "Signed in" : "New · Open · Sample";
+      case "connect": return g.state === "ready" ? g.account : g.state === "waiting" ? "Waiting in your browser…" : "Sign in once";
+      case "scope": return k ? (k.scope === "tenant" ? "Whole tenant" : k.subject) + " · " + k.days + " d" : "Who · window · evidence";
+      case "collect": { if (!k) return "Progress · Stop"; const c = cov(k); return k.collecting ? "collecting " + c.c + " / " + c.n : c.c + " / " + c.n + " complete"; }
+      case "review": { if (!k || !k.collectionDone) return "Findings · evidence"; const n = Object.values(k.dispositions).filter(d => d.state !== "unreviewed").length; return n + " of " + k.findings.length + " reviewed"; }
+      case "respond": { if (!k || !k.collectionDone) return "First 60 minutes"; return (k.armed ? "armed · " : "") + Object.keys(k.phaseOutcomes).length + " / 5 phases"; }
+      case "handover": return k && k.handedOver ? "Handed over" : k && k.respondVisited ? "Exports · next case" : "After Respond";
+    }
+  }
+  function renderChrome() {
+    const k = S.kase;
+    // prototype bar (not part of the product)
+    $("#proto").innerHTML = `<b>PROTOTYPE</b><span>Surface</span><span class="seg"><button type="button" data-surface="web" aria-pressed="${S.surface === "web"}">Web</button><button type="button" data-surface="app" aria-pressed="${S.surface === "app"}">Desktop app</button></span><span>changes Connect and Scope only · sign-ins and collection are simulated · use the browser's Back button, reload the page</span><span class="spacer"></span><button type="button" class="text-button" data-act="reset">Reset demo</button>`;
+    // sidebar = the step rail, in the beta's nav style
+    const c = k ? cov(k) : null;
+    const pill = k && k.collecting ? `<button type="button" class="nav-collection" data-step="collect" aria-label="Open collection progress"><span class="nav-collect-dot" aria-hidden="true"></span><span><strong>Collecting evidence</strong><small>${S.surface === "app" ? "PowerShell" : "Browser JavaScript"} · ${c.c} / ${c.n} sources complete</small></span></button><button type="button" data-act="stop" class="danger">Stop scanning</button>` : "";
+    const items = STEP_NAMES.map(([id, name], i) => {
+      const st = stepState(id);
+      const icon = st.cls === "done" ? "✓" : String(i + 1);
+      const count = id === "review" && k && k.collectionDone ? `<span class="count">${k.findings.length}</span>` : "";
+      const subs = id === "review" && k && k.collectionDone ? SUBS.map(([t, n]) => `<button type="button" class="sub" data-step="review" data-tab="${t}" ${route.step === "review" && (route.tab || "overview") === t ? 'aria-current="page"' : ""}>${n}</button>`).join("") : "";
+      return `<button type="button" data-step="${id}" ${st.cls === "now" ? 'aria-current="page"' : ""} ${st.cls === "todo" ? `aria-disabled="true" title="${esc(st.reason)}"` : ""}><span class="nav-icon step" data-state="${st.cls || "later"}">${icon}</span><span class="nav-text">${name}<small>${esc(stepStatus(id))}</small></span>${count}</button>${subs}`;
+    }).join("");
+    $("#navigation").innerHTML = pill + items + `<hr><button type="button" data-act="help"><span class="nav-icon">?</span><span class="nav-text">Help · coverage</span></button>`;
+    // topbar
+    const i = STEP_NAMES.findIndex(s => s[0] === route.step);
+    $("#breadcrumb").innerHTML = i >= 0 ? `Limon-IT <span>/</span> Step ${i + 1} of 7 <span>/</span> ${STEP_NAMES[i][1]}` : `Limon-IT <span>/</span> New investigation`;
+    const g = S.svc.graph;
+    $("#connection").textContent = g.state === "ready" ? g.account + " · " + g.tenantName : S.surface === "app" ? "Desktop · not signed in" : "Not connected";
+    $("#signin").textContent = g.state === "ready" ? "Disconnect" : "Sign in";
+    $("#signin").disabled = !!(k && k.collecting);
+    const t = $("#theme"); if (t) t.value = themeMode;
+    // casebar
+    const time = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
+    $("#casebar").innerHTML = k
+      ? `<div><strong>${esc(k.scope === "tenant" ? k.tenantName + " · whole tenant" : k.subject)}</strong>${k.sample ? '<span class="badge pending">Sample case</span>' : '<span class="badge imported">Active case</span>'} <span class="muted">${esc(k.id.slice(0, 8))} · ${k.records.toLocaleString()} records · ${k.collecting ? "autosaving" : k.dirty ? '<span style="color:var(--amber)">unsaved changes</span>' : k.savedAt ? "saved " + time(k.savedAt) : "not saved yet"}</span></div><div class="row-actions"><button type="button" data-act="export" data-what="Case file" ${k.collecting ? "disabled" : ""}>Export case</button><button type="button" data-act="save-now" ${k.collecting ? "disabled" : ""}>${S.surface === "app" ? "Save to evidence folder" : "Save on this device"}</button><button type="button" data-act="new-case" ${k.collecting ? "disabled" : ""}>New case</button></div>`
+      : `<span>No active case · Start a new investigation or open existing evidence.</span><div class="row-actions"><button type="button" data-act="open-case">Open evidence</button><button type="button" data-act="open-case">Open saved case</button></div>`;
+    // execution strip (the beta's persistent status line)
+    const strip = $("#execution-status");
+    let card = "";
+    if (k && k.collecting) card = executionCard(engine(), "collecting", S.surface === "app" ? "Collecting with PowerShell" : "Running checks with Browser JavaScript", (S.surface === "app" ? "Runs on this computer" : "Runs in this browser") + " · " + (k.sources.find(s => s.state === "running") ? LABEL[k.sources.find(s => s.state === "running").key] + " · running" : "Preparing…"));
+    else if (k && k.analyzing) card = executionCard("analysis-js", "analyzing", "Analyzing evidence with JavaScript", S.surface === "app" ? "Runs locally in this app · collection is no longer running." : "Runs in this browser · collection is no longer running.");
+    else if (k) card = executionCard("viewer", "viewing", S.surface === "app" ? "App viewer · no checks running" : "Browser viewer · no checks running", k.sample ? "Fictional sample evidence." : "Collection method recorded in this case: " + k.collectionMethod);
+    strip.hidden = !card; strip.innerHTML = card; strip.dataset.active = String(!!(k && (k.collecting || k.analyzing)));
+  }
+
+  // =====================================================================
+  //  Views, in the beta's page language
+  // =====================================================================
+  const head = (eyebrow, title, subtitle, actions = "") => `<div class="page-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p class="subtitle">${subtitle}</p></div><div class="row-actions">${actions}</div></div>`;
+  const panel = (title, body, sub = "", actions = "") => `<section class="panel"><div class="panel-head"><div><h2>${title}</h2>${sub ? "<p>" + sub + "</p>" : ""}</div>${actions}</div>${body}</section>`;
+  const runStep = (n, title, text) => `<div class="run-step"><b>${n}</b><div><strong>${title}</strong><p>${text}</p></div></div>`;
+  const stepEyebrow = (n, name) => `STEP ${n} OF 7 · ${name.toUpperCase()}${[2, 3].includes(n) ? (S.surface === "app" ? " · DESKTOP APP" : " · WEB") : ""}`;
+
+  function viewStart() {
+    const last = S.saved[0];
+    const second = S.surface === "app"
+      ? (last ? panel("Continue last case", `<div class="panel-body"><p class="subtitle">${esc(last.subject)} · ${esc(last.tenantName)} · saved ${new Date(last.savedAt).toLocaleString()} · ${last.findings} signals</p><div class="row-actions section-gap"><button type="button" class="primary" data-act="continue-last">Continue →</button></div></div>`, "Saved in your evidence folder") : panel("Open a plan", `<div class="panel-body"><p class="subtitle">A plan saved on the website fills Scope for you: tenant, account, window and sources. Drop the file on this window or choose it.</p><div class="row-actions section-gap"><button type="button" data-act="open-plan">Open a plan…</button></div></div>`, "From the website"))
+      : panel("Need mailbox evidence?", `<div class="panel-body"><p class="subtitle">Mailbox rules, forwarding, delegates and message trace need the desktop app. Download it once; the same case file opens in both.</p><div class="row-actions section-gap"><button type="button" data-act="get-app">↓ macOS · Apple silicon</button><button type="button" data-act="get-app">↓ Windows · x64</button></div></div>`, "Desktop app");
+    return head("MICROSOFT 365 · INCIDENT TRIAGE", "Clarity in the first hour.", "One guided flow: sign in, choose the scope, collect, review, respond, hand over. Every decision stays connected to the case.", `<button type="button" data-act="sample">Explore sample case ↗</button>`) +
+      `<div class="grid-3">
+        <section class="panel hero-card primary-path"><span class="path-icon">⌕</span><span class="path-number">01 / NEW INVESTIGATION</span><h2>Start an investigation</h2><p>Sign in once, choose who and how far back, and collect the first signals with your delegated Microsoft 365 access.</p><ul><li>One account or a whole tenant</li><li>Read-only collection</li><li>Sign-in only on the Connect step</li></ul><button type="button" class="primary" data-act="new-investigation">New investigation <span>→</span></button></section>
+        <section class="panel hero-card"><span class="path-icon">▤</span><span class="path-number">02 / PICK UP A CASE</span><h2>Open a case</h2><p>Bring a case file or a case saved on this ${S.surface === "app" ? "computer" : "device"} back into the workspace, exactly where you left it.</p><ul><li>Case files and saved cases</li><li>Reviews, decisions and the action log</li><li>Integrity-checked before analysis</li></ul><button type="button" data-act="open-case">Open a case <span>→</span></button></section>
+        <section class="panel hero-card"><span class="path-icon">◷</span><span class="path-number">03 / PRACTISE FIRST</span><h2>Try the sample</h2><p>A fictional Contoso tenant with a staged compromise. Walk all seven steps without touching a real tenant.</p><ul><li>Nothing is real, nothing is changed</li><li>Same screens, same runbook</li><li>Reset any time</li></ul><button type="button" data-act="sample">Explore sample case <span>→</span></button></section>
+      </div>
+      <div class="grid-even section-gap">${second}${panel("Your evidence, under your control", '<div class="panel-body"><p class="subtitle">The case is saved automatically while you work — the case bar says when. Export a case file to move between the desktop app and the web viewer. Nothing is uploaded.</p></div>')}</div>`;
+  }
+
+  function viewNewCase() {
+    const k = S.kase;
+    return `<section class="panel new-case-panel" id="new-case-panel"><div class="new-case-symbol" aria-hidden="true">＋</div><div class="eyebrow">NEW INVESTIGATION</div><h2>Start a new investigation</h2><p class="subtitle">A case is already open. It is saved on this ${S.surface === "app" ? "computer" : "device"} and stays listed under Open a case.</p><div class="current-case-summary"><strong>${esc(k.scope === "tenant" ? k.tenantName + " · whole tenant" : k.subject)}</strong><span>${esc(k.id.slice(0, 8))} · ${k.records.toLocaleString()} records · ${k.log.length} log entries · ${k.exports["Case file"] ? "exported " + esc(k.exports["Case file"]) : "not exported as a file yet"}</span></div><div class="new-case-actions"><button type="button" class="primary" data-act="confirm-new">Save &amp; start new case →</button><button type="button" data-act="export" data-what="Case file">Export current case</button></div><div class="row-actions"><button type="button" class="text-button" data-step="review">Return to current case</button></div></section>`;
+  }
+
+  function tenantFields() {
+    if (S.surface === "app" && S.signAs === "profile") return `<div class="notice good">Customer profile <strong>Contoso</strong> · tenant 7d3f2c1a… · Graph app 4b2e… · Exchange app 91c0… · certificate expires 2027-03-01. No browser sign-in: the services authenticate with the certificate.</div>`;
+    return `<div class="field-grid"><label class="field">Tenant<select id="tenantMode"><option value="org" ${S.tenantMode === "org" ? "selected" : ""}>My organisation</option><option value="customer" ${S.tenantMode === "customer" ? "selected" : ""}>Customer tenant · by domain</option></select></label>${S.tenantMode === "customer" ? `<label class="field">Customer domain<input id="domain" value="${esc(S.domain)}" placeholder="contoso.com" autocomplete="off" spellcheck="false"></label>` : `<label class="field">Signed-in account<input value="analyst@limon-it.nl" disabled></label>`}</div>
+      ${S.tenantMode === "customer" ? (S.tenant ? `<div class="notice good">✓ <strong>${esc(S.tenant.name)}</strong> · ${esc(S.tenant.id)} — resolved from the public OpenID configuration. The sign-in window opens for this tenant, so a partner account gets a token for the customer, not for its home tenant.</div>` : `<div class="row-actions" style="margin-bottom:15px"><button type="button" data-act="resolve">Look up tenant</button><span class="form-note">Try contoso.com, fabrikam.com or northwind.nl.</span></div>`) : `<p class="form-note account-hint">The account's own tenant. For a customer tenant choose the other option — the tenant is pinned before the browser opens.</p>`}`;
+  }
+  function viewConnect() {
+    const g = S.svc.graph, app = S.surface === "app";
+    const picker = app ? `<section class="connection-picker"><div class="split-label"><h3>Microsoft 365 connection</h3><button type="button" class="text-button" data-act="manage-profiles">Customer connections</button></div><label class="field">Authentication<select id="signAs"><option value="delegated" ${S.signAs === "delegated" ? "selected" : ""}>Delegated user · sign in with your passkey</option><option value="profile" ${S.signAs === "profile" ? "selected" : ""}>Contoso · App + certificate</option></select></label><p class="form-note">Delegated access needs no new registration. Customer profiles use existing application permissions. Certificates stay on this computer.</p></section>` : "";
+    const readiness = app ? (S.ready === "ok" ? `<div class="notice good">✓ Bundled PowerShell and collection modules ready — checked automatically when this step opened.</div>` : `<div class="notice"><p class="readiness-checking" style="margin:0">Checking the bundled PowerShell runtime and collection modules…</p></div>`) : "";
+    const webCard = !app ? `<div class="service-connections rows">${g.state === "ready" ? `<div class="service-connection" data-state="ready"><div><strong>Microsoft 365</strong><small class="okline">✓ ${esc(g.account)} · ${esc(g.tenantName)} · read-only permissions granted</small></div><span class="svc-actions"><span class="badge complete">Ready</span><button type="button" data-act="disconnect">Disconnect</button></span></div>` : g.state === "waiting" ? `<div class="service-connection" data-state="waiting"><div><strong>Microsoft sign-in window</strong><small class="wait"><span class="spin"></span>Waiting for the Microsoft window… <span data-elapsed="graph">${elapsed(g.since)}</span> · allow the pop-up if your browser blocks it</small></div><span class="svc-actions"><span class="badge pending">Waiting for you</span><button type="button" data-act="cancel-signin" data-svc="graph">Cancel</button></span></div>` : `<div class="service-connection" data-state="idle"><div><strong>Sign in with Microsoft</strong><small>A Microsoft window opens. Sign in with your analyst account; Microsoft may ask for MFA or consent.</small></div><span class="svc-actions"><button type="button" class="primary" data-act="signin" data-svc="graph" ${S.tenantMode === "customer" && !S.tenant ? "disabled" : ""}>Sign in with Microsoft</button></span></div>`}</div>` : connectionRows(true);
+    return head(stepEyebrow(2, "Connect"), "Sign in once. Then nothing interrupts you.", app ? "Each service is a row: press its button when you are ready, watch it wait, see the result. The browser opens then — not before, and not later." : "Connect with delegated access. Your account's roles and Microsoft 365 licensing determine the evidence you can collect.") +
+      `<div class="grid-2">${panel("Microsoft 365 connection", `<div class="panel-body">${picker}${readiness}${tenantFields()}${webCard}${(g.state === "waiting" || S.svc.exchange.state === "waiting") ? `<div class="notice">Microsoft may ask for MFA or consent in the browser. Come back here when it says the window can be closed.</div>` : ""}<div class="row-actions section-gap"><button type="button" class="text-button" data-step="start">← Start</button><button type="button" class="primary" data-step="scope" ${connected() ? "" : "disabled"}>Next: choose the scope →</button></div></div>`, app ? "PowerShell · user or application access" : "Read-only · browser sign-in")}
+      ${panel("What happens next", `<div class="panel-body">${runStep(1, "Sign in — once", "Microsoft handles the sign-in and MFA. The tenant and account stay visible on the case.")}${runStep(2, "Choose the scope", "One account or the whole tenant, the window, and how much evidence.")}${runStep(3, "Collect and review", "Progress on one screen; Review opens by itself. Nothing later opens a sign-in window — arming containment on step 6 asks for write permissions once, and says so first.")}<div class="notice">${app ? "Exchange Online is optional here. Skip it and the mailbox evidence is simply hidden on Scope; you can come back." : "Mailbox rules, forwarding and delegates need the desktop app — Scope offers the hand-off."}</div></div>`, "One case from first check to handover")}</div>`;
+  }
+
+  function viewScope() {
+    const sc = S.scope, app = S.surface === "app", exch = S.svc.exchange.state === "ready";
+    const q = sc.upn.toLowerCase();
+    const sugg = q.length >= 2 && !USERS.some(u => u[0] === sc.upn) ? USERS.filter(u => u[0].includes(q) || u[1].toLowerCase().includes(q)).slice(0, 4) : [];
+    const known = USERS.find(u => u[0] === sc.upn);
+    const preset = (id, name, note, disabled, reason) => `<label class="check" ${disabled ? `title="${esc(reason)}" style="opacity:.5"` : ""}><input type="radio" name="preset" value="${id}" ${sc.preset === id ? "checked" : ""} ${disabled ? "disabled" : ""}><span>${name}<small>${note}</small></span></label>`;
+    const presets = app
+      ? preset("quick", "Quick", "Graph core · 8 sources · about 3 minutes") + preset("standard", "Standard", "+ audit log, roles, devices, application identities, mailbox snapshot · 13 sources", sc.mode === "tenant" || !exch, sc.mode === "tenant" ? "The mailbox snapshot needs one affected account" : "Connect Exchange Online on step 2") + preset("everything", "Everything", "All 20 sources · may exceed an hour · includes mail content", !exch, "Connect Exchange Online on step 2") + preset("custom", "Custom", "Choose the sources yourself")
+      : preset("quick", "Quick", "Graph core · 8 sources · about 3 minutes") + preset("custom", "Custom", "Choose the Graph sources yourself");
+    const list = app ? CATALOG : CATALOG.filter(c => c[2] === "graph" && PRESETS.standard.includes(c[0]));
+    const custom = sc.preset === "custom" ? list.map(c => `<label class="check"><input type="checkbox" data-src="${c[0]}" ${sc.custom.includes(c[0]) ? "checked" : ""} ${c[2] === "exchange" && !exch ? "disabled" : ""}><span>${esc(c[1])}<small>${c[2] === "exchange" ? "PowerShell · Exchange Online" : app ? "PowerShell · Microsoft Graph" : "Read-only · delegated permissions apply"}</small></span></label>`).join("") : "";
+    const form = `<div class="field-grid"><label class="field">Investigation scope<select id="scopeMode"><option value="user" ${sc.mode === "user" ? "selected" : ""}>One affected account</option><option value="tenant" ${sc.mode === "tenant" ? "selected" : ""}>Tenant-wide review</option></select></label><label class="field">Lookback window<select id="days">${[1, 7, 30, 90, 180].map(d => `<option value="${d}" ${sc.days == d ? "selected" : ""}>Last ${d} ${d === 1 ? "day" : "days"}</option>`).join("")}</select></label></div>
+      <div class="quick-account-row"><label class="field">Account to check<input id="upn" value="${esc(sc.upn)}" placeholder="name@company.com" type="text" inputmode="email" autocomplete="off" spellcheck="false" ${sc.mode === "tenant" ? "disabled" : ""}></label><button type="button" class="primary" data-act="start-collection">Start collection →</button></div>
+      ${sc.mode === "user" ? (sugg.length ? `<section class="panel" style="margin:-8px 0 15px">${sugg.map(u => `<button type="button" class="finding" data-pick="${esc(u[0])}"><span class="badge">user</span><span><strong>${esc(u[0])}</strong><small>${esc(u[1])} · ${esc(u[2])}</small></span><span class="arrow">↗</span></button>`).join("")}</section>` : known ? `<p class="form-note account-hint">✓ ${esc(known[1])} · ${esc(known[2])} — found in ${esc(S.tenant?.name || "your organisation")}${app ? " (the connected Graph session answered the lookup)" : ""}.</p>` : sc.upn.includes("@") ? `<p class="form-note account-hint" style="color:var(--red)">No account matches ${esc(sc.upn)} in this tenant. Check the address before collecting.</p>` : `<p class="form-note account-hint">Start typing a name or address; the tenant's users are suggested.</p>`) : `<p class="form-note account-hint">All accessible users and mailboxes in ${esc(S.tenant?.name || "your organisation")}. Response always targets one account — you choose it on step 6.</p>`}
+      ${executionCard(engine(), "ready", app ? "Collection method: PowerShell" : "Collection method: Browser JavaScript", app ? "Runs on this computer using the bundled PowerShell runtime. The services you connected on step 2 are reused; no new sign-in." : "Runs in this browser using JavaScript and Microsoft Graph, with the sign-in from step 2.")}
+      <div class="split-label"><h3>Evidence to collect</h3><span class="muted">${app ? "Graph + Exchange" : "Microsoft Graph"}</span></div><div class="presets">${presets}</div>${custom}
+      ${app ? `<div class="notice"><strong>Evidence folder</strong><p style="margin:6px 0 10px;overflow-wrap:anywhere">~/Triage evidence</p><div class="row-actions"><button type="button" data-act="noop">Choose evidence folder…</button><button type="button" data-act="noop">Open folder</button></div><p class="form-note">New collections save here automatically. Saving the case includes your latest reviews and action log.</p></div>` : ""}
+      <div class="row-actions section-gap"><button type="button" class="text-button" data-step="connect">← Connect</button></div>`;
+    return head(stepEyebrow(3, "Scope"), "Who, how far back, how much.", "Choose the account, the window and an evidence preset. Current-state checks are snapshots; a completed query covers what Microsoft returned, not what was retained.") +
+      `<div class="grid-2">${panel("Investigation", `<div class="panel-body">${form}</div>`, app ? "PowerShell · reuses the step 2 connections" : "Read-only · browser collection")}
+      ${panel("What happens next", `<div class="panel-body">${runStep(1, "Confirm the account", "A mistyped address is caught before any source is read.")}${runStep(2, "Collect and see the gaps", "Each source shows its returned records, errors and continuation state.")}${runStep(3, "Review in one workspace", "Findings open in a drawer with their source records; nothing jumps you to another page.")}${app ? "" : `<div class="notice">Need mailbox rules, forwarding or delegation? Continue in the desktop app: 1 · download, 2 · open, 3 · <em>Open a plan</em> and pick the plan you save here.</div><button type="button" data-act="save-plan">Save collection plan</button>`}</div>`, "One case from first check to handover")}</div>`;
+  }
+
+  const STATE_LABEL = { complete: ["✓", "Complete", "Ready to inspect"], running: ["", "Collecting", "Collecting evidence now"], queued: ["◷", "Waiting", "Waiting to start"], partial: ["!", "Partial", "Some evidence collected; collection is incomplete"], failed: ["×", "Failed", "Collection failed; open for details"], cancelled: ["Ⅱ", "Cancelled", "Collection stopped before completion"], "not-collected": ["—", "Not collected", "No collection result recorded"] };
+  function sourceRows(k, limit, expandable) {
+    const list = expandable ? k.sources : k.sources.slice().sort((a, b) => ({ running: 0, partial: 1, failed: 1, cancelled: 1, queued: 2, complete: 3 }[a.state] ?? 4) - ({ running: 0, partial: 1, failed: 1, cancelled: 1, queued: 2, complete: 3 }[b.state] ?? 4)).slice(0, limit || 99);
+    return list.map(s => {
+      const [icon, label, desc] = STATE_LABEL[s.state] || STATE_LABEL["not-collected"];
+      const open = expandable && route.s === s.key;
+      const count = s.count > 0 || s.state === "complete" ? s.count.toLocaleString() + (s.count === 1 ? " record" : " records") + (s.state === "running" ? " so far" : "") : s.state === "running" ? "Awaiting records" : "";
+      const refs = Object.keys(RECORDS).filter(r => r.startsWith(s.key + ":"));
+      return `<div class="source-group"><button type="button" id="source-${s.key}" class="source-row" data-state="${s.state}" data-act="${expandable ? "toggle-source" : "evidence-source"}" data-src="${s.key}" ${expandable ? `aria-expanded="${open}"` : ""}><span class="source-state-icon" aria-hidden="true">${icon}</span><span class="source-label"><strong>${esc(LABEL[s.key])}</strong><small>${esc(s.note || desc)}</small></span><span class="source-result"><span class="source-status">${label}</span>${count ? `<span class="source-count">${esc(count)}</span>` : ""}</span><span class="source-arrow" aria-hidden="true">${expandable ? (open ? "−" : "+") : "›"}</span></button>${open ? `<div class="source-details" id="source-records-${s.key}"><div class="source-detail-head"><h3>${s.count.toLocaleString()} records</h3><p class="subtitle">${refs.length ? "Select a record to inspect the original evidence." : s.count ? "Records are carried for the sample sources only in this prototype." : "This query completed and returned no records."}</p></div><details class="source-metadata"><summary>Collection details</summary><p class="form-note">${esc(s.note || "Delegated query · " + k.window)}<br>Started: ${esc(k.startedAt)}<br>State: ${label}</p></details><div class="source-record-list">${refs.map((r, i) => `<button type="button" class="finding" data-act="open-record" data-ref="${r}"><span class="record-ref">${r}</span><span><strong>${esc(RECORDS[r]["Operation / event"] || RECORDS[r].Operation || RECORDS[r].Command || RECORDS[r].Role || RECORDS[r].User || RECORDS[r].clientId || RECORDS[r].userPrincipalName || "Record " + (i + 1))}</strong><small>${esc([RECORDS[r].Account || RECORDS[r].UserId || RECORDS[r]["Initiated by"] || RECORDS[r].Mailbox || "", RECORDS[r]["Time (UTC)"] || RECORDS[r].CreationTime || RECORDS[r].riskLastUpdated || "current state", RECORDS[r]["IP address"] || ""].filter(Boolean).join(" · "))}</small></span><span aria-hidden="true">↗</span></button>`).join("")}</div></div>` : ""}</div>`;
+    }).join("");
+  }
+  function coverageSummary(k) {
+    const c = cov(k); const counts = {}; for (const s of k.sources) counts[s.state] = (counts[s.state] || 0) + 1;
+    const running = k.sources.filter(s => s.state === "running");
+    const legend = Object.entries({ complete: ["✓", "complete"], running: ["↻", "collecting"], queued: ["◷", "waiting"], partial: ["!", "partial"], failed: ["×", "failed"], cancelled: ["Ⅱ", "cancelled"], "not-collected": ["—", "not collected"] }).filter(([st]) => counts[st]).map(([st, [i, l]]) => `<span class="coverage-key" data-state="${st}"><i aria-hidden="true">${i}</i>${counts[st]} ${l}</span>`).join("");
+    return `<div class="coverage-summary"><div class="coverage-heading"><div><span class="coverage-eyebrow">${k.collecting ? "Collection in progress" : "Collection results"}</span><p><strong>${c.c}</strong> / ${c.n} selected sources complete</p></div><span class="coverage-percent">${c.pct}%</span></div><div class="coverage-meter" role="progressbar" aria-valuemin="0" aria-valuemax="${c.n}" aria-valuenow="${c.c}"><span style="width:${c.pct}%"></span></div><div class="coverage-legend">${legend}</div>${k.collecting ? `<p class="coverage-current" role="status">${running.length ? "Collecting now · " + esc(running.map(s => LABEL[s.key]).join(", ")) + (running[0].key === "ual" ? " · audit query pending" : "") : "Preparing collection…"}</p>` : k.analyzing ? `<p class="coverage-current" role="status">Analyzing evidence with JavaScript…</p>` : ""}</div>`;
+  }
+  function viewCollect() {
+    const k = S.kase; if (!k) return "";
+    const done = k.collectionDone;
+    return head(stepEyebrow(4, "Collect"), done ? "Collection finished." : k.analyzing ? "Analyzing evidence." : "Collecting evidence.", done ? "Review has the results. Incomplete sources stay visible as gaps." : "Keep this window open. Review opens by itself when collection ends.", k.collecting ? `<button type="button" data-act="stop">Stop scanning</button>` : done ? `<button type="button" class="primary" data-step="review">Open Review →</button>` : "") +
+      connectionRows(false) +
+      `<section class="panel collection-coverage section-gap"><div class="panel-head"><div><h2>Collection coverage</h2><p>Every selected source, its status and record count. Open a source in Review to inspect its evidence.</p></div></div>${coverageSummary(k)}${sourceRows(k, 99, false)}<div class="coverage-footer">${k.sources.length} sources selected · ${S.surface === "app" ? "PowerShell on this computer" : "Microsoft Graph in this browser"}<span>Stop keeps the records already returned; unfinished sources are marked cancelled.</span></div></section>
+      <details class="panel collection-details section-gap"><summary>Collection details <span>${S.surface === "app" ? "PowerShell output" : "Source activity"}</span></summary><pre class="command">${esc(k.log.filter(l => l.type.startsWith("source") || l.type.startsWith("collection")).slice(-30).map(l => l.at + " " + l.detail).join("\n") || "—")}</pre></details>`;
+  }
+
+  function findingRow(f, k) {
+    const d = k.dispositions[f.id];
+    return `<button type="button" class="finding" data-act="open-finding" data-id="${f.id}" ${route.f === f.id ? 'style="background:var(--soft)"' : ""}><span class="badge ${f.sev}">${f.sev}</span><span><strong>${esc(f.title)}</strong><small>${esc(f.user)} · ${esc(f.analyzer)} · ${esc(f.time)}${d && d.state !== "unreviewed" ? " · " + esc(d.state) : ""}</small></span><span class="arrow">↗</span></button>`;
+  }
+  function logRow(l) { return `<div class="log-row"><time>${esc(l.at)}<small>${esc(l.actor)}</small></time><div><strong>${esc(l.type)}</strong><span>${esc(l.detail)}</span></div></div>`; }
+  function viewReview() {
+    const k = S.kase; k.reviewVisited = true;
+    const tab = route.tab || "overview";
+    const high = k.findings.filter(f => ["Critical", "High"].includes(f.sev)).length;
+    const reviewed = Object.values(k.dispositions).filter(d => d.state !== "unreviewed").length;
+    const c = cov(k);
+    const partial = k.partial ? `<div class="notice">Analysis ran on a partial set: ${esc(k.sources.filter(s => s.state !== "complete").map(s => LABEL[s.key]).join(", "))} ${k.partial > 1 ? "are" : "is"} incomplete. <button type="button" data-act="resume" style="margin-left:10px">${S.surface === "app" ? "Collect again" : "Resume incomplete sources"}</button></div>` : "";
+    const drawer = route.f ? findingDrawer(k) : route.r ? recordDrawer(k, route.r, null) : "";
+    const wrap = (inner) => drawer ? `<div class="drawer-layout"><div>${inner}</div>${drawer}</div>` : inner;
+    if (tab === "overview") {
+      const phases = Object.keys(k.phaseOutcomes).length;
+      return head("CASE WORKSPACE", "The case, at a glance.", `${esc(k.subject || k.tenantName)} · ${esc(k.window)} · ${k.collectionMethod}`, `<button type="button" class="primary" data-step="respond">Respond →</button>`) + partial + (k.sample ? '<div class="notice">Sample case · Fictional data for exploring the workflow. No live collection or tenant response has been performed.</div>' : "") +
+        `<div class="stats"><div class="stat attention"><span class="stat-label">PRIORITY SIGNALS</span><strong>${high}</strong><small>High / critical · requires review</small></div><div class="stat"><span class="stat-label">EVIDENCE RECORDS</span><strong>${k.records.toLocaleString()}</strong><small>Preserved in this case</small></div><div class="stat"><span class="stat-label">SOURCES COMPLETE</span><strong>${c.c}<span class="muted"> / ${c.n}</span></strong><small>${c.gaps} incomplete or not collected</small></div><div class="stat"><span class="stat-label">REVIEWED</span><strong>${reviewed}<span class="muted"> / ${k.findings.length}</span></strong><small>Analyst decisions with a reason</small></div></div>
+        <div class="grid-2">${panel("Signals to review", k.findings.slice(0, 6).map(f => findingRow(f, k)).join(""), "Automated analysis · prioritize, inspect, decide", `<button type="button" class="text-button" data-step="review" data-tab="findings">View all →</button>`)}
+        <section class="panel collection-coverage"><div class="panel-head"><div><h2>Collection coverage</h2><p>Track progress. Open a source to inspect evidence.</p></div><button type="button" class="text-button" data-step="review" data-tab="evidence">All sources →</button></div>${coverageSummary(k)}${sourceRows(k, 7, false)}<div class="coverage-footer">${k.sources.length > 7 ? `Showing 7 of ${k.sources.length} sources · incomplete results first` : "Select a source to inspect its evidence"}</div></section></div>
+        <div class="grid-even section-gap">${panel("Respond", `<div class="panel-body"><p class="subtitle">Confirm and preserve → Contain and record → Establish impact → Secure evidence → Hand over.</p><div class="progress"><div style="width:${phases * 20}%"></div></div><button type="button" class="primary" data-step="respond">${phases ? "Continue the runbook →" : "Start the first 60 minutes →"}</button></div>`, "Guidance for decisions, not a deadline for collection")}${panel("Latest activity", k.log.slice(-3).reverse().map(logRow).join("") || `<div class="empty">The case is open. Decisions will appear here.</div>`, "One chronology across collection and response", `<button type="button" class="text-button" data-step="handover">Open action log →</button>`)}</div>`;
+    }
+    if (tab === "findings") {
+      const q = S.filter.toLowerCase(); const list = k.findings.filter(f => (S.severity === "all" || f.sev === S.severity) && (route.state !== "unreviewed" || !k.dispositions[f.id] || k.dispositions[f.id].state === "unreviewed") && (f.title + f.user + f.detail).toLowerCase().includes(q));
+      return head("CASE WORKSPACE", "Turn signals into decisions.", "Review each finding against its source records. An automated signal is not confirmation of compromise.", `<button type="button" class="primary" data-step="respond">Respond →</button>`) + partial +
+        wrap(`<div class="filter-bar"><input id="finding-filter" aria-label="Search findings" placeholder="Search account, finding or detail…" value="${esc(S.filter)}"><select id="severity" aria-label="Filter severity">${["all", "Critical", "High", "Medium", "Low", "Info"].map(s => `<option ${S.severity === s ? "selected" : ""}>${s}</option>`).join("")}</select>${route.state ? `<button type="button" data-act="clear-state-filter">Unreviewed only ✕</button>` : ""}<span class="muted">${list.length} findings</span></div><section class="panel">${list.map(f => findingRow(f, k)).join("") || `<div class="empty"><div class="empty-icon">◫</div><h2>No findings match</h2><p>Clear the filter or the severity.</p></div>`}</section>`);
+    }
+    if (tab === "timeline") {
+      const rows = Object.entries(RECORDS).map(([ref, r]) => ({ ref, time: r["Time (UTC)"] || r.CreationTime || r.riskLastUpdated || r.lastSignIn || "", title: r["Operation / event"] || r.Operation || r.Command || r.Role || "Current state", user: r.Account || r.UserId || r["Initiated by"] || r.User || r.Principal || r.userPrincipalName || r.Mailbox || "" })).filter(x => x.time).sort((a, b) => b.time.localeCompare(a.time));
+      return head("CASE WORKSPACE", "Reconstruct the sequence.", "Events across collected sources, ordered by their recorded time. Undated inventory remains available in Evidence.") + wrap(`<section class="panel">${rows.map(x => `<div class="timeline-row"><time>${esc(x.time)}</time><div><strong>${esc(x.title)}</strong><small>${esc(x.user)}</small><button type="button" class="text-button" data-act="open-record" data-ref="${x.ref}">${x.ref} →</button></div></div>`).join("")}</section>`);
+    }
+    return head("CASE WORKSPACE", "Know what you have. See what is missing.", "Select an evidence source to open its records here. Each source keeps its collection status, errors and original evidence.", k.partial && S.surface === "web" ? `<button type="button" data-act="resume">Resume incomplete sources</button>` : "") +
+      wrap(`<section class="panel evidence-sources"><div class="panel-head"><div><h2>Evidence sources</h2><p>Click a source to inspect its records and collection details.</p></div><span class="badge imported">${k.records.toLocaleString()} records</span></div>${sourceRows(k, 99, true)}</section>`);
+  }
+  function findingDrawer(k) {
+    const f = k.findings.find(x => x.id === route.f); if (!f) return "";
+    if (route.r) return recordDrawer(k, route.r, f);
+    const d = k.dispositions[f.id] || { state: "unreviewed", note: "", reference: "" }; const err = k.reviewError || {};
+    return `<aside class="panel drawer" aria-label="Finding"><div class="dialog-head"><h2>Finding · ${f.id}</h2><button type="button" data-act="close-drawer" aria-label="Close">✕ Close</button></div><div class="dialog-body">
+      <p><span class="badge ${f.sev}">${f.sev}</span> <span class="badge ${d.state}">${d.state}</span></p><h2 style="margin-top:10px">${esc(f.title)}</h2><p class="subtitle">${esc(f.detail)}</p><p class="muted">${esc(f.user)} · ${esc(f.analyzer)} · ${esc(f.time)}<br>Signal requires analyst review</p>
+      <form id="review-form" data-id="${f.id}" novalidate><label class="field">Review decision<select name="state">${["unreviewed", "investigating", "confirmed", "benign"].map(s => `<option ${d.state === s ? "selected" : ""}>${s}</option>`).join("")}</select></label><label class="field">Reason and supporting facts (required)<textarea name="note" ${err.note ? 'aria-invalid="true"' : ""}>${esc(d.note)}</textarea>${err.note ? `<span class="field-error">${esc(err.note)}</span>` : ""}</label><label class="field">Evidence reference<input name="reference" value="${esc(d.reference)}" placeholder="${f.refs[0] ? "e.g. " + f.refs[0] : "source:record"}" ${err.reference ? 'aria-invalid="true"' : ""}>${err.reference ? `<span class="field-error">${esc(err.reference)}</span>` : ""}</label><p class="form-note">Required when confirming. Copy the reference from a supporting record below.</p><div class="row-actions"><button type="submit" class="primary">Save review</button><button type="button" data-act="contain-account" data-user="${esc(f.user)}">Contain this account →</button></div></form>
+      <div class="split-label section-gap"><h3>Supporting evidence · ${f.refs.length}</h3><span class="muted">stays in this drawer</span></div><div class="source-record-list">${f.refs.map(r => `<button type="button" class="finding" data-act="open-record" data-ref="${r}"><span class="record-ref">${r}</span><span><strong>${esc(RECORDS[r]?.["Operation / event"] || RECORDS[r]?.Operation || RECORDS[r]?.Command || RECORDS[r]?.Role || RECORDS[r]?.User || r)}</strong><small>${esc(RECORDS[r]?.["Time (UTC)"] || RECORDS[r]?.CreationTime || "current state")}${RECORDS[r]?.["IP address"] ? " · " + esc(RECORDS[r]["IP address"]) : ""}</small></span><span aria-hidden="true">→</span></button>`).join("")}</div></div></aside>`;
+  }
+  function recordDrawer(k, ref, f) {
+    const r = RECORDS[ref] || { Reference: ref, Note: "This prototype carries records for the sample findings only." };
+    return `<aside class="panel drawer" aria-label="Evidence record"><div class="dialog-head"><h2>Evidence · ${esc(ref)}</h2><button type="button" data-act="close-drawer" aria-label="Close">✕ Close</button></div><div class="dialog-body">${f ? `<button type="button" class="text-button" data-act="back-to-finding">← Back to finding ${f.id}</button>` : ""}<p class="muted">Use <strong>${esc(ref)}</strong> when recording a review or a runbook outcome.</p><dl class="evidence-facts">${Object.entries(r).map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("")}</dl><details class="source-metadata"><summary>Original JSON</summary><pre class="raw">${esc(JSON.stringify(r, null, 2))}</pre></details></div></aside>`;
+  }
+
+  // ---------- Respond: the beta's first-hour page ----------
+  function hourCheck(title, detail, action, mark) { return `<div class="hour-check"><div class="who">${mark ? `<span class="checkmark ${mark === "ok" ? "ok" : mark === "warn" ? "warn" : ""}">${mark === "ok" ? "✓" : mark === "warn" ? "!" : ""}</span>` : ""}<div><h3>${title}</h3><p>${detail}</p></div></div><div class="row-actions">${action || ""}</div></div>`; }
+  function viewRespond() {
+    const k = S.kase; k.respondVisited = true;
+    const phase = route.tab || "preserve"; const idx = PHASES.findIndex(p => p[0] === phase); const P = PHASES[idx] || PHASES[0];
+    const target = k.responseTarget || (k.scope === "user" ? k.subject : "");
+    const c = cov(k), resp = S.svc.response, app = S.surface === "app";
+    let content = "";
+    if (phase === "preserve") content = `<section class="panel">${hourCheck("Confirm account and tenant", `${esc(target || "Tenant-wide case")} · ${esc(k.tenantName)}`, `<button type="button" data-step="review" data-tab="evidence">Inspect evidence</button>`, "ok")}${hourCheck("Review collection coverage", `${c.c} / ${c.n} selected sources complete; ${c.gaps} gap${c.gaps === 1 ? "" : "s"} to inspect.`, `<button type="button" data-step="review" data-tab="evidence">Review gaps</button>`, c.gaps ? "warn" : "ok")}${hourCheck("Preserve the starting point", k.startingPointExported ? "Exported " + esc(k.startingPointExported) + " — before any change." : "Export original evidence before changing an account.", k.startingPointExported ? "" : `<button type="button" class="primary" data-act="export-starting-point">Export case</button>`, k.startingPointExported ? "ok" : "")}</section>`;
+    if (phase === "contain") {
+      const armed = k.armed;
+      const stepCards = STEPS.filter(s => s[0] !== "preserve").map((s, i) => stepCard(k, s, i + 1)).join("");
+      content = (k.scope === "tenant" && !target ? `<section class="panel">${hourCheck("Choose the affected account", "Response always targets one account, even in a tenant-wide investigation.", USERS.slice(0, 3).map(u => `<button type="button" data-act="pick-target" data-user="${esc(u[0])}">${esc(u[0])}</button>`).join(""))}</section>` :
+        `<section class="panel">${hourCheck("Affected account", `<strong>${esc(target)}</strong> · ${esc(k.tenantName)}${k.scope === "tenant" ? " · tenant-wide case" : ""}`, k.scope === "tenant" ? `<button type="button" class="text-button" data-act="choose-account">Change</button>` : "", "ok")}${hourCheck("Response session", resp.state === "ready" ? `✓ Reuses your Connect sign-in · ${esc(S.svc.graph.account)}` : resp.state === "waiting" ? `<span class="spin"></span>${app ? "Waiting for you in your browser… " : "Checking the session… "}<span data-elapsed="response">${elapsed(resp.since)}</span>` : app ? "Read-only checks against the account: methods, sessions, grants. Until WP-41 lands this opens one browser window; after it, none." : "Read-only checks against the account. Silent — the Connect sign-in is reused.", resp.state === "ready" ? `<span class="badge complete">Connected</span>` : resp.state === "waiting" ? `<button type="button" data-act="cancel-signin" data-svc="response">Cancel</button>` : `<button type="button" class="primary" data-act="signin" data-svc="response">Connect account checks</button>`, resp.state === "ready" ? "ok" : "")}</section>
+        <div id="hour-response-slot"><section class="screen active" id="screen-contain"><div id="containBody">
+          <div class="card arm ${armed ? "on" : "off"}" id="armCard"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><div><h2 style="margin:0 0 2px">${armed ? "Containment armed" : k.arming ? "Requesting write permissions…" : "Containment is not armed"}</h2><span class="mini muted">${armed ? "This session holds delegated write permissions for " + esc(target) + ". Actions below take effect immediately in your tenant — each one still confirms." : k.arming ? '<span class="spin"></span>Microsoft permissions window open · <span data-elapsed="arm">' + elapsed(k.arming) + "</span> · consent is recorded once per tenant" : "Arming opens a Microsoft permissions window (once per tenant) for the containment scopes: revoke sessions, user read/write, authentication methods, delegated permission grants. It says so here first — nothing else in this flow opens one."}</span></div><span class="hspacer" style="margin-left:auto"></span>${armed ? '<span class="cs-pill done">write access held</span><button type="button" class="btn small" data-act="disarm">Disarm</button>' : k.arming ? '<button type="button" class="btn" data-act="cancel-arm">Cancel</button>' : `<button type="button" class="btn primary" data-act="arm" ${resp.state === "ready" ? "" : 'disabled title="Connect the account checks first"'}>Arm containment</button>`}</div></div>
+          ${stepCards}
+        </div></section></div>`);
+    }
+    if (phase === "scope") content = `<section class="panel">${hourCheck("Establish the affected accounts", k.impactRun ? `Thirteen checks ran at ${esc(k.impactRun)} over ${k.days} days · 2 need attention.` : "Run the thirteen impact checks against this account's context: same IPs, same user agent, rules and grants tenant-wide, role and MFA changes.", resp.state === "ready" ? `<button type="button" class="primary" data-act="run-impact" ${k.impactRun ? "disabled" : ""}>${k.impactRun ? "Ran" : "Run all checks"}</button>` : `<button type="button" data-tab="contain" data-step="respond">Connect checks on phase 2</button>`, k.impactRun ? "warn" : "")}</section>
+      <div id="hour-response-slot"><section class="screen active" id="screen-contain"><div class="card"><h2>Blast radius · ${k.days} days</h2><div class="cl-grid blast">${IMPACT.map((t, i) => { const hot = k.impactRun && (i === 0 || i === 2); return `<div class="cl-item blast ${k.impactRun ? "on" : ""}"><label class="bl-head"><input type="checkbox" ${k.impactRun ? "checked" : ""} disabled><span><b>${i + 1} · ${esc(t)}</b><span class="cl-what">${k.impactRun ? (hot ? (i === 0 ? "2 other accounts signed in from 51.x.x.x in the window" : "1 tenant-wide inbox rule created by adm.piet") : "clear") : "not run"}</span></span></label>${hot ? `<div class="bl-res"><span class="bl-sum hot">needs attention</span></div>` : ""}</div>`; }).join("")}</div></div></section></div>`;
+    if (phase === "evidence") content = `<section class="panel">${hourCheck("Preserve this investigation", "Export all source records, collection errors, decisions and the case action log in one integrity-checked file.", `<button type="button" class="primary" data-act="export" data-what="Case file">Export case</button>`, k.exports["Case file"] ? "ok" : "")}${hourCheck("Sources with gaps", c.gaps ? esc(k.sources.filter(s => s.state !== "complete").map(s => LABEL[s.key]).join(", ")) + " — recorded as gaps in the handover." : "Every selected source completed.", c.gaps ? `<button type="button" data-step="review" data-tab="evidence">Inspect</button>` : "", c.gaps ? "warn" : "ok")}</section>`;
+    if (phase === "handover") content = `<section class="panel">${hourCheck("Communication templates", "Drafts for the incident owner, the affected user, leadership and privacy/legal. A download is a draft — never a record that it was sent.", ["Incident owner", "Affected user", "Leadership", "Privacy / legal"].map(t => `<button type="button" data-act="template" data-what="${t}">${t}</button>`).join(""))}${hourCheck("Outstanding work and handover", "Findings, decisions, references and unresolved work for the next owner live on step 7.", `<button type="button" class="primary" data-step="handover">Hand over →</button>`)}</section>`;
+    const outcome = k.phaseOutcomes[phase];
+    return head("INVESTIGATE · DECIDE · RECORD", "First 60 minutes", "One guided workflow. Every check, decision and action stays with this case.", `<button type="button" data-step="handover">Hand over →</button>`) +
+      `<div class="phase-track">${PHASES.map((x, i) => `<button type="button" data-step="respond" data-tab="${x[0]}" ${phase === x[0] ? 'aria-current="step"' : ""}><small>${x[2]} MIN</small><b>${i + 1}. ${esc(x[1])}</b><span>${esc(k.phaseOutcomes[x[0]]?.outcome || "Not reviewed")}</span></button>`).join("")}</div>
+      <div class="hour-layout"><div><div class="hour-heading"><h2>${idx + 1}. ${esc(P[1])}</h2><button type="button" class="text-button" data-act="phase-note">＋ Note or decision</button></div>
+        <div class="hour-engine"><b>${app ? "PS" : "JS"}</b><div><strong>${app ? "Local PowerShell collector" : "Browser JavaScript checks"}</strong><p>${app ? "Graph and Exchange collection runs on this computer; response reuses the Connect session." : "Graph checks run in this browser with the Connect sign-in. Exchange collection needs the desktop app."}</p></div>${resp.state === "ready" ? `<span class="badge complete">checks connected</span>` : `<button type="button" data-step="respond" data-tab="contain">Connect account checks</button>`}</div>
+        ${content}
+        ${outcome ? `<p class="form-note section-gap">Latest analyst decision · <strong>${esc(outcome.outcome)}</strong> — ${esc(outcome.detail)}${outcome.reference ? " [" + esc(outcome.reference) + "]" : ""}</p>` : ""}
+        <div class="hour-next"><span>Check results and decisions belong to this phase.</span>${idx < 4 ? `<button type="button" data-step="respond" data-tab="${PHASES[idx + 1][0]}">Next phase →</button>` : `<button type="button" class="primary" data-step="handover">Hand over →</button>`}</div></div>
+      <aside class="panel hour-log"><div class="panel-head"><h2>Case action log</h2><span class="badge">UTC</span></div><div class="panel-body"><p class="form-note">Results are recorded automatically. Add context when it helps.</p><div id="hour-events">${k.log.slice(-6).reverse().map(logRow).join("") || '<p class="muted">Checks and decisions will appear here.</p>'}</div><button type="button" data-act="phase-note">＋ Note or external action</button><button type="button" class="text-button" data-step="handover">View complete history →</button></div></aside></div>`;
+  }
+  function stepCard(k, s, n) {
+    const [key, title, kind, why] = s; const st = k.steps[key] || {};
+    const flagged = { revoke: true, methods: true, rules: true, oauth: true }[key];
+    const dis = k.armed ? "" : "disabled";
+    const pill = `<span class="cs-pill ${st.status === "done" ? "done" : ""}">${st.status === "done" ? "done · " + esc(st.at) : st.status === "skipped" ? "deliberately skipped" : "verification pending"}</span>`;
+    let actions = "";
+    if (kind === "action") actions = `<button type="button" class="btn ${key === "disable" ? "danger" : "primary"}" data-act="write" data-key="${key}" ${dis || (st.status === "done" ? "disabled" : "")}>${{ revoke: "Revoke sessions now", disable: "Disable account", password: "Generate & set a temporary password" }[key]}</button>`;
+    if (kind === "methods") actions = `<button type="button" class="btn primary" data-act="load" data-key="methods" ${S.svc.response.state === "ready" ? "" : "disabled"}>Load authentication methods</button>`;
+    if (kind === "oauth") actions = `<button type="button" class="btn primary" data-act="load" data-key="oauth" ${S.svc.response.state === "ready" ? "" : "disabled"}>Load OAuth grants</button>`;
+    let out = "";
+    if (kind === "methods" && st.loaded) out = `<div class="cs-out"><table class="ftable"><thead><tr><th>Method</th><th>Registered</th><th></th></tr></thead><tbody><tr><td>Microsoft Authenticator · iPhone 15</td><td>2024-02-11 · default</td><td><span class="cs-pill done">keep</span></td></tr><tr><td>Phone · +31 6 12 34 56 78 (SMS)</td><td style="color:var(--sev-critical)">2026-07-15 03:42 UTC · in the incident window</td><td><button type="button" class="btn small danger" data-act="write" data-key="methods-delete" ${dis}>Remove</button></td></tr></tbody></table></div>`;
+    if (kind === "oauth" && st.loaded) out = `<div class="cs-out"><table class="ftable"><thead><tr><th>Application</th><th>Scopes</th><th></th></tr></thead><tbody><tr><td>Microsoft Teams</td><td><span class="scope">offline_access</span> <span class="scope">User.Read</span></td><td><span class="cs-pill done">keep</span></td></tr><tr><td>"Mail Backup Pro"</td><td><span class="scope risky">Mail.ReadWrite</span> <span class="scope">offline_access</span> · consented 2026-07-15 03:44 UTC</td><td><button type="button" class="btn small danger" data-act="write" data-key="oauth-revoke" ${dis}>Revoke</button></td></tr></tbody></table></div>`;
+    if (kind === "rules") {
+      const snap = k.sources.find(x => x.key === "exchange" && x.state === "complete");
+      return `<section class="panel hour-mailbox" id="cs-rules"><div class="panel-head"><div><h2>${n} · Mailbox rules, forwarding &amp; delegates</h2><p>${snap ? "Collected " + esc(k.startedAt) : "No mailbox snapshot for this account"}</p></div>${snap ? '<span class="badge imported">Evidence available</span>' : '<span class="badge pending">Not collected</span>'}</div><div class="panel-body">${snap ? `<div class="notice">1 enabled forwarding / redirect rule to review. Mailbox forwarding is off.</div><div class="hour-rule"><h3>Rule "."</h3><p>Forwards every message to jan.devries.mail@outlook-relay.net and marks it read.</p><p>Destination: ["jan.devries.mail@outlook-relay.net"]</p></div><p class="form-note">Delegates: 2 full-access records (svc-scan, adm.piet), 0 send-as records. Inspect original permissions to distinguish expected and unexpected access.</p>` : `<p>Read hidden rules, forwarding, delegates and mailbox audit settings using the local collector.</p>`}<div class="row-actions">${snap ? `<button type="button" data-act="open-record" data-ref="exchange:3">Inspect original evidence →</button>` : S.surface === "app" ? `<button type="button" class="primary" data-act="collect-mailbox">Run local mailbox check</button>` : `<button type="button" data-act="get-app">Needs the desktop app →</button>`}<button type="button" data-act="phase-note">Record decision or follow-up</button></div><p class="form-note">Collection is read-only. Mailbox changes currently require the reviewed PowerShell steps below; record their actual outcome in this case.</p><details><summary>Manual Exchange response · PowerShell</summary><pre class="raw">Connect-ExchangeOnline -UserPrincipalName analyst@contoso.nl\nRemove-InboxRule -Mailbox jan.devries@contoso.nl -Identity "."\nSet-Mailbox jan.devries@contoso.nl -ForwardingSmtpAddress $null\nRemove-MailboxPermission jan.devries@contoso.nl -User svc-scan@contoso.nl -AccessRights FullAccess</pre></details></div></section>`;
+    }
+    return `<div class="card cstep ${st.status || ""}" id="cs-${key}"><div class="cs-head"><span class="cs-n">${n}</span><h2>${n} · ${esc(title)}</h2>${flagged ? '<span class="cs-flag" title="A finding in this case points here">flagged by triage</span>' : ""}<span class="hspacer"></span>${pill}</div><p class="cs-why">${esc(why)}</p><div class="cs-actions">${actions}${["action", "methods", "oauth"].includes(kind) ? `<label class="cs-check"><input type="checkbox" data-skip="${key}" ${st.status === "skipped" ? "checked" : ""}> Deliberately skipped</label>` : ""}</div>${out}<details class="cs-ps"><summary>PowerShell equivalent</summary><pre class="raw code">${esc({ revoke: "Revoke-MgUserSignInSession -UserId jan.devries@contoso.nl", disable: "Update-MgUser -UserId jan.devries@contoso.nl -AccountEnabled:$false", password: "Update-MgUser -UserId jan.devries@contoso.nl -PasswordProfile @{Password=$tmp; ForceChangePasswordNextSignIn=$true}", methods: "Get-MgUserAuthenticationMethod -UserId jan.devries@contoso.nl", oauth: "Get-MgUserOauth2PermissionGrant -UserId jan.devries@contoso.nl" }[key] || "")}</pre></details></div>`;
+  }
+
+  function viewHandover() {
+    const k = S.kase;
+    const unreviewed = k.findings.filter(f => !k.dispositions[f.id] || k.dispositions[f.id].state === "unreviewed").length;
+    const phases = Object.keys(k.phaseOutcomes).length; const gaps = k.sources.filter(s => s.state !== "complete");
+    const exp = (name, sub) => hourCheck(name, sub + (k.exports[name] ? ` · <span style="color:var(--green)">✓ ${S.surface === "app" ? "saved to ~/Triage evidence/saved-cases/" : "downloaded"} ${esc(k.exports[name])}</span>` : ""), `<button type="button" ${k.exports[name] ? "" : 'class="primary"'} data-act="export" data-what="${name}">${k.exports[name] ? "Export again" : S.surface === "app" ? "Save" : "Download"}</button>`, k.exports[name] ? "ok" : "");
+    return head(stepEyebrow(7, "Hand over"), "Every decision has a place.", "What the next owner gets, and what is still open. Sending happens outside this workspace.", `<button type="button" class="primary" data-act="next-investigation">Start next investigation →</button>`) +
+      `<div class="grid-2" style="align-items:start"><div class="stack">${panel("Handover checklist", `${hourCheck(`${k.findings.length} signals · ${k.findings.length - unreviewed} reviewed`, unreviewed ? `${unreviewed} unreviewed — they are listed as outstanding work in the handover.` : "Every finding has a decision and a reason.", unreviewed ? `<button type="button" data-act="review-unreviewed">Review them</button>` : "", unreviewed ? "warn" : "ok")}${hourCheck(`First 60 minutes · ${phases} / 5 phases`, phases === 5 ? "Every phase has a recorded decision." : "Phases without a recorded decision are listed as pending.", phases === 5 ? "" : `<button type="button" data-step="respond">Open Respond</button>`, phases === 5 ? "ok" : "warn")}${hourCheck(gaps.length ? `${gaps.length} source${gaps.length > 1 ? "s" : ""} incomplete` : "Every selected source completed", gaps.length ? esc(gaps.map(g => LABEL[g.key]).join(", ")) + " — recorded as gaps." : "Coverage is complete for the selected plan.", "", gaps.length ? "warn" : "ok")}${hourCheck(k.armed ? "Containment is still armed" : "Containment not armed", k.armed ? "Disarm before handing over; the next owner arms their own session." : "No write permissions are held by this session.", k.armed ? `<button type="button" data-act="disarm">Disarm</button>` : "", k.armed ? "warn" : "ok")}`, "What the next owner needs to know")}
+        ${panel("Exports", `${exp("Case file", "JSON, integrity-checked · raw records, coverage, reviews, action log")}${exp("Handover", "Markdown for the ticket · assessment, decisions, outstanding work")}${exp("Action log", "CSV · every collection event, review and response result")}`, "History is retained in the exported case")}
+        <div class="row-actions"><button type="button" class="text-button" data-step="respond">← Respond</button></div></div>
+      ${panel("Action log", k.log.slice().reverse().map(logRow).join(""), "Collection events, analyst reviews, response outcomes and notes in one chronology", `<button type="button" class="text-button" data-act="phase-note">＋ Add a note</button>`)}</div>`;
+  }
+
+  // =====================================================================
+  //  Render
+  // =====================================================================
+  function render() {
+    guard();
+    renderChrome();
+    const v = route.step === "newcase" && S.kase ? viewNewCase : { start: viewStart, connect: viewConnect, scope: viewScope, collect: viewCollect, review: viewReview, respond: viewRespond, handover: viewHandover }[route.step] || viewStart;
+    $("#main").innerHTML = v();
+    document.title = "Triage · " + (STEP_NAMES.find(s => s[0] === route.step)?.[1] || "Start");
+  }
+  // =====================================================================
+  //  Case model + simulations
+  // =====================================================================
+  const now = () => new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  const shortTime = () => new Date().toISOString().slice(11, 16) + " UTC";
+  const actor = () => S.svc.graph.account || "Local analyst";
+  function log(type, detail, who) { if (!S.kase) return; S.kase.log.push({ at: shortTime(), actor: who || actor(), type, detail }); persist(); }
+  function newCase(sources) {
+    const sc = S.scope;
+    return {
+      id: crypto.randomUUID(), subject: sc.mode === "user" ? sc.upn : "", scope: sc.mode, tenantName: S.tenant?.name || "My organisation", days: sc.days,
+      presetLabel: sc.preset[0].toUpperCase() + sc.preset.slice(1), window: sc.days + " days", startedAt: now(), collectionMethod: S.surface === "app" ? "PowerShell" : "Browser JavaScript",
+      sources: sources.map(k => ({ key: k, state: "queued", count: 0 })), records: 0, findings: [], dispositions: {}, log: [], phaseOutcomes: {}, steps: {}, exports: {},
+      collecting: true, collectionDone: false, analyzing: false, partial: 0, armed: false, dirty: false, savedAt: null, reviewVisited: false, respondVisited: false, handedOver: false,
+    };
+  }
+  const timers = {};
+  function startCollection() {
+    const sc = S.scope;
+    if (sc.mode === "user" && !USERS.some(u => u[0] === sc.upn)) { toast("Enter an account that exists in this tenant.", true); return; }
+    const sources = sc.preset === "custom" ? sc.custom.slice() : PRESETS[sc.preset].slice();
+    const allowed = sources.filter(k => S.surface === "app" || CATALOG.find(c => c[0] === k)[2] === "graph").filter(k => CATALOG.find(c => c[0] === k)[2] !== "exchange" || S.svc.exchange.state === "ready");
+    if (!allowed.length) { toast("Select at least one source.", true); return; }
+    S.kase = newCase(allowed); S.svc.response = { state: "idle" };
+    log("collection-start", "Started " + (S.surface === "app" ? "delegated collection with PowerShell on this computer" : "delegated Microsoft Graph collection in this browser") + " · " + allowed.length + " sources");
+    navigate({ step: "collect" });
+    let i = 0;
+    const step = () => {
+      const k = S.kase; if (!k || !k.collecting) return;
+      if (i > 0) { const prev = k.sources[i - 1]; if (prev.state === "running") finishSource(k, prev); }
+      if (i >= k.sources.length) { endCollection(); return; }
+      k.sources[i].state = "running"; i++;
+      render(); timers.collect = setTimeout(step, k.sources[i - 1].key === "ual" ? 1600 : 650);
+    };
+    timers.collect = setTimeout(step, 400);
+  }
+  function finishSource(k, s) {
+    const partial = s.key === "mfa" && S.surface === "web" || s.key === "ual" && S.surface === "app" && k.days >= 30;
+    s.state = partial ? "partial" : "complete"; s.count = COUNTS[s.key] || 0; if (partial) { s.count = Math.round(s.count * 0.6); s.note = s.key === "ual" ? "Audit query still pending after the wait — query ID preserved" : "More pages exist — resume to finish"; }
+    k.records += s.count;
+    log("source-result", LABEL[s.key] + " · " + s.state + " · " + s.count + " records", S.surface === "app" ? "Desktop collector" : "Browser collector");
+  }
+  function endCollection(stopped) {
+    const k = S.kase; if (!k) return; clearTimeout(timers.collect);
+    for (const s of k.sources) { if (s.state === "running") { if (stopped) { s.state = "cancelled"; s.count = Math.round((COUNTS[s.key] || 0) / 3); k.records += s.count; } else finishSource(k, s); } else if (s.state === "queued") s.state = stopped ? "cancelled" : "not-collected"; }
+    k.collecting = false; k.analyzing = true; k.partial = k.sources.filter(s => s.state !== "complete").length;
+    log("collection-end", stopped ? "Collection stopped; completed checkpoints preserved." : "Collection ended; inspect coverage for incomplete sources.");
+    render();
+    timers.analyze = setTimeout(() => {
+      const k2 = S.kase; if (!k2) return;
+      const have = new Set(k2.sources.filter(s => s.state !== "not-collected" && s.state !== "cancelled" || s.count).map(s => s.key));
+      k2.findings = FINDINGS.filter(f => have.has(f.src) && (k2.scope === "tenant" || f.user === k2.subject || f.user === "adm.piet@contoso.nl" && k2.subject === "jan.devries@contoso.nl"));
+      k2.analyzing = false; k2.collectionDone = true;
+      log("analysis", k2.findings.length + " signals from " + [...have].length + " sources · analyzed with JavaScript on this " + (S.surface === "app" ? "computer" : "browser"));
+      persist(true);
+      navigate({ step: "review", tab: "overview" }, true);
+      toast("Collection finished · " + cov(k2).c + " / " + cov(k2).n + " sources complete" + (k2.partial ? ", " + k2.partial + " partial" : ""));
+    }, 1500);
+  }
+  function signIn(svc) {
+    const cert = S.surface === "app" && S.signAs === "profile" && svc !== "response";
+    S.svc[svc] = { state: cert ? "cert" : "waiting", since: Date.now() }; render();
+    timers[svc] = setTimeout(() => {
+      const t = S.tenant || (S.signAs === "profile" ? { name: "Contoso", id: TENANTS["contoso.com"][1] } : { name: "My organisation", id: "0000aaaa-1111-2222-3333-444455556666" });
+      const account = cert ? "App · 4b2e91c0 (Contoso profile)" : (S.signAs === "profile" ? "App" : "analyst@" + (S.tenant ? S.tenant.name.toLowerCase().split(" ")[0] + ".nl" : "limon-it.nl"));
+      S.svc[svc] = { state: "ready", account, tenantName: t.name, tenantId: t.id };
+      if (svc === "graph" && !S.tenant) S.tenant = t;
+      if (svc === "response") log("response-connect", "Response checks connected for " + (S.kase.responseTarget || S.kase.subject) + " · " + account);
+      persist(true); render();
+      toast(svc === "graph" ? "Signed in · " + account + " · " + t.name : svc === "exchange" ? "Exchange Online connected" : "Response checks connected");
+    }, cert ? 1800 : 2600);
+  }
+  function cancelSignIn(svc) { clearTimeout(timers[svc]); S.svc[svc] = { state: "idle" }; persist(true); render(); toast("Sign-in cancelled"); }
+  function arm() {
+    const k = S.kase; k.arming = Date.now(); render();
+    timers.arm = setTimeout(() => { const k2 = S.kase; if (!k2 || !k2.arming) return; k2.arming = 0; k2.armed = true; log("response-armed", "Write permissions granted for " + (k2.responseTarget || k2.subject) + " · consent recorded once for " + k2.tenantName); render(); toast("Containment armed · every action still confirms"); }, 2200);
+  }
+  function execute(key) {
+    const k = S.kase; closeDialog();
+    const base = key.split("-")[0];
+    if (["revoke", "disable", "password"].includes(key)) k.steps[key] = { status: "done", at: shortTime() };
+    if (key === "methods-delete") k.steps.methods = { status: "done", at: shortTime(), loaded: true };
+    if (key === "oauth-revoke") k.steps.oauth = { status: "done", at: shortTime(), loaded: true };
+    log("response-result", ({ revoke: "Revoke sessions: accepted · verification pending", disable: "Disable account: accepted", password: "Temporary password set · shown once, not stored", "methods-delete": "Removed SMS method registered during the incident window", "oauth-revoke": "Revoked delegated grant for \"Mail Backup Pro\"" })[key]);
+    render(); toast("Recorded · " + base);
+  }
+  function exportThing(what) { const k = S.kase; k.exports[what] = shortTime(); log("case-exported", what + " exported"); render(); toast((S.surface === "app" ? "Saved · " : "Downloaded · ") + what + " (simulated in this prototype)"); }
+  function loadSample() {
+    S.svc.graph = { state: "ready", account: "demo.analyst@contoso.nl", tenantName: "Contoso · demonstration", tenantId: TENANTS["contoso.com"][1] };
+    S.tenant = { name: "Contoso · demonstration", id: TENANTS["contoso.com"][1] };
+    if (S.surface === "app") S.svc.exchange = { ...S.svc.graph };
+    S.scope = { mode: "user", upn: "jan.devries@contoso.nl", days: 30, preset: S.surface === "app" ? "standard" : "quick", custom: PRESETS.standard.slice() };
+    const k = newCase((S.surface === "app" ? PRESETS.standard : PRESETS.quick).slice());
+    k.tenantName = "Contoso · demonstration"; k.sample = true;
+    for (const s of k.sources) { s.state = "complete"; s.count = COUNTS[s.key]; k.records += s.count; }
+    k.collecting = false; k.collectionDone = true; k.findings = FINDINGS.filter(f => S.surface === "app" || f.src !== "exchange");
+    k.log.push({ at: shortTime(), actor: "Local analyst", type: "case-opened", detail: "Opened fictional sample evidence." });
+    S.kase = k; persist(true); navigate({ step: "review", tab: "overview" }); toast("Sample case · fictional data, nothing is real");
+  }
+  function finishAndReset() {
+    const k = S.kase;
+    if (k) { k.handedOver = true; S.saved.unshift({ id: k.id, subject: k.scope === "tenant" ? "Whole tenant" : k.subject, tenantName: k.tenantName, savedAt: new Date().toISOString(), findings: k.findings.length, snapshot: k }); S.saved = S.saved.slice(0, 5); }
+    S.kase = null; S.svc.response = { state: "idle" }; S.scope.upn = ""; S.filter = ""; S.severity = "all";
+    persist(true); navigate({ step: "start" }); toast("Case saved on this " + (S.surface === "app" ? "computer" : "device") + " · ready for the next investigation");
+  }
+
+  // ---------- dialogs that collect a form (the beta's <dialog id="detail">) ----------
+  function writeAction(key) {
+    const k = S.kase; const target = k.responseTarget || k.subject;
+    const names = { revoke: ["Revoke sign-in sessions", "POST /users/" + target + "/revokeSignInSessions"], disable: ["Disable the account", "PATCH /users/" + target + " {accountEnabled:false}"], password: ["Set a temporary password", "PATCH /users/" + target + " {passwordProfile}"], "methods-delete": ["Remove the SMS method +31 6 12 34 56 78", "DELETE /users/" + target + "/authentication/phoneMethods/…"], "oauth-revoke": ["Revoke the grant for \"Mail Backup Pro\"", "DELETE /oauth2PermissionGrants/…"] };
+    const [title, path] = names[key];
+    confirmModal("Confirm account response", `<p class="mini"><strong>${esc(title)}</strong></p><dl class="kv"><dt>Tenant</dt><dd>${esc(k.tenantName)}</dd><dt>Account</dt><dd>${esc(target)}</dd><dt>Operator</dt><dd>${esc(actor())}</dd><dt>Request</dt><dd><code class="scope">${esc(path)}</code></dd></dl><p class="mini muted">This changes Microsoft 365. The action is recorded in the case action log and the device journal.</p>`, "Execute approved action", () => execute(key));
+  }
+  function phaseNoteDialog() {
+    const phase = route.tab || "preserve"; const P = PHASES.find(p => p[0] === phase) || PHASES[0];
+    dialog("Record a decision · " + P[1], `<form id="phase-form"><label class="field">Outcome<select name="outcome"><option value="in progress">In progress</option><option value="reviewed">Reviewed by analyst</option><option value="needs follow-up">Needs follow-up</option></select></label><label class="field">Decision, reason and next owner<textarea name="detail" required></textarea></label><label class="field">Evidence reference<input name="reference" placeholder="e.g. interactive:12"></label><p class="form-note">An analyst review is not proof that a response action executed.</p><div class="row-actions"><button type="submit" class="primary">Add to action log</button><button type="button" data-act="close-dialog">Cancel</button></div></form>`);
+  }
+  function openCaseDialog() {
+    dialog("Open a case", `<p class="subtitle">A case file from another viewer, or a case saved on this ${S.surface === "app" ? "computer" : "device"}. Each case is stored separately; opening one never replaces another.</p><div class="row-actions" style="margin:16px 0 22px"><button type="button" class="primary" data-act="pick-file">Choose case file…</button><span class="form-note">.json · integrity-checked before analysis</span></div>${S.saved.length ? S.saved.map(c => `<div class="log-row"><time>${esc(new Date(c.savedAt).toLocaleString())}</time><div><strong>${esc(c.subject)}</strong><span class="muted">${esc(c.tenantName)} · ${c.findings} signals · ${esc(c.id.slice(0, 8))}</span><div class="row-actions" style="margin-top:8px"><button type="button" class="primary" data-act="open-saved" data-id="${c.id}">Open</button><button type="button" class="text-button" data-act="remove-saved" data-id="${c.id}">Remove</button></div></div></div>`).join("") : `<p class="form-note">No saved cases yet. Finish an investigation with "Start next investigation" and it appears here.</p>`}`);
+  }
+  function helpDialog() {
+    dialog("Triage · workspace guide", `<h3>One flow, seven steps</h3><p class="subtitle">Start → Connect → Scope → Collect → Review → Respond → Hand over. The sidebar is the rail: the current step is highlighted, finished steps show a check, steps you cannot open yet say why on hover.</p><h3 class="section-gap">Sign in only on Connect</h3><p class="subtitle">Every prompt is a row with a button, a waiting state and a result. Nothing later opens a sign-in window; arming containment on step 6 asks for write permissions once, and says so first.</p><h3 class="section-gap">Back and reload work</h3><p class="subtitle">The step, the tab and an open finding live in the address. The browser's Back button closes the drawer, then goes back a step. The case is saved automatically — the case bar says when.</p><div class="notice">Web and desktop app differ on Connect and Scope only: how you sign in and which evidence exists. From Collect on, the screens and the case file are identical.</div><p><button type="button" class="text-button" data-act="close-dialog">Coverage contract · App versus Web →</button></p>`);
+  }
+
+  // =====================================================================
+  //  Theme (port of BETA/js/theme.js)
+  // =====================================================================
+  const THEME_KEY = "triage-desk-theme"; let themeMode = "system";
+  try { const t = localStorage.getItem(THEME_KEY); if (["system", "light", "dark"].includes(t)) themeMode = t; } catch (e) {}
+  const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+  function applyTheme() { const t = themeMode === "system" ? (systemDark.matches ? "dark" : "light") : themeMode; document.documentElement.dataset.theme = t; document.documentElement.style.colorScheme = t; const c = $("#theme"); if (c) c.value = themeMode; }
+  systemDark.addEventListener("change", () => { if (themeMode === "system") applyTheme(); });
+
+  // =====================================================================
+  //  Events
+  // =====================================================================
+  document.addEventListener("click", async (e) => {
+    const dlg = $("#detail"); if (dlg.open && e.target === dlg) { closeDialog(); return; }
+    if (e.target.id === "confirmModal") { closeDialog(); return; }
+    const b = e.target.closest("button, [data-act], [data-pick]"); if (!b) return;
+    const k = S.kase;
+    if (b.id === "cfCancel") { closeDialog(); return; }
+    if (b.id === "cfOk") { const fn = confirmAction; confirmAction = null; closeDialog(); fn && fn(); return; }
+    if (b.dataset.surface) { S.surface = b.dataset.surface; if (S.surface === "web") { S.svc.exchange = { state: "idle" }; S.signAs = "delegated"; if (!["quick", "custom"].includes(S.scope.preset)) S.scope.preset = "quick"; } else if (S.scope.preset === "quick" && !k) S.scope.preset = "standard"; persist(true); render(); return; }
+    if (b.dataset.step) {
+      const st = stepState(b.dataset.step); if (st.cls === "todo" && b.dataset.step !== route.step) { toast(st.reason, true); return; }
+      if (["connect", "scope"].includes(b.dataset.step) && k && !k.collecting && b.closest("nav")) { confirmModal("Go back to " + (b.dataset.step === "scope" ? "Scope" : "Connect") + "?", `<p class="mini">The current case stays saved and listed under Open a case. Changing the scope or the sign-in starts a <strong>new</strong> collection.</p>`, "Go back and start a new case", () => { S.saved.unshift({ id: k.id, subject: k.scope === "tenant" ? "Whole tenant" : k.subject, tenantName: k.tenantName, savedAt: new Date().toISOString(), findings: k.findings.length, snapshot: k }); S.kase = null; S.svc.response = { state: "idle" }; persist(true); navigate({ step: b.dataset.step }); }); return; }
+      closeDialog(); navigate({ step: b.dataset.step, caseId: k?.id, tab: b.dataset.tab || (b.dataset.step === "review" ? "overview" : b.dataset.step === "respond" ? (route.step === "respond" ? route.tab : "preserve") : undefined) }); return;
+    }
+    if (b.dataset.pick) { S.scope.upn = b.dataset.pick; persist(); render(); return; }
+    const act = b.dataset.act; if (!act) return;
+    switch (act) {
+      case "reset": clearTimeout(timers.collect); clearTimeout(timers.analyze); S = fresh(); try { localStorage.removeItem(KEY); } catch (e) {} closeDialog(); navigate({ step: "start" }); toast("Demo reset"); break;
+      case "brand": navigate(k ? { step: "review", tab: "overview" } : { step: "start" }); break;
+      case "help": helpDialog(); break;
+      case "close-dialog": closeDialog(); break;
+      case "topbar-session": if (S.svc.graph.state === "ready") { confirmModal("Disconnect?", `<p class="mini">Signs out of ${esc(S.svc.graph.account)}. An open case stays saved; collecting again means signing in again on Connect.</p>`, "Disconnect", () => { clearTimeout(timers.graph); S.svc.graph = { state: "idle" }; S.svc.exchange = { state: "idle" }; S.svc.response = { state: "idle" }; if (k) k.armed = false; persist(true); navigate({ step: "connect" }); }); } else navigate({ step: "connect" }); break;
+      case "new-investigation": navigate(connected() ? { step: "scope" } : { step: "connect" }); break;
+      case "open-case": openCaseDialog(); break;
+      case "pick-file": closeDialog(); toast("A file picker would open here; the case is integrity-checked, then Review opens."); break;
+      case "open-saved": { const c = S.saved.find(x => x.id === b.dataset.id); if (c) { closeDialog(); S.kase = { ...c.snapshot, handedOver: false, dirty: false, armed: false }; S.svc.response = { state: "idle" }; if (!connected()) S.svc.graph = { state: "ready", account: "analyst@limon-it.nl", tenantName: c.tenantName, tenantId: "…" }; persist(true); navigate({ step: "review", tab: "overview", caseId: S.kase.id }); toast("Opened saved case · " + c.subject); } break; }
+      case "remove-saved": S.saved = S.saved.filter(x => x.id !== b.dataset.id); persist(true); openCaseDialog(); break;
+      case "continue-last": { const c = S.saved[0]; if (c) { S.kase = { ...c.snapshot, handedOver: false, dirty: false, armed: false }; S.svc.response = { state: "idle" }; if (!connected()) S.svc.graph = { state: "ready", account: "analyst@limon-it.nl", tenantName: c.tenantName, tenantId: "…" }; persist(true); navigate({ step: "review", tab: "overview", caseId: S.kase.id }); } break; }
+      case "sample": loadSample(); break;
+      case "open-plan": toast("A file picker would open; the plan fills Scope and you continue from there."); break;
+      case "get-app": toast("Links to the GitHub Release assets (macOS arm64 / Windows x64)."); break;
+      case "resolve": { const d = ($("#domain")?.value || S.domain).trim().toLowerCase(); S.domain = d; const t = TENANTS[d]; if (t) { S.tenant = { name: t[0], id: t[1] }; toast("Resolved " + d + " → " + t[0]); } else { S.tenant = null; toast("No tenant found for " + (d || "that domain") + " — try contoso.com, fabrikam.com or northwind.nl", true); } persist(); render(); break; }
+      case "signin": if (b.dataset.svc === "response" && S.surface === "web") { S.svc.response = { state: "ready" }; log("response-connect", "Response checks use the Connect sign-in · " + actor()); render(); toast("Response checks connected — no new window on the web"); } else signIn(b.dataset.svc); break;
+      case "cancel-signin": cancelSignIn(b.dataset.svc); break;
+      case "disconnect": clearTimeout(timers.graph); S.svc.graph = { state: "idle" }; S.svc.exchange = { state: "idle" }; S.svc.response = { state: "idle" }; persist(true); render(); break;
+      case "manage-profiles": dialog("Customer connections", `<p class="subtitle">Local PowerShell connections · choose a customer certificate or keep delegated passkey sign-in. These forms collect a registration; they never navigate.</p><div class="row-actions" style="margin:14px 0"><button type="button" class="primary" data-act="close-dialog">Use existing registration</button><button type="button" data-act="close-dialog">Create registrations…</button></div><section class="notice"><strong>Contoso</strong><p>7d3f2c1a-5b6e-4f70-9a8d-1c2b3e4f5a6b<br>Certificate expires 2027-03-01 00:00 UTC<br>Graph: 4b2e91c0-…<br>Exchange: 91c0e4b2-…</p><button type="button" class="text-button" data-act="close-dialog">Remove local profile</button></section>`); break;
+      case "save-plan": toast("Plan saved · triage-plan-….json — open it in the desktop app with Open a plan (simulated)"); break;
+      case "save-now": persist(true); toast(S.surface === "app" ? "Case saved to ~/Triage evidence/saved-cases" : "Case saved on this device (one file per case; earlier saved cases are kept)"); break;
+      case "start-collection": startCollection(); break;
+      case "stop": endCollection(true); break;
+      case "resume": if (k) { for (const s of k.sources) if (s.state !== "complete") { s.state = "complete"; s.count = COUNTS[s.key]; s.note = ""; } k.records = k.sources.reduce((n, s) => n + s.count, 0); k.partial = 0; log("collection-end", "Incomplete sources resumed and completed."); render(); toast("Incomplete sources completed"); } break;
+      case "open-finding": navigate({ ...route, step: "review", tab: "findings", f: b.dataset.id, r: "" }); break;
+      case "open-record": closeDialog(); navigate({ ...route, step: "review", tab: route.step === "review" ? route.tab : "evidence", r: b.dataset.ref, s: route.step === "review" ? route.s : b.dataset.ref.split(":")[0] }); break;
+      case "back-to-finding": navigate({ ...route, r: "" }); break;
+      case "close-drawer": history.back(); break;
+      case "toggle-source": navigate({ ...route, s: route.s === b.dataset.src ? "" : b.dataset.src, r: "" }, true); break;
+      case "evidence-source": if (k && (k.collecting || k.analyzing)) { toast("Evidence opens in Review when collection ends."); break; } navigate({ step: "review", tab: "evidence", s: b.dataset.src, caseId: k?.id }); break;
+      case "clear-state-filter": navigate({ ...route, state: "" }); break;
+      case "contain-account": k.responseTarget = b.dataset.user; persist(); navigate({ step: "respond", tab: "contain", caseId: k.id }); break;
+      case "choose-account": k.responseTarget = ""; render(); break;
+      case "pick-target": k.responseTarget = b.dataset.user; log("note", "Affected account for response: " + b.dataset.user); render(); break;
+      case "export-starting-point": k.startingPointExported = shortTime(); k.exports["Case file"] = k.startingPointExported; log("case-exported", "Starting point exported before response"); render(); toast("Starting point exported (simulated)"); break;
+      case "arm": arm(); break;
+      case "cancel-arm": clearTimeout(timers.arm); k.arming = 0; render(); break;
+      case "disarm": k.armed = false; log("response-disarmed", "Write permissions released"); render(); break;
+      case "write": writeAction(b.dataset.key); break;
+      case "load": k.steps[b.dataset.key] = { ...(k.steps[b.dataset.key] || {}), loaded: true }; log("response-result", (b.dataset.key === "methods" ? "Loaded 2 authentication methods" : "Loaded 2 OAuth grants") + " for " + (k.responseTarget || k.subject)); render(); break;
+      case "run-impact": k.impactRun = shortTime(); log("response-result", "Ran 13 blast-radius checks over " + k.days + " days · 2 need attention"); render(); break;
+      case "collect-mailbox": { const s = k.sources.find(x => x.key === "exchange"); if (s) { s.state = "complete"; s.count = COUNTS.exchange; } else k.sources.push({ key: "exchange", state: "complete", count: COUNTS.exchange }); k.records += COUNTS.exchange; k.partial = k.sources.filter(x => x.state !== "complete").length; if (!k.findings.some(f => f.id === "F9")) k.findings.push(FINDINGS.find(f => f.id === "F9")); log("source-result", "Mailbox configuration snapshot · complete · 14 records"); render(); toast("Mailbox evidence added to the case"); break; }
+      case "template": toast("Draft downloaded · " + b.dataset.what + " · not a record that it was sent"); log("note", "Downloaded template: " + b.dataset.what + " · draft only"); break;
+      case "phase-note": phaseNoteDialog(); break;
+      case "export": exportThing(b.dataset.what); break;
+      case "review-unreviewed": navigate({ step: "review", tab: "findings", state: "unreviewed", caseId: k.id }); break;
+      case "next-investigation": finishAndReset(); break;
+      case "new-case": navigate({ step: "newcase" }); break;
+      case "confirm-new": finishAndReset(); break;
+      case "noop": toast("Native folder dialog — simulated"); break;
+    }
+  });
+  document.addEventListener("submit", (e) => {
+    e.preventDefault(); const k = S.kase;
+    if (e.target.id === "review-form") {
+      const f = e.target, id = f.dataset.id, state = f.elements.state.value, note = f.elements.note.value.trim(), reference = f.elements.reference.value.trim();
+      const err = {}; if (!note) err.note = "Add your reason and supporting facts before saving."; if (state === "confirmed" && !RECORDS[reference]) err.reference = "Confirmation needs an existing evidence reference, e.g. " + (k.findings.find(x => x.id === id)?.refs[0] || "interactive:12") + ".";
+      k.reviewError = err; if (Object.keys(err).length) { render(); return; }
+      k.dispositions[id] = { state, note, reference, at: shortTime() }; log("finding-review", id + " · " + state + (reference ? " [" + reference + "]" : "") + " — " + note);
+      history.back(); toast("Finding review recorded · " + state);
+    }
+    if (e.target.id === "phase-form") {
+      const f = e.target, detail = f.elements.detail.value.trim(); if (!detail) { f.elements.detail.focus(); return; }
+      const phase = route.step === "respond" ? (route.tab || "preserve") : "handover";
+      k.phaseOutcomes[phase] = { outcome: f.elements.outcome.value, detail, reference: f.elements.reference.value.trim() };
+      log("phase-outcome", (PHASES.find(p => p[0] === phase)?.[1] || "Note") + ": " + f.elements.outcome.value + " — " + detail); closeDialog(); render(); toast("Outcome added to the action log");
+    }
+  });
+  document.addEventListener("input", (e) => {
+    const t = e.target;
+    if (t.id === "upn") { S.scope.upn = t.value; persist(); const pos = t.selectionStart; render(); const el = $("#upn"); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (err) {} } }
+    if (t.id === "domain") { S.domain = t.value; if (S.tenant && TENANTS[t.value.trim().toLowerCase()]?.[0] !== S.tenant.name) { S.tenant = null; render(); const el = $("#domain"); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } } }
+    if (t.id === "finding-filter") { S.filter = t.value; const pos = t.selectionStart; render(); const el = $("#finding-filter"); if (el) { el.focus(); el.setSelectionRange(pos, pos); } }
+  });
+  document.addEventListener("change", (e) => {
+    const t = e.target, k = S.kase;
+    if (t.id === "theme") { themeMode = t.value; applyTheme(); try { localStorage.setItem(THEME_KEY, themeMode); } catch (err) {} }
+    if (t.id === "tenantMode") { S.tenantMode = t.value; S.tenant = null; persist(); render(); }
+    if (t.id === "signAs") { S.signAs = t.value; S.svc.graph = { state: "idle" }; S.svc.exchange = { state: "idle" }; persist(); render(); }
+    if (t.id === "scopeMode") { S.scope.mode = t.value; if (S.scope.mode === "tenant" && S.scope.preset === "standard") S.scope.preset = "quick"; persist(); render(); }
+    if (t.id === "days") { S.scope.days = Number(t.value); persist(); }
+    if (t.name === "preset") { S.scope.preset = t.value; if (t.value !== "custom") S.scope.custom = PRESETS[t.value].slice(); persist(); render(); }
+    if (t.id === "severity") { S.severity = t.value; render(); }
+    if (t.dataset.src) { const set = new Set(S.scope.custom); t.checked ? set.add(t.dataset.src) : set.delete(t.dataset.src); S.scope.custom = [...set]; persist(); }
+    if (t.dataset.skip && k) { k.steps[t.dataset.skip] = { ...(k.steps[t.dataset.skip] || {}), status: t.checked ? "skipped" : "" }; log("checklist", (t.checked ? "Deliberately skipped: " : "Un-skipped: ") + STEPS.find(s => s[0] === t.dataset.skip)[1]); render(); }
+    if (t.id === "domain") { const d = t.value.trim().toLowerCase(); if (TENANTS[d]) { S.domain = d; S.tenant = { name: TENANTS[d][0], id: TENANTS[d][1] }; persist(); render(); } }
+  });
+  setInterval(() => { for (const el of document.querySelectorAll("[data-elapsed]")) { const key = el.dataset.elapsed; const since = key === "arm" ? S.kase?.arming : S.svc[key]?.since; if (since) el.textContent = elapsed(since); } }, 1000);
+  const bootReady = () => { if (S.surface === "app" && route.step === "connect" && S.ready !== "ok" && S.ready !== "checking") { S.ready = "checking"; setTimeout(() => { S.ready = "ok"; persist(true); if (route.step === "connect") render(); }, 1400); } };
+  window.addEventListener("popstate", bootReady);
+  document.addEventListener("click", () => setTimeout(bootReady, 0), true);
+  applyTheme(); render(); bootReady();
+})();
+</script>
+
+</body></html>

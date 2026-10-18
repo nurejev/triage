@@ -1,0 +1,83 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exchange preview — read-only browser test</title>
+<style>body{font:16px system-ui;background:#f2f7f3;color:#12331f;max-width:850px;margin:40px auto;padding:20px}label{display:block;margin:16px 0}input{display:block;width:95%;padding:10px}button{padding:12px;margin:8px 8px 8px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:20px}small{display:block}</style>
+<h1>Exchange preview browser test</h1>
+<p>This isolated experiment runs only Get-Mailbox against the mailbox you select. It does not modify Exchange settings or grant permissions.</p>
+<p>Sign-in requests the application's configured Exchange permissions using https://outlook.office365.com/.default. The test requires Exchange.ManageV2, which can allow administrative operations according to your Exchange role. If Microsoft requests new consent, stop for administrator review.</p>
+<label>Test tenant ID<input id="tenant" value="020eb2d3-8046-4257-828d-64bf3ece8fbb"></label>
+<label>Application client ID<input id="client" value="8f1b5185-e782-4dc3-8aee-92ba4616c8d0"></label>
+<label>Approved test mailbox<input id="mailbox" value="pedro.wakao@cloudfellows.dev" placeholder="user@your-test-tenant.onmicrosoft.com"></label>
+<small id="redirect"></small>
+<button id="signin">Sign in to test tenant</button>
+<button id="read" disabled>Test mailbox read</button>
+<button id="clear">Clear test session</button>
+<pre id="result" role="status">Not tested. No Microsoft requests have run.</pre>
+<script src="/msal.js"></script>
+<script>
+(() => {
+  const el = id => document.getElementById(id);
+  // The preview documentation specifies the Exchange resource's static consent flow.
+  const scope = 'https://outlook.office365.com/.default';
+  const redirectUri = location.origin + '/';
+  el('redirect').textContent = 'SPA callback: ' + redirectUri;
+  let app, token, boundTenant, generation = 0;
+  const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const show = value => el('result').textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  el('signin').onclick = async () => {
+    token = undefined; el('read').disabled = true;
+    const run = ++generation;
+    boundTenant = el('tenant').value.trim().toLowerCase();
+    const clientId = el('client').value.trim();
+    if (!guid.test(boundTenant) || !guid.test(clientId)) return show('Enter valid tenant and client GUIDs.');
+    el('signin').disabled = true;
+    show('Waiting for Microsoft sign-in. Stop if new administrator consent is requested.');
+    try {
+      app = new msal.PublicClientApplication({auth:{clientId,authority:'https://login.microsoftonline.com/'+boundTenant,redirectUri},cache:{cacheLocation:'memoryStorage'}});
+      await app.initialize();
+      const response = await app.acquireTokenPopup({scopes:[scope],prompt:'select_account'});
+      if (run !== generation) return;
+      if (response.account?.tenantId?.toLowerCase() !== boundTenant) throw new Error('tenant_mismatch');
+      const grantedScopes = response.scopes || [];
+      if (!grantedScopes.some(s => s.split('/').pop().toLowerCase() === 'exchange.managev2')) {
+        show({stage:'permission check',status:'Exchange.ManageV2 not returned',requestedScope:scope,grantedScopes,
+          detail:'Sign-in alone is not preview access. Check the application\'s Office 365 Exchange Online delegated permissions and existing admin consent. No mailbox request was sent.'});
+        return;
+      }
+      token = response.accessToken;
+      el('tenant').disabled = true; el('client').disabled = true;
+      el('read').disabled = false;
+      show({stage:'authentication',status:'Exchange.ManageV2 returned for selected tenant',requestedScope:scope,grantedScopes,detail:'No mailbox has been read yet.'});
+    } catch(error) {
+      if (run === generation) show({stage:'authentication',status:'not completed',code:error.errorCode || error.name,microsoftError:String(error.errorMessage || error.message || '').slice(0,2000),detail:'Mailbox/API/CORS support remains untested. No token is included in this output.'});
+    } finally { el('signin').disabled = false; }
+  };
+  el('read').onclick = async () => {
+    const mailbox = el('mailbox').value.trim();
+    if (!token || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mailbox)) return show('Sign in and enter the approved test mailbox first.');
+    const run = generation;
+    el('read').disabled = true; show('Testing direct browser access to Get-Mailbox…');
+    try {
+      const response = await fetch('https://outlook.office365.com/adminapi/v2.0/'+boundTenant+'/Mailbox?$select=Id,DisplayName,PrimarySmtpAddress,GrantSendOnBehalfTo', {
+        method:'POST', mode:'cors', credentials:'omit', redirect:'error', signal:AbortSignal.timeout(30000),
+        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json','X-AnchorMailbox':'AAD-UPN:'+mailbox},
+        body:JSON.stringify({CmdletInput:{CmdletName:'Get-Mailbox',Parameters:{Identity:mailbox,ResultSize:1}}})
+      });
+      const data = await response.json().catch(() => null);
+      if (run !== generation) return;
+      const records = Array.isArray(data?.value) ? data.value : Array.isArray(data) ? data : data ? [data] : [];
+      show({stage:'Get-Mailbox',httpStatus:response.status,browserCanReadResponse:true,
+        status:response.ok ? (data?.error ? 'API error in response' : records.length ? 'Response received; verify returned property contract' : 'No mailbox records returned') : 'API rejected request',
+        errorCode:data?.error?.code || null,recordCount:response.ok ? records.length : null,
+        returnedPropertyNames:response.ok ? [...new Set(records.flatMap(r=>Object.keys(r || {})))] : [],
+        continuationPresent:!!data?.['@odata.nextLink'],
+        note:'No raw mailbox values or credentials are printed. This tests one read, not all Exchange commands or complete pagination.'});
+    } catch(error) {
+      if (run === generation) show({stage:'browser request',status:'No readable API response',code:error.name,
+        detail:'Inspect browser diagnostics to distinguish CORS, network, redirect and timeout failures. This alone does not prove tenant rollout or permission status.'});
+    } finally { if (run === generation) el('read').disabled = !token; }
+  };
+  el('clear').onclick = async () => { ++generation; token = undefined; if(app) await app.clearCache(); location.replace('/probe'); };
+})();
+</script>

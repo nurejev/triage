@@ -36,19 +36,22 @@
   }
 
   function analyze(ev) {
+    const seen=new Set();
+    const uniqueSigns=(ev.signIns||[]).filter(r=>{const key=r.id||JSON.stringify(r);if(seen.has(key))return false;seen.add(key);return true;});
     const F = [];
     function add(sev, cat, title, detail, ts, rec, src) {
-      F.push({ Severity: sev, Category: cat, Title: title, Detail: detail,
+      F.push({ Confidence:"Signal requires analyst review", Severity: sev, Category: cat, Title: title, Detail: detail,
                User: ev.upn, Timestamp: fmtTime(ts), _t: ts || "", Source: src || "", Recommendation: rec || "" });
     }
 
     // ================= sign-ins =================
-    const si = (ev.signIns || []).map(function (r) {
+    const owned = (r) => (r.userPrincipalName && String(r.userPrincipalName).toLowerCase() === String(ev.upn).toLowerCase()) || (ev.user?.id && r.userId === ev.user.id);
+    const si = uniqueSigns.filter(owned).map(function (r) {
       return {
         time: r.createdDateTime, ip: r.ipAddress,
         country: (r.location && r.location.countryOrRegion) || "",
         city: (r.location && r.location.city) || "",
-        err: (r.status && r.status.errorCode) || 0,
+        err: Number.isInteger(r.status?.errorCode) ? r.status.errorCode : null,
         app: r.appDisplayName || "", client: r.clientAppUsed || "",
         ca: r.conditionalAccessStatus || "",
         risk: r.riskLevelDuringSignIn || r.riskLevelAggregated || "none",
@@ -56,7 +59,7 @@
       };
     });
     const ok = si.filter(function (s) { return s.err === 0; });
-    const bad = si.filter(function (s) { return s.err !== 0; });
+    const bad = si.filter(function (s) { return s.err !== null && s.err !== 0; });
 
     // baseline: user's most common sign-in country
     const cc = {};
@@ -86,16 +89,20 @@
     Object.keys(failByIp).forEach(function (ip) {
       const fails = failByIp[ip];
       if (fails.length < 10) return;
-      const successFromIp = ok.filter(function (s) { return s.ip === ip; });
+      const successFromIp = ok.filter(function (s) {
+        if(s.ip !== ip) return false;
+        const t=Date.parse(s.time);
+        return fails.filter(f=>Date.parse(f.time)<=t && t-Date.parse(f.time)<=3600000).length >= 10;
+      });
       if (successFromIp.length) {
         add("Critical", "Sign-ins", "Password attack followed by successful sign-in (IP " + ip + ")",
-          fails.length + " failed sign-ins from " + ip + " followed by a SUCCESSFUL sign-in. Strong indicator of account compromise.",
+          fails.length + " failed sign-ins from " + ip + " followed by a SUCCESSFUL sign-in. Correlate with the user, device and session before confirming compromise.",
           successFromIp[0].time,
           "Treat as compromised: reset password, revoke sessions and refresh tokens, block the IP, review everything this account did afterwards.",
           "Entra ID sign-in logs");
       } else {
         add("Medium", "Sign-ins", "Brute force / password spray attempts (IP " + ip + ")",
-          fails.length + " failed sign-ins from " + ip + ". No success from this IP in the period.",
+          fails.length + " failed sign-ins from " + ip + ". No qualifying failure sequence followed by success within one hour.",
           fails[0].time,
           "Confirm smart lockout / CA protections. Consider blocking the IP.",
           "Entra ID sign-in logs");
@@ -123,7 +130,7 @@
       if (a.country !== b.country) {
         const dh = (new Date(b.time) - new Date(a.time)) / 36e5;
         if (dh >= 0 && dh <= 2) {
-          add("High", "Sign-ins", "Impossible travel between sign-ins",
+          add("Medium", "Sign-ins", "Rapid country change between sign-ins",
             "Signed in from " + a.country + " and then " + b.country + " within " + dh.toFixed(1) +
             " hours (IPs " + a.ip + " → " + b.ip + ").",
             b.time,
@@ -135,7 +142,7 @@
     }
 
     // risky sign-ins
-    const risky = si.filter(function (s) { return s.risk && s.risk !== "none"; });
+    const risky = si.filter(function (s) { return /^(low|medium|high)$/i.test(s.risk); });
     if (risky.length) {
       const worst = risky.some(function (s) { return /high/i.test(s.risk); }) ? "High" : "Medium";
       add(worst, "Sign-ins", "Sign-ins flagged as risky by Identity Protection",
@@ -296,7 +303,7 @@
       }
       if (!extra && ad.ObjectId) extra = String(ad.ObjectId);
 
-      if (op === "Set-Mailbox" && /forward/i.test(extra)) {
+      if (op === "Set-Mailbox" && (ad.Parameters || []).some(p=>/^(ForwardingSmtpAddress|ForwardingAddress)$/i.test(p.Name || '') && !/^(null|\$null|false)?$/i.test(String(p.Value ?? '').trim()))) {
         add("Critical", "Audit log", "Mailbox-level forwarding configured (Set-Mailbox)",
           "Set-Mailbox from IP " + ip + " with parameters: " + extra,
           t,
@@ -453,6 +460,16 @@
       add("Info", "Account", "Account is disabled",
         "The account is currently disabled in Entra ID.", null, "", "User profile");
     }
+
+    // Preserve actor/target distinction for directory events affecting this account.
+    for(const r of ev.directoryAudits || []) {
+      const actor=r.initiatedBy?.user;
+      const byUser=actor?.id === ev.user?.id && !!actor?.id || String(actor?.userPrincipalName || '').toLowerCase() === String(ev.upn).toLowerCase();
+      const toUser=r.targetResources?.some(t=>(t.id && t.id === ev.user?.id) || String(t.userPrincipalName || '').toLowerCase() === String(ev.upn).toLowerCase());
+      if((byUser || toUser) && /role|authentication|password|consent|credential|federation/i.test(r.activityDisplayName || ''))
+        add('Medium','Directory audit',r.activityDisplayName,(byUser?'Performed by selected user. ':'')+(toUser?'Targets selected user. ':'')+'Actor: '+(actor?.userPrincipalName || 'application/unknown')+'. Result: '+(r.result || 'unknown')+'. Event: '+(r.id || 'unavailable'),r.activityDateTime,'Review the recorded actor, targets and modified properties.','Directory audit');
+    }
+    F.forEach(f=>{ const text=[f.Category,f.Title,f._t,f.User].join('|'); let h=2166136261; for(const c of text)h=Math.imul(h^c.charCodeAt(0),16777619); f.Id='quick-'+(h>>>0).toString(16); });
 
     F.sort(function (a, b) {
       const d = SEV_RANK[a.Severity] - SEV_RANK[b.Severity];

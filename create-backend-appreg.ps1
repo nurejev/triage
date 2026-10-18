@@ -15,8 +15,8 @@
         Exchange RBAC for Applications afterwards (step 6 below).
       * An exposed API scope Contain.Exchange, pre-authorized for the Triage
         SPA, so only the SPA can obtain tokens for this backend.
-      * Delegated Microsoft Graph User.Read + Directory.Read.All, used only
-        for the on-behalf-of call that checks the caller's directory roles.
+      * Explicit Triage.Reader / Triage.Responder app roles. Broad directory roles
+        do not authorize this backend. Mutation is disabled by default.
 
     Run once, as an account that can create app registrations and grant
     admin consent (Application Administrator + Privileged Role Administrator,
@@ -49,6 +49,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ((Test-Path (Join-Path $PSScriptRoot 'backend.env')) -or (Test-Path (Join-Path $CertPath 'backend.pfx'))) {
+    throw "Existing backend configuration found. Use the Phase 1 migration guide; this script will not overwrite credentials or create a duplicate."
+}
 Connect-MgGraph -Scopes "Application.ReadWrite.All", "AppRoleAssignment.ReadWrite.All", "Directory.ReadWrite.All"
 $ctx = Get-MgContext
 $tenantId = $ctx.TenantId
@@ -100,28 +103,23 @@ if ($IsLinux -or $IsMacOS) { & chmod 600 $keyPem $pfx 2>$null }
 Write-Host "  wrote $keyPem, $crtPem, $pfx, $cer" -ForegroundColor Gray
 
 # ----------------------------------------------------------------- 2. app ---
-$graphAppId = "00000003-0000-0000-c000-000000000000"
-$exoAppId   = "00000002-0000-0ff1-ce00-000000000000"   # Office 365 Exchange Online
-$graphSp = Get-MgServicePrincipal -Filter "appId eq '$graphAppId'"
-$exoSp   = Get-MgServicePrincipal -Filter "appId eq '$exoAppId'"
-
-$delegated = @("User.Read", "Directory.Read.All") | ForEach-Object {
-    $n = $_
-    $p = $graphSp.Oauth2PermissionScopes | Where-Object { $_.Value -eq $n }
-    if (-not $p) { Write-Warning "Graph scope not found: $n"; return }
-    @{ Id = $p.Id; Type = "Scope" }
-}
+$exoAppId = "00000002-0000-0ff1-ce00-000000000000"
+$exoSp = Get-MgServicePrincipal -Filter "appId eq '$exoAppId'"
 $manageAsApp = $exoSp.AppRoles | Where-Object { $_.Value -eq "Exchange.ManageAsApp" }
 if (-not $manageAsApp) { throw "Exchange.ManageAsApp app role not found - is Exchange Online licensed in this tenant?" }
 
 $scopeId = [guid]::NewGuid()
 $app = New-MgApplication -DisplayName $DisplayName `
     -SignInAudience "AzureADMyOrg" `
+    -AppRoles @(
+        @{ Id=[guid]::NewGuid(); Value="Triage.Reader"; DisplayName="Triage mailbox reader"; Description="Read allowed mailbox configuration"; AllowedMemberTypes=@("User"); IsEnabled=$true },
+        @{ Id=[guid]::NewGuid(); Value="Triage.Responder"; DisplayName="Triage mailbox responder"; Description="Perform explicitly enabled operations on allowed mailboxes"; AllowedMemberTypes=@("User"); IsEnabled=$true }
+    ) `
     -RequiredResourceAccess @(
-        @{ ResourceAppId = $graphAppId; ResourceAccess = @($delegated) },
         @{ ResourceAppId = $exoAppId;   ResourceAccess = @(@{ Id = $manageAsApp.Id; Type = "Role" }) }
     ) `
     -Api @{
+        RequestedAccessTokenVersion = 2
         Oauth2PermissionScopes = @(@{
             Id = $scopeId; Value = "Contain.Exchange"; Type = "User"
             AdminConsentDisplayName = "Contain a compromised mailbox"
@@ -130,9 +128,7 @@ $app = New-MgApplication -DisplayName $DisplayName `
             UserConsentDescription  = "Lets Triage clear inbox rules, forwarding and delegates on a mailbox you name."
             IsEnabled = $true
         })
-        # Only the Triage SPA may request a token for this API. Any other
-        # client - including one an attacker registers - is refused by Entra
-        # before the request ever reaches the backend.
+        # Preauthorization is a consent convenience. The API independently checks azp/appid.
         PreAuthorizedApplications = @(@{
             AppId = $SpaAppId; DelegatedPermissionIds = @($scopeId)
         })
@@ -157,6 +153,11 @@ ORGANIZATION=$Organization
 BACKEND_APP_ID=$($app.AppId)
 SPA_APP_ID=$SpaAppId
 API_SCOPE=Contain.Exchange
+ALLOWED_ANALYST_IDS=
+ALLOWED_MAILBOX_IDS=
+PROTECTED_MAILBOX_IDS=
+ENABLE_MUTATIONS=false
+ALLOWED_OPERATIONS=/api/exo/snapshot,/api/exo/rules/list,/api/exo/forwarding/get,/api/exo/delegates/list
 CERT_PFX_PASSWORD=$plain
 # Mailboxes the backend must never touch (comma separated), e.g. break-glass:
 PROTECTED_UPNS=
@@ -182,7 +183,8 @@ Write-Host ""
 Write-Host "STILL TO DO - these cannot be scripted safely:" -ForegroundColor Yellow
 Write-Host "  4. Grant admin consent for the app (Entra > App registrations > $DisplayName"
 Write-Host "     > API permissions > Grant admin consent). This covers Exchange.ManageAsApp"
-Write-Host "     and the delegated Graph permissions used for the role check."
+Write-Host "     Assign Triage.Reader or Triage.Responder under Enterprise applications > Users and groups."
+Write-Host "     Populate analyst/mailbox immutable IDs in backend.env. All access is denied until configured."
 Write-Host ""
 Write-Host "  5. Give the service principal Exchange rights. Least privilege first:"
 Write-Host "       Connect-ExchangeOnline -Organization $Organization"

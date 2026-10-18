@@ -1,0 +1,78 @@
+{
+  "errors": [],
+  "interactions": "finding, timeline, navigation, route, resume, confirmation passed",
+  "sizes": [
+    {
+      "viewport": 1024,
+      "view": "investigate",
+      "width": 990,
+      "scrollWidth": 990
+    },
+    {
+      "viewport": 1024,
+      "view": "collect",
+      "width": 990,
+      "scrollWidth": 990
+    },
+    {
+      "viewport": 1024,
+      "view": "contain",
+      "width": 990,
+      "scrollWidth": 990
+    },
+    {
+      "viewport": 736,
+      "view": "investigate",
+      "width": 702,
+      "scrollWidth": 702
+    },
+    {
+      "viewport": 736,
+      "view": "collect",
+      "width": 702,
+      "scrollWidth": 702
+    },
+    {
+      "viewport": 736,
+      "view": "contain",
+      "width": 702,
+      "scrollWidth": 702
+    },
+    {
+      "viewport": 390,
+      "view": "investigate",
+      "width": 356,
+      "scrollWidth": 356
+    },
+    {
+      "viewport": 390,
+      "view": "collect",
+      "width": 356,
+      "scrollWidth": 356
+    },
+    {
+      "viewport": 390,
+      "view": "contain",
+      "width": 356,
+      "scrollWidth": 356
+    },
+    {
+      "viewport": 320,
+      "view": "investigate",
+      "width": 286,
+      "scrollWidth": 286
+    },
+    {
+      "viewport": 320,
+      "view": "collect",
+      "width": 286,
+      "scrollWidth": 286
+    },
+    {
+      "viewport": 320,
+      "view": "contain",
+      "width": 286,
+      "scrollWidth": 286
+    }
+  ]
+}

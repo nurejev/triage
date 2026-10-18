@@ -1,0 +1,24 @@
+{
+  "name": "triage-beta-validation",
+  "private": true,
+  "version": "0.34.0",
+  "scripts": {
+    "test": "node tools/test.mjs",
+    "test:browser": "node BETA/desk.dom.test.mjs",
+    "desktop:runtime": "python3 desktop/scripts/prepare-runtime.py",
+    "desktop:start": "electron desktop",
+    "desktop:package:mac": "node desktop/scripts/package.mjs darwin-arm64",
+    "desktop:package:win": "node desktop/scripts/package.mjs win32-x64",
+    "start": "node tools/serve-web.mjs",
+    "web": "node tools/serve-web.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "44.3.0",
+    "playwright": "1.62.1",
+    "prettier": "3.6.2"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

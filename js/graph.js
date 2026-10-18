@@ -12,7 +12,7 @@
         auth: {
           clientId: A.clientId,
           authority: A.authority,
-          redirectUri: window.location.origin + window.location.pathname
+          redirectUri: A.redirectUri || window.location.origin + window.location.pathname
         },
         cache: { cacheLocation: "sessionStorage" }
       });
@@ -38,6 +38,7 @@
   }
 
   async function signOut() {
+    C?.reset();
     const acc = account;
     account = null;
     elevated = false;
@@ -65,57 +66,80 @@
   }
 
   async function token(scopes) {
-    const req = { scopes: scopes || A.scopes, account: account };
-    try {
-      return (await app().acquireTokenSilent(req)).accessToken;
-    } catch (e) {
-      return (await app().acquireTokenPopup(req)).accessToken;
-    }
+    const expected=account, version=C.generation;
+    if(!expected) throw Error('Sign in first');
+    const req={scopes:scopes || A.scopes,account:expected};let response;
+    try {response=await app().acquireTokenSilent(req);}
+    catch(e){C.assert(version);response=await app().acquireTokenPopup(req);}
+    C.assert(version);
+    if(response.account?.homeAccountId !== expected.homeAccountId || response.account?.tenantId !== expected.tenantId) throw Error('Authentication returned a different account or tenant');
+    return response.accessToken;
   }
 
   // Step up to the containment (write) scopes. Silent if the tenant already
   // consented, otherwise a popup - which is the deliberate "I am about to
   // change something" moment. Read-only triage never calls this.
   async function elevate() {
+    const version = C?.generation;
     await token(A.containScopes);
+    C?.assert(version);
     elevated = true;
     return true;
   }
 
-  async function gfetch(url, opts) {
-    const t = await token(opts && opts.scopes);
-    const r = await fetch(url, Object.assign({
-      headers: Object.assign({ Authorization: "Bearer " + t, "Content-Type": "application/json" },
-        (opts && opts.headers) || {})
-    }, opts || {}));
-    if (r.status === 204) return null;
-    const body = await r.json().catch(function () { return null; });
-    if (!r.ok) {
-      const msg = (body && body.error && (body.error.code + ": " + body.error.message)) || ("HTTP " + r.status);
-      const err = new Error(msg);
-      err.status = r.status;
-      throw err;
-    }
-    return body;
+  const C = window.TriageCase;
+  function trusted(url) {
+    const u = new URL(url);
+    if (u.origin !== 'https://graph.microsoft.com' || !/^\/(v1\.0|beta)\//.test(u.pathname) || u.username || u.password) throw Error('Untrusted Graph URL');
+    return u.href;
   }
-
-  // Follow @odata.nextLink; cap pages to keep the tab responsive.
-  async function gall(url, maxPages) {
-    const out = [];
-    let next = url, pages = 0;
-    while (next && pages < (maxPages || 20)) {
-      const body = await gfetch(next);
-      if (body && body.value) out.push.apply(out, body.value);
-      else if (body) out.push(body);
-      next = body && body["@odata.nextLink"];
-      pages++;
+  async function gfetch(url, opts = {}) {
+    trusted(url);
+    const version = C?.generation;
+    const signal = C?.signal;
+    const t = await token(opts.scopes);
+    C?.assert(version);
+    const method = opts.method || 'GET';
+    for (let attempt = 0; ; attempt++) {
+      const r = await fetch(url, {...opts, signal: AbortSignal.any([signal || new AbortController().signal, opts.signal || new AbortController().signal, AbortSignal.timeout(60000)]),
+        headers: {...opts.headers, Authorization:'Bearer '+t,'Content-Type':'application/json'}});
+      C?.assert(version);
+      if (method === 'GET' && [429,503,504].includes(r.status) && attempt < 3) {
+        const delay = Math.min(30000, Math.max(1000, Number(r.headers.get('Retry-After'))*1000 || 1000*2**attempt));
+        await new Promise(resolve=>setTimeout(resolve,delay)); C?.assert(version); continue;
+      }
+      if (r.status === 204) return null;
+      const body = await r.json().catch(()=>null);
+      if (!r.ok) throw Object.assign(Error(body?.error?.message || 'HTTP '+r.status),{status:r.status});
+      C?.assert(version); return body;
     }
-    return out;
+  }
+  async function pages(url, maxPages = 20) {
+    const records = [], startedAt = new Date().toISOString();
+    let nextLink=url, count=0;
+    try {
+      while(nextLink && count < maxPages) {
+        const body = await gfetch(nextLink);
+        if(!Array.isArray(body?.value)) throw Error('Graph returned an invalid collection envelope');
+        records.push(...body.value);
+        count++; nextLink=body?.['@odata.nextLink'] || null;
+        if(nextLink) trusted(nextLink);
+      }
+      return {records,state:nextLink?'partial':'complete',nextLink,pages:count,query:url,startedAt,completedAt:new Date().toISOString()};
+    } catch(e) {
+      if(e.name === 'AbortError') throw e;
+      return {records,state:records.length?'partial':e.status===403?'unavailable':'failed',nextLink,pages:count,query:url,startedAt,error:e.message};
+    }
+  }
+  async function gall(url,maxPages) {
+    const result=await pages(url,maxPages);
+    if(result.state !== 'complete') throw Object.assign(Error(result.error || 'Partial collection: continuation remains'),{records:result.records,collection:result});
+    return result.records;
   }
 
   // ---- Unified Audit Log via the async audit query API (v1.0) ----
   // POST /security/auditLog/queries -> poll -> GET records
-  async function ualQuery(upn, startIso, endIso, onStatus) {
+  async function ualQuery(upn, startIso, endIso, onStatus, onCollection) {
     const base = A.graphV1 + "/security/auditLog/queries";
     const job = await gfetch(base, {
       method: "POST",
@@ -144,24 +168,37 @@
       status = j.status;
       if (onStatus) onStatus(status, Math.round(waited / 1000));
     }
-    return gall(base + "/" + id + "/records?$top=500", 60);
+    const result=await pages(base+"/"+id+"/records?$top=500",60);
+    const {records,...metadata}=result;if(onCollection)onCollection({...metadata,queryId:id});
+    if(result.state!=='complete')throw Object.assign(Error(result.error||'Audit records are partial'),{records,collection:{...metadata,queryId:id}});
+    return records;
   }
 
   // Write helper: every containment call goes through here so the write scopes
   // are requested in one place and nothing can mutate the tenant by accident.
-  function gwrite(url, method, body) {
-    return gfetch(url, {
-      method: method,
-      scopes: A.containScopes,
-      body: body === undefined ? undefined : JSON.stringify(body)
-    });
+  async function gwrite(url, method, body) {
+    if (!elevated || !window.TriageContain?.armed) throw Error('Containment must be armed');
+    const identity={...window.TriageContain.identity}, version=C.generation;
+    if(!identity.objectId || identity.tenantId !== account?.tenantId) throw Error('Unverified action identity');
+    const path=new URL(trusted(url)).pathname;
+    if(path.includes('/users/') && !path.startsWith('/v1.0/users/'+encodeURIComponent(identity.objectId)+'/') && path!=='/v1.0/users/'+encodeURIComponent(identity.objectId)) throw Error('Action targets a different account');
+    const intent={operationId:crypto.randomUUID(),preservation:window.TriageContain.preservation,...identity,method,path,analystId:account.localAccountId};
+    await window.TriageJournal.append({...intent,state:'intent'}); C.assert(version);
+    try {
+      const result=await gfetch(url,{method,scopes:A.containScopes,body:body===undefined?undefined:JSON.stringify(body)});
+      await window.TriageJournal.append({...intent,state:'accepted-verification-pending'}); C.assert(version);
+      return result;
+    } catch(e) {
+      try {await window.TriageJournal.append({...intent,state:'failed-or-uncertain',error:e.message});} catch { /* Intent remains durable. Do not resend automatically. */ }
+      throw e;
+    }
   }
 
   window.TriageGraph = {
     init: init, signIn: signIn, signOut: signOut, forgetSession: forgetSession,
     get account() { return account; },
     get elevated() { return elevated; },
-    elevate: elevate, token: token,
+    elevate: elevate, token: token, pages: pages,
     gfetch: gfetch, gall: gall, gwrite: gwrite, ualQuery: ualQuery
   };
 })();

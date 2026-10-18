@@ -14,7 +14,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][ValidateSet(
-        "rules-list", "rules-remove", "rules-disable",
+        "snapshot", "rules-list", "rules-remove", "rules-disable",
         "forwarding-get", "forwarding-clear",
         "delegates-list", "delegates-remove")]
     [string]$Action,
@@ -22,6 +22,7 @@ param(
     [Parameter(Mandatory)][string]$Organization,
     [Parameter(Mandatory)][string]$PfxPath,
     [string]$PfxPassword = "",
+    [Parameter(Mandatory)][guid]$ObjectId,
     [string]$Upn,
     [string]$RuleId,
     [string]$Delegate
@@ -32,7 +33,7 @@ $ProgressPreference = "SilentlyContinue"
 
 function Out-Json($o) {
     # Depth 6 keeps nested rule conditions intact without dumping the world.
-    $o | ConvertTo-Json -Depth 6 -Compress
+    ConvertTo-Json -InputObject $o -Depth 6 -Compress
 }
 
 try {
@@ -47,13 +48,65 @@ try {
     Import-Module ExchangeOnlineManagement -ErrorAction Stop
     Connect-ExchangeOnline -AppId $AppId -Certificate $cert -Organization $Organization `
         -ShowBanner:$false -CommandName Get-InboxRule, Remove-InboxRule, Set-InboxRule, `
-        Get-Mailbox, Set-Mailbox, Get-MailboxPermission, Remove-MailboxPermission `
+        Get-Mailbox, Set-Mailbox, Get-MailboxPermission, Remove-MailboxPermission, Get-EXOMailbox `
         -ErrorAction Stop | Out-Null
 
+    # Resolve the approved immutable object before any read or mutation.
+    $resolved = @(Get-EXOMailbox -ExternalDirectoryObjectId $ObjectId -ErrorAction Stop)
+    if ($resolved.Count -ne 1 -or [string]$resolved[0].ExternalDirectoryObjectId -ne [string]$ObjectId) { throw 'Canonical mailbox identity did not match.' }
+    if ([string]$resolved[0].PrimarySmtpAddress -ine $Upn) { throw 'Mailbox address does not match the approved object ID.' }
+    $Upn = [string]$resolved[0].PrimarySmtpAddress
+
     switch ($Action) {
+        "snapshot" {
+
+            $rules = Get-InboxRule -Mailbox $Upn -IncludeHidden -ErrorAction Stop
+            $snapshotRules = @($rules | ForEach-Object {
+                [pscustomobject]@{
+                    id                  = [string]$_.Identity
+                    ruleIdentity        = [string]$_.RuleIdentity
+                    name                = $_.Name
+                    enabled             = [bool]$_.Enabled
+                    priority            = $_.Priority
+                    description         = ($_.Description -replace '\s+', ' ')
+                    forwardTo           = @($_.ForwardTo           | ForEach-Object { "$_" })
+                    forwardAsAttachment = @($_.ForwardAsAttachmentTo | ForEach-Object { "$_" })
+                    redirectTo          = @($_.RedirectTo          | ForEach-Object { "$_" })
+                    moveToFolder        = "$($_.MoveToFolder)"
+                    deleteMessage       = [bool]$_.DeleteMessage
+                    markAsRead          = [bool]$_.MarkAsRead
+                    stopProcessingRules = [bool]$_.StopProcessingRules
+                    from                = @($_.From                | ForEach-Object { "$_" })
+                    subjectContains     = @($_.SubjectContainsWords)
+                    bodyContains        = @($_.BodyContainsWords)
+                }
+            })
+
+            $mb = Get-Mailbox -Identity $Upn -ErrorAction Stop
+            $snapshotForwarding = @{
+                identity                  = [string]$mb.Identity
+                forwardingAddress         = "$($mb.ForwardingAddress)"
+                forwardingSmtpAddress     = "$($mb.ForwardingSmtpAddress)"
+                deliverToMailboxAndForward = [bool]$mb.DeliverToMailboxAndForward
+                hiddenFromAddressLists    = [bool]$mb.HiddenFromAddressListsEnabled
+            }
+
+            $perms = Get-MailboxPermission -Identity $Upn -ErrorAction Stop |
+                Where-Object { $_.User -notlike "NT AUTHORITY\SELF" -and -not $_.IsInherited }
+            $snapshotDelegates = @($perms | ForEach-Object {
+                [pscustomobject]@{
+                    user         = "$($_.User)"
+                    accessRights = @($_.AccessRights | ForEach-Object { "$_" })
+                    deny         = [bool]$_.Deny
+                }
+            })
+
+            Out-Json @{rules=$snapshotRules;forwarding=$snapshotForwarding;delegates=$snapshotDelegates}
+        }
+
 
         "rules-list" {
-            $rules = Get-InboxRule -Mailbox $Upn -ErrorAction Stop
+            $rules = Get-InboxRule -Mailbox $Upn -IncludeHidden -ErrorAction Stop
             Out-Json @($rules | ForEach-Object {
                 [pscustomobject]@{
                     id                  = [string]$_.Identity

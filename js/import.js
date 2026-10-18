@@ -39,6 +39,7 @@
       field += c; i++;
     }
     if (field.length || row.length) { row.push(field); rows.push(row); }
+    if (inQ) throw Error("Unterminated CSV quote");
     return rows;
   }
   function csvToObjects(text) {
@@ -47,7 +48,9 @@
     });
     if (rows.length < 2) return [];
     const head = rows[0];
+    if (new Set(head).size !== head.length) throw Error("Duplicate CSV column");
     return rows.slice(1).map(function (r) {
+      if (r.length !== head.length) throw Error("CSV row has wrong number of columns");
       const o = {};
       head.forEach(function (h, idx) { o[h] = r[idx]; });
       return o;
@@ -84,13 +87,23 @@
   }
   // Suite sign-in JSON already matches the Graph resource - pass through.
   // For a flattened CSV export, rebuild the nested bits the detections read.
+  function parseStatus(value) {
+    const s=String(value ?? '').trim();
+    if(/^\d+$/.test(s)) return Number(s);
+    if(/^success$/i.test(s)) return 0;
+    if(/^(failure|failed)$/i.test(s)) return -1;
+    throw Error('Missing or ambiguous sign-in status: '+s);
+  }
   function mapSignInCsv(r) {
     return {
+      originalRecord:{...r}, tenantId:pick(r,["tenantId","TenantId","AADTenantId"]) || "",
+      userPrincipalName: pick(r, ["userPrincipalName", "UPN", "UserPrincipalName"]) || "",
+      userId: pick(r, ["userId", "UserId"]) || "",
       createdDateTime: pick(r, ["createdDateTime", "CreationTime", "Date"]),
       ipAddress: pick(r, ["ipAddress", "IP", "ClientIP"]),
       location: { countryOrRegion: pick(r, ["countryOrRegion", "Country"]) || "",
                   city: pick(r, ["city", "City"]) || "" },
-      status: { errorCode: parseInt(pick(r, ["errorCode", "ErrorCode", "Status"]) || "0", 10) || 0 },
+      status: { errorCode: parseStatus(pick(r, ["errorCode", "ErrorCode", "Status"])) },
       appDisplayName: pick(r, ["appDisplayName", "AppDisplayName", "App"]) || "",
       clientAppUsed: pick(r, ["clientAppUsed", "ClientAppUsed"]) || "",
       conditionalAccessStatus: pick(r, ["conditionalAccessStatus"]) || "",
@@ -100,6 +113,7 @@
   }
   function mapOAuth(r) {
     return {
+      ...r, principalUpn:pick(r,["principalUpn","userPrincipalName","UserPrincipalName"]) || "",
       appName: pick(r, ["appName", "AppDisplayName", "displayName", "ClientDisplayName", "Application"]) || "",
       clientId: pick(r, ["clientId", "ClientId", "appId", "AppId"]) || "",
       scope: pick(r, ["scope", "Scope", "Permission", "Permissions", "grantedScopes"]) || "",
@@ -137,7 +151,7 @@
     return new Promise(function (resolve) {
       const reader = new FileReader();
       reader.onerror = function () { resolve({ name: file.name, kind: "error", detail: "could not read file" }); };
-      reader.onload = function () {
+      reader.onload = async function () {
         const text = String(reader.result || "");
         const lower = file.name.toLowerCase();
         try {
@@ -149,6 +163,10 @@
                 .map(function (l) { return JSON.parse(l); });
             } else {
               data = JSON.parse(text);
+            }
+            if (data?.schema === 'limon.triage.evidence') {
+              const evidence=await window.BETA_Evidence.unpack(data);
+              return resolve({name:file.name,kind:'evidence',evidence});
             }
             // native Triage Evidence JSON (a single evidence object)
             if (data && !Array.isArray(data) && typeof data === "object" &&
@@ -174,7 +192,7 @@
   // ---- module state ----
   let built = null; // the assembled evidence object, ready to view
 
-  function assemble(descriptors) {
+  function assemble(descriptors, selectedSubject) {
     // If a native evidence file was dropped, it wins (it already holds everything).
     const nativeDesc = descriptors.find(function (d) { return d.kind === "evidence"; });
     const acc = { signIns: [], ualRecords: [], oauthGrants: [] };
@@ -210,10 +228,10 @@
     if (nativeDesc) {
       ev = nativeDesc.evidence;
       ev.imported = true;
-      // merge any additionally-dropped Suite files into the native evidence
-      if (acc.ualRecords.length) ev.ualRecords = (ev.ualRecords || []).concat(acc.ualRecords);
-      if (acc.signIns.length) ev.signIns = (ev.signIns || []).concat(acc.signIns);
-      if (acc.oauthGrants.length) ev.oauthGrants = (ev.oauthGrants || []).concat(acc.oauthGrants);
+      if(descriptors.filter(d=>d.kind!=='empty').length !== 1) {
+        document.getElementById('importSummary').textContent='Open one native case bundle at a time. Merge requires verified tenant and source provenance.';
+        document.getElementById('viewImportBtn').disabled=true; built=null; return;
+      }
     } else if (recognized) {
       ev = {
         upn: inferUpn(acc), imported: true, demo: false, skipped: [],
@@ -223,6 +241,21 @@
       };
     } else {
       ev = null;
+    }
+
+    let subjectPicker='';
+    if(ev) {
+      const tenants=[...new Set([ev.tenantId,...['signIns','ualRecords','directoryAudits','oauthGrants'].flatMap(k=>(ev[k]||[]).map(r=>r.tenantId || r.TenantId || r.auditData?.OrganizationId))].filter(Boolean).map(x=>x.toLowerCase()))];
+      if(tenants.length>1){document.getElementById('importSummary').textContent='Incompatible tenants cannot be combined.';document.getElementById('viewImportBtn').disabled=true;built=null;return;}
+      ev.tenantId=tenants[0]||'';
+      if(!ev.raw) ev=window.TriageCase.toCommon(ev);
+      const people=[...new Set([...(ev.users || []).map(u=>u.userPrincipalName),...(ev.signIns || []).map(r=>r.userPrincipalName),...(ev.ualRecords || []).map(r=>r.userPrincipalName),ev.upn].filter(x=>x && x.includes('@')).map(x=>x.toLowerCase()))];
+      if(people.length>1 && !selectedSubject) {
+        subjectPicker='<p>Select the account to investigate. Evidence for other accounts remains in the original file.</p><select id="importSubject"><option value="">Choose account</option>'+people.map(u=>'<option>'+esc(u)+'</option>').join('')+'</select>';
+        ev=null;
+      } else if(selectedSubject || people.length===1) ev=window.TriageCase.subject(ev,selectedSubject || people[0]);
+      else {subjectPicker='<p>No attributable user identity was found. Open this data in tenant investigation; it cannot authorize user containment.</p>';ev=null;}
+      if(ev){ev.imported=true;window.TriageCase.ensure(ev);}
     }
 
     const total = acc.signIns.length + acc.ualRecords.length + acc.oauthGrants.length +
@@ -235,7 +268,9 @@
       head = '<strong>' + recognized + ' file' + (recognized === 1 ? '' : 's') + ' recognized.</strong> ' +
         (nativeDesc ? 'Ready to view.' : (total + ' record' + (total === 1 ? '' : 's') + ' ready to analyze.'));
     }
-    document.getElementById("importSummary").innerHTML = head + '<ul>' + lines.join("") + '</ul>';
+    document.getElementById("importSummary").innerHTML = head + '<ul>' + lines.join("") + '</ul>' + subjectPicker;
+    const picker=document.getElementById('importSubject');
+    if(picker) picker.onchange=()=>{if(picker.value) assemble(descriptors,picker.value);};
     document.getElementById("viewImportBtn").disabled = !ev;
     document.getElementById("importClearBtn").style.display = descriptors.length ? "" : "none";
     built = ev;
@@ -260,7 +295,10 @@
     if (!files.length) return;
     document.getElementById("importSummary").innerHTML = '<span class="mini muted">Parsing ' +
       files.length + ' file' + (files.length === 1 ? '' : 's') + '&hellip;</span>';
+    if(files.reduce((n,f)=>n+f.size,0)>100*1024*1024){document.getElementById("importSummary").textContent="The combined import limit is 100 MB. Use a smaller evidence package.";return;}
+    const version=window.TriageCase.generation;
     const descriptors = await Promise.all(files.map(readFile));
+    if(version!==window.TriageCase.generation)return;
     assemble(descriptors);
   }
 

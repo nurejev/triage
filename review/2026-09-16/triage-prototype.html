@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"></head>
+<body>
+<title>Triage Flow Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f2f7f3; --surface: #ffffff; --ink: #12331f; --muted: #5f7a67; --border: #dbe7de; --soft: #eaf3ec;
+    --green: #1e4729; --green-ink: #ffffff; --green-hover: #2a5d38; --lemon: #f7d65a; --lemon-ink: #12331f;
+    --red: #b63a39; --red-bg: #fff0ed; --amber: #846211; --amber-bg: #fff8dd; --blue: #23638d; --blue-bg: #edf5fc;
+    --neutral: #647079; --neutral-bg: #f0f2f4; --shadow: 0 1px 2px rgba(18,51,31,.06), 0 10px 30px rgba(18,51,31,.08);
+    --radius: 7px; --scrim: rgba(18,51,31,.45);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1512; --surface: #161d19; --ink: #e6f0e8; --muted: #9bb3a3; --border: #2c3e32; --soft: #1c2b21;
+      --green: #b2dbb6; --green-ink: #0f1512; --green-hover: #c6e6c9; --lemon: #f7d65a; --lemon-ink: #12331f;
+      --red: #ffa19c; --red-bg: #3d2020; --amber: #f7d65a; --amber-bg: #362e16; --blue: #8fc6e7; --blue-bg: #1a2e3b;
+      --neutral: #a9b4bd; --neutral-bg: #252c30; --shadow: none; --scrim: rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1512; --surface: #161d19; --ink: #e6f0e8; --muted: #9bb3a3; --border: #2c3e32; --soft: #1c2b21;
+    --green: #b2dbb6; --green-ink: #0f1512; --green-hover: #c6e6c9; --lemon: #f7d65a; --lemon-ink: #12331f;
+    --red: #ffa19c; --red-bg: #3d2020; --amber: #f7d65a; --amber-bg: #362e16; --blue: #8fc6e7; --blue-bg: #1a2e3b;
+    --neutral: #a9b4bd; --neutral-bg: #252c30; --shadow: none; --scrim: rgba(0,0,0,.6);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.5; font-synthesis: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  input, select, textarea { font: inherit; color: inherit; }
+  h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  h2 { font-size: 16px; font-weight: 600; }
+  h3 { font-size: 14px; font-weight: 600; }
+  p { margin: 0; }
+  a { color: var(--blue); }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .num { font-variant-numeric: tabular-nums; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; background: var(--soft); padding: 1px 5px; border-radius: 4px; }
+  [hidden] { display: none !important; }
+
+  /* ---------- prototype bar (not part of the product) ---------- */
+  .proto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 16px; font-size: 12px; color: var(--muted); border-bottom: 1px dashed var(--border); background: var(--bg); }
+  .proto b { color: var(--ink); letter-spacing: .08em; text-transform: uppercase; font-size: 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; background: var(--surface); }
+  .seg button { border: 0; background: transparent; padding: 3px 12px; font-size: 12px; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--green); color: var(--green-ink); }
+  .proto .spacer { flex: 1; }
+  .proto .link { background: none; border: 0; color: var(--blue); text-decoration: underline; padding: 0; }
+
+  /* ---------- app shell ---------- */
+  .shell { min-height: 100%; display: flex; flex-direction: column; }
+  header.app { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .appbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 20px; max-width: 1240px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 20px; letter-spacing: -.02em; white-space: nowrap; background: none; border: 0; padding: 0; }
+  .brand .mark { width: 24px; height: 24px; border-radius: 50%; background: var(--lemon); border: 3px solid var(--green); display: inline-block; position: relative; }
+  .brand .mark::after { content: ""; position: absolute; width: 8px; height: 3px; background: var(--green); right: -5px; bottom: -1px; transform: rotate(45deg); border-radius: 2px; }
+  .brand small { font-weight: 400; color: var(--muted); font-size: 11px; margin-left: 2px; }
+  .beta { font-size: 10px; font-weight: 700; background: var(--lemon); color: var(--lemon-ink); padding: 2px 7px; border-radius: 4px; margin-left: 6px; letter-spacing: .04em; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+  .chip { border: 1px solid var(--border); background: var(--soft); border-radius: 999px; padding: 4px 11px; font-size: 12px; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+  .chip { max-width: 100%; }
+  .chip b { font-weight: 600; }
+  .chip .ok { color: var(--green); font-weight: 700; }
+  .chip .warn { color: var(--amber); font-weight: 600; }
+  .chip.dirty { border-color: var(--amber); }
+  .chip button { background: none; border: 0; padding: 0; color: var(--blue); text-decoration: underline; font-size: 12px; }
+  .help { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; font-size: 12px; }
+
+  /* rail */
+  .rail { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0 20px 10px; max-width: 1240px; margin-inline: auto; width: 100%; }
+  .rail li { flex: 1 1 0; min-width: 0; }
+  .rail button { display: block; width: 100%; text-align: left; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; background: var(--surface); min-height: 56px; }
+  .rail .n { font-size: 10px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; display: block; white-space: nowrap; }
+  .rail b { font-size: 13px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail .s { font-size: 11px; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail li.done button { border-color: var(--green); }
+  .rail li.done .n::after { content: " ✓"; color: var(--green); }
+  .rail li.now button { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+  .rail li.now .n, .rail li.now .s { color: var(--green-ink); opacity: .85; }
+  .rail li.todo button { opacity: .5; border-style: dashed; cursor: not-allowed; }
+  .rail button:focus-visible { outline: 2px solid var(--lemon); outline-offset: 2px; }
+  .rail-compact { display: none; }
+
+  main { flex: 1; width: 100%; max-width: 1240px; margin: 0 auto; padding-block: 26px 40px; padding-inline: 20px; }
+  footer.app { border-top: 1px solid var(--border); padding: 12px 20px; font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; letter-spacing: .06em; text-transform: uppercase; }
+  footer.app button { background: none; border: 0; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; padding: 0; }
+
+  /* page structure */
+  .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .page-head h1 { margin-top: 4px; }
+  .page-head p { color: var(--muted); margin-top: 4px; max-width: 70ch; }
+  .wizard { max-width: 760px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  .panel-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .row.between { justify-content: space-between; }
+  .wizard-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; }
+
+  /* controls */
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 6px; padding: 8px 13px; font-weight: 600; font-size: 13px; background: var(--surface); }
+  .btn:hover { background: var(--soft); }
+  .btn.primary { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+  .btn.primary:hover { background: var(--green-hover); border-color: var(--green-hover); }
+  .btn.danger { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); font-weight: 500; }
+  .btn.ghost:hover { color: var(--ink); background: var(--soft); }
+  .btn.big { display: flex; width: 100%; padding: 14px 16px; font-size: 15px; justify-content: space-between; text-align: left; }
+  .btn.big small { font-weight: 400; color: inherit; opacity: .75; font-size: 12px; display: block; }
+  .btn.big.primary small { opacity: .85; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn:disabled:hover { background: var(--surface); }
+  .btn.primary:disabled:hover { background: var(--green); }
+  .btn:focus-visible, .field input:focus-visible, .field select:focus-visible, textarea:focus-visible { outline: 2px solid var(--lemon); outline-offset: 2px; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  .field > span { text-transform: uppercase; letter-spacing: .08em; font-size: 10px; font-weight: 600; }
+  .field input, .field select, .field textarea { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--surface); color: var(--ink); font-size: 14px; width: 100%; }
+  .field textarea { min-height: 70px; resize: vertical; }
+  .toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .toggle button { border: 0; background: var(--surface); padding: 8px 14px; font-weight: 600; font-size: 13px; }
+  .toggle button[aria-pressed="true"] { background: var(--green); color: var(--green-ink); }
+  .radio-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .radio-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .note { border-radius: 6px; padding: 9px 12px; font-size: 12.5px; background: var(--amber-bg); color: var(--amber); }
+  .note.info { background: var(--blue-bg); color: var(--blue); }
+  .note.good { background: var(--soft); color: var(--green); }
+  .note.bad { background: var(--red-bg); color: var(--red); }
+  .note b { font-weight: 600; }
+  .suggest { border: 1px solid var(--border); border-top: 0; border-radius: 0 0 6px 6px; margin-top: -4px; background: var(--surface); overflow: hidden; }
+  .suggest button { display: flex; justify-content: space-between; width: 100%; text-align: left; border: 0; background: var(--surface); padding: 7px 10px; font-size: 13px; }
+  .suggest button:hover, .suggest button:focus { background: var(--soft); }
+  .suggest small { color: var(--muted); }
+
+  /* service rows */
+  .svc { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; background: var(--surface); }
+  .svc.ready { border-color: var(--green); }
+  .svc.failed { border-color: var(--red); }
+  .svc b { display: block; font-size: 14px; }
+  .svc small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .svc .wait { color: var(--amber); font-weight: 600; }
+  .svc .okline { color: var(--green); font-weight: 600; }
+  .svc .badline { color: var(--red); font-weight: 600; }
+  .status-ok { color: var(--green); font-weight: 700; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--amber); border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+  /* presets */
+  .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .presets button { text-align: left; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; background: var(--surface); font-size: 12px; color: var(--muted); }
+  .presets button b { display: block; color: var(--ink); font-size: 13px; margin-bottom: 2px; }
+  .presets button[aria-pressed="true"] { border-color: var(--green); background: var(--soft); }
+  .presets button:disabled { opacity: .45; cursor: not-allowed; }
+  details.plain { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+  details.plain summary { cursor: pointer; font-weight: 600; }
+  details.plain .body { padding-top: 8px; color: var(--muted); font-size: 12.5px; }
+  .checklist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 14px; }
+  .checklist label { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 3px 0; }
+
+  /* coverage / lists */
+  .meter { height: 8px; background: var(--soft); border-radius: 4px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--green); transition: width .4s ease; }
+  .list { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface); }
+  .list > div, .list > button { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--border); width: 100%; text-align: left; background: var(--surface); border-left: 0; border-right: 0; border-bottom: 0; font-size: 13px; }
+  .list > :first-child { border-top: 0; }
+  .list button:hover { background: var(--soft); }
+  .list .l { display: flex; flex-direction: column; min-width: 0; }
+  .list .l small { color: var(--muted); font-size: 11.5px; }
+  .st { font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .st.complete { color: var(--green); } .st.running { color: var(--blue); } .st.partial, .st.cancelled { color: var(--amber); } .st.failed { color: var(--red); } .st.queued, .st.not-collected { color: var(--muted); font-weight: 500; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .stat .lbl { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .stat strong { font-size: 26px; display: block; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+  .stat.attention strong { color: var(--red); }
+  .stat small { color: var(--muted); font-size: 12px; }
+  .sev { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+  .sev.Critical, .sev.High { background: var(--red-bg); color: var(--red); } .sev.Medium { background: var(--amber-bg); color: var(--amber); } .sev.Low { background: var(--blue-bg); color: var(--blue); } .sev.Info { background: var(--neutral-bg); color: var(--neutral); }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--neutral-bg); color: var(--neutral); white-space: nowrap; }
+  .badge.confirmed { background: var(--red-bg); color: var(--red); } .badge.investigating { background: var(--amber-bg); color: var(--amber); } .badge.benign { background: var(--soft); color: var(--green); }
+  .finding { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--border); background: var(--surface); width: 100%; text-align: left; border-left: 0; border-right: 0; border-bottom: 0; }
+  .finding:first-child { border-top: 0; }
+  .list > button.finding { display: grid; grid-template-columns: auto 1fr auto; justify-content: stretch; }
+  .finding:hover { background: var(--soft); }
+  .finding.sel { background: var(--soft); box-shadow: inset 3px 0 0 var(--green); }
+  .finding strong { display: block; font-size: 13.5px; }
+  .finding small { color: var(--muted); font-size: 11.5px; }
+  .tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--border); margin-bottom: 14px; overflow-x: auto; }
+  .tabs button { background: none; border: 0; padding: 8px 2px; color: var(--muted); font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; }
+  .tabs button[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--green); }
+  .filter { display: flex; gap: 8px; margin-bottom: 10px; }
+  .filter input { flex: 1; }
+  .filter input, .filter select { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+  .tl { display: grid; grid-template-columns: 150px 1fr; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 13px; }
+  .tl:first-child { border-top: 0; }
+  .tl time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .tl .ref { background: none; border: 0; color: var(--blue); text-decoration: underline; padding: 0; font-size: 12px; }
+  .src-details { padding: 10px 12px 12px; border-top: 1px solid var(--border); background: var(--bg); }
+
+  /* drawer */
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .layout.with-drawer { grid-template-columns: minmax(0, 1fr) 420px; }
+  .drawer { position: sticky; top: 140px; align-self: start; background: var(--surface); border: 1px solid var(--green); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 160px); overflow: auto; box-shadow: var(--shadow); }
+  .drawer .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .drawer .head .eyebrow { color: var(--green); }
+  .drawer h2 { font-size: 15px; }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 12.5px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; }
+  .field-error { color: var(--red); font-size: 12px; }
+
+  /* respond */
+  .phases { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
+  .phases button { text-align: left; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--surface); font-size: 11px; color: var(--muted); }
+  .phases button b { display: block; color: var(--ink); font-size: 12.5px; }
+  .phases button[aria-current="step"] { background: var(--green); border-color: var(--green); color: var(--green-ink); }
+  .phases button[aria-current="step"] b { color: var(--green-ink); }
+  .phases button.done { border-color: var(--green); }
+  .card { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--surface); display: flex; flex-direction: column; gap: 8px; }
+  .card h3 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .card p { color: var(--muted); font-size: 13px; }
+  .card.done { border-color: var(--green); }
+  .card.skipped { opacity: .7; }
+  .flag { font-size: 10px; background: var(--amber-bg); color: var(--amber); padding: 2px 7px; border-radius: 4px; font-weight: 700; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  .check i { width: 16px; height: 16px; border: 1.5px solid var(--border); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 10px; flex: none; }
+  .check i.ok { background: var(--green); border-color: var(--green); color: var(--green-ink); }
+  .check i.warn { border-color: var(--amber); color: var(--amber); }
+  .log { display: flex; flex-direction: column; }
+  .log > div { display: grid; grid-template-columns: 120px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 12.5px; }
+  .log > div:first-child { border-top: 0; }
+  .log time { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .log b { display: block; font-size: 12.5px; }
+  .log span { color: var(--muted); }
+  aside.side { display: flex; flex-direction: column; gap: 10px; }
+
+  /* dialogs, sheet, toast */
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .dialog { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; width: min(560px, 100%); max-height: 90vh; overflow: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .dialog h2 { font-size: 17px; }
+  .sheet { position: fixed; inset: auto 0 0 0; background: var(--surface); border-top: 1px solid var(--border); border-radius: 12px 12px 0 0; z-index: 41; padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: var(--shadow); }
+  .sheet .rail { flex-direction: column; padding: 0; }
+  .sheet .rail button { min-height: 0; }
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 50; box-shadow: var(--shadow); max-width: min(560px, calc(100% - 32px)); }
+  .toast.error { background: var(--red); color: #fff; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .stats { grid-template-columns: 1fr 1fr; }
+    .layout.with-drawer { grid-template-columns: 1fr; }
+    .drawer { position: fixed; inset: 0; z-index: 30; border-radius: 0; max-height: none; top: 0; border: 0; padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
+    .presets { grid-template-columns: 1fr 1fr; }
+    .phases { grid-template-columns: repeat(3, 1fr); }
+    .checklist { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px) {
+    .rail { display: none; }
+    .rail-compact { display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 0 20px 10px; max-width: none; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; background: var(--surface); font-weight: 600; }
+    .appbar { padding: 8px 16px; }
+    main { padding-inline: 16px; }
+    .rail-compact { margin-inline: 16px; width: auto; }
+    .chips { margin-left: 0; width: 100%; }
+    .chip { white-space: normal; }
+    .grid-2, .grid-3, .stats { grid-template-columns: 1fr; }
+    .phases { grid-template-columns: repeat(2, 1fr); }
+    .tl { grid-template-columns: 1fr; gap: 2px; }
+    .log > div { grid-template-columns: 1fr; gap: 2px; }
+    .wizard-foot { flex-direction: column-reverse; align-items: stretch; }
+    .wizard-foot .btn { justify-content: center; }
+  }
+</style>
+
+<div class="proto" id="proto"></div>
+<div class="shell">
+  <header class="app" id="header"></header>
+  <main id="main"></main>
+  <footer class="app"><span>Triage / Limon-IT</span><span>Read-only collection · evidence before conclusions</span><button data-act="help">Build 31 · Help</button></footer>
+</div>
+<div id="overlay"></div>
+<div id="toast" hidden></div>
+<script>
+(function () {
+  "use strict";
+  // =====================================================================
+  //  Data — fictional Contoso case (nothing here is real)
+  // =====================================================================
+  const CATALOG = [
+    ["interactive", "Interactive sign-ins", "graph"], ["nonInteractive", "Non-interactive sign-ins", "graph"],
+    ["audits", "Directory changes", "graph"], ["riskyUsers", "Current risky users", "graph"], ["riskDetections", "Risk detections", "graph"],
+    ["users", "User inventory", "graph"], ["oauth", "Delegated OAuth grants", "graph"], ["mfa", "MFA registration", "graph"],
+    ["admins", "Directory role assignments", "graph"], ["devices", "Device inventory", "graph"], ["servicePrincipals", "Application identities", "graph"],
+    ["ual", "Unified Audit Log", "graph"], ["exchange", "Mailbox configuration snapshot", "exchange"], ["transportRules", "Transport rules", "exchange"],
+    ["messageTrace", "Message trace", "exchange"], ["mailboxAudit", "Mailbox audit log", "exchange"], ["conditionalAccess", "Conditional Access policies", "graph"],
+    ["securityAlerts", "Security alerts", "graph"], ["messages", "Email content", "graph"], ["attachments", "Email attachments", "graph"],
+  ];
+  const LABEL = Object.fromEntries(CATALOG.map(c => [c[0], c[1]]));
+  const PRESETS = {
+    quick: ["interactive", "nonInteractive", "audits", "riskyUsers", "riskDetections", "users", "oauth", "mfa"],
+    standard: ["interactive", "nonInteractive", "audits", "riskyUsers", "riskDetections", "users", "oauth", "mfa", "admins", "devices", "servicePrincipals", "ual", "exchange"],
+    everything: CATALOG.map(c => c[0]),
+  };
+  const COUNTS = { interactive: 75, nonInteractive: 1204, audits: 5, riskyUsers: 2, riskDetections: 3, users: 1, oauth: 3, mfa: 1, admins: 2, devices: 3, servicePrincipals: 212, ual: 391, exchange: 14, transportRules: 6, messageTrace: 118, mailboxAudit: 63, conditionalAccess: 9, securityAlerts: 2, messages: 240, attachments: 31 };
+  const USERS = [
+    ["jan.devries@contoso.nl", "Jan de Vries", "Sales"], ["jan.devos@contoso.nl", "Jan de Vos", "Finance"], ["janneke.bos@contoso.nl", "Janneke Bos", "HR"],
+    ["adm.piet@contoso.nl", "Piet Admin", "IT"], ["anna.koning@contoso.nl", "Anna Koning", "Marketing"], ["sanne.visser@contoso.nl", "Sanne Visser", "Legal"],
+  ];
+  const FINDINGS = [
+    { id: "F1", sev: "Critical", title: "Domain federation changed (possible AADFS / Golden SAML persistence)", user: "adm.piet@contoso.nl", analyzer: "EntraAuditLogs", time: "2026-07-16 11:05 UTC", src: "audits", refs: ["audits:2"], detail: "Set federation settings on domain was executed by adm.piet from 51.x.x.x, an IP not seen for this account in 90 days. Federation changes allow an attacker to mint tokens for any user." },
+    { id: "F2", sev: "Critical", title: "Device-code authentication to Microsoft Authentication Broker (PRT phishing)", user: "adm.piet@contoso.nl", analyzer: "EntraSignInLogs", src: "interactive", time: "2026-07-16 11:00 UTC", refs: ["interactive:3"], detail: "A device-code sign-in to the Authentication Broker app completed from a hosting ASN five minutes before the federation change." },
+    { id: "F3", sev: "Critical", title: "Risky user: high (atRisk)", user: "jan.devries@contoso.nl", analyzer: "RiskyUsers", src: "riskyUsers", time: "2026-07-15 03:15 UTC", refs: ["riskyUsers:1"], detail: "Identity Protection raised the user to high risk after anonymous-IP and unfamiliar-features detections." },
+    { id: "F4", sev: "High", title: "Authenticated SMTP (legacy auth): 1 sign-in, 1 successful", user: "jan.devries@contoso.nl", analyzer: "EntraSignInLogs", src: "interactive", time: "2026-07-15 03:40 UTC", refs: ["interactive:12", "interactive:11"], detail: "SMTP AUTH succeeded from 51.x.x.x (AS16276 OVH) 30 seconds after two MFA prompts were denied. Legacy authentication bypasses MFA." },
+    { id: "F5", sev: "High", title: "Whole-folder mailbox sync (MailItemsAccessed — Sync): 3", user: "jan.devries@contoso.nl", analyzer: "UAL", src: "ual", time: "2026-07-15 03:30 UTC", refs: ["ual:4", "ual:5"], detail: "Three Sync operations downloaded the Inbox and Sent Items from a client not seen before for this mailbox." },
+    { id: "F6", sev: "High", title: "Add-MailboxPermission ×1 — mailbox permission added", user: "jan.devries@contoso.nl", analyzer: "UAL", src: "ual", time: "2026-07-15 03:26 UTC", refs: ["ual:2"], detail: "FullAccess on jan.devries was granted to svc-scan@contoso.nl by adm.piet." },
+    { id: "F7", sev: "High", title: "Session replay: one session ID seen from two networks", user: "jan.devries@contoso.nl", analyzer: "EntraSignInLogs", src: "nonInteractive", time: "2026-07-15 03:38 UTC", refs: ["nonInteractive:40"], detail: "sessionId 9c1e… refreshed tokens from KPN (NL) and OVH (FR) within 4 minutes — a stolen session cookie fits this pattern." },
+    { id: "F8", sev: "Medium", title: "Sign-in from hosting ASN (AS16276 OVH)", user: "jan.devries@contoso.nl", analyzer: "EntraSignInLogs", src: "interactive", time: "2026-07-15 03:38 UTC", refs: ["interactive:11"], detail: "Interactive OfficeHome sign-in from a hosting provider; no managed device." },
+    { id: "F9", sev: "Medium", title: "Inbox rule forwards to an external address", user: "jan.devries@contoso.nl", analyzer: "ExchangeSnapshot", src: "exchange", time: "Current state", refs: ["exchange:3"], detail: "Rule \".\" forwards every message to jan.devries.mail@outlook-relay.net and marks it read." },
+    { id: "F10", sev: "Medium", title: "Phone-only MFA registration", user: "jan.devries@contoso.nl", analyzer: "MFA", src: "mfa", time: "Current state", refs: ["mfa:1"], detail: "The only registered method is SMS; no authenticator app or passkey." },
+    { id: "F11", sev: "Low", title: "Dormant admin: no interactive sign-in for 62 days", user: "adm.backup@contoso.nl", analyzer: "Admins", src: "admins", time: "Current state", refs: ["admins:2"], detail: "Global Administrator without recent activity — review whether the role is still needed." },
+    { id: "F12", sev: "Info", title: "OAuth grant: Microsoft Teams (offline_access, User.Read)", user: "jan.devries@contoso.nl", analyzer: "OAuthPermissions", src: "oauth", time: "Current state", refs: ["oauth:1"], detail: "Baseline first-party grant; listed for completeness." },
+  ];
+  const RECORDS = {
+    "interactive:3": { "Operation / event": "Sign-in · Microsoft Authentication Broker", "Account": "adm.piet@contoso.nl", "Time (UTC)": "2026-07-16 11:00:12", "IP address": "51.x.x.x · AS16276 OVH", "Application": "Microsoft Authentication Broker", "Result": "Success · deviceCode", "Device": "none" },
+    "interactive:11": { "Operation / event": "Sign-in · OfficeHome", "Account": "jan.devries@contoso.nl", "Time (UTC)": "2026-07-15 03:38:44", "IP address": "51.x.x.x · AS16276 OVH", "Application": "OfficeHome", "Result": "MFA denied (500121)", "Device": "none · Windows 10 · Chrome 128" },
+    "interactive:12": { "Operation / event": "Sign-in · SMTP AUTH", "Account": "jan.devries@contoso.nl", "Time (UTC)": "2026-07-15 03:40:03", "IP address": "51.x.x.x · AS16276 OVH", "Application": "Office 365 Exchange Online", "Client": "Authenticated SMTP (legacy)", "Result": "Success" },
+    "nonInteractive:40": { "Operation / event": "Token refresh · Outlook", "Account": "jan.devries@contoso.nl", "Time (UTC)": "2026-07-15 03:36:10", "IP address": "84.x.x.x · AS1136 KPN", "sessionId": "9c1e5a…", "Result": "Success" },
+    "audits:2": { "Operation / event": "Set federation settings on domain", "Initiated by": "adm.piet@contoso.nl", "Time (UTC)": "2026-07-16 11:05:31", "Target": "contoso.nl", "Changes": "IssuerUri, SigningCertificate, PassiveLogOnUri" },
+    "riskyUsers:1": { "User": "jan.devries@contoso.nl", "riskLevel": "high", "riskState": "atRisk", "riskLastUpdated": "2026-07-15 03:15:00", "Detections": "anonymizedIPAddress, unfamiliarFeatures" },
+    "ual:2": { "Operation": "Add-MailboxPermission", "UserId": "adm.piet@contoso.nl", "CreationTime": "2026-07-15 03:26:48", "ObjectId": "jan.devries@contoso.nl", "Parameters": "User=svc-scan@contoso.nl; AccessRights=FullAccess; InheritanceType=All" },
+    "ual:4": { "Operation": "MailItemsAccessed", "UserId": "jan.devries@contoso.nl", "CreationTime": "2026-07-15 03:30:02", "MailAccessType": "Sync", "ClientInfoString": "Client=REST;Client=RESTSystem;;", "Folders": "Inbox (1,204 items)" },
+    "ual:5": { "Operation": "MailItemsAccessed", "UserId": "jan.devries@contoso.nl", "CreationTime": "2026-07-15 03:31:19", "MailAccessType": "Sync", "ClientInfoString": "Client=REST;Client=RESTSystem;;", "Folders": "Sent Items (388 items)" },
+    "exchange:3": { "Command": "Get-InboxRule", "Mailbox": "jan.devries@contoso.nl", "Name": ".", "Enabled": "True", "ForwardTo": "jan.devries.mail@outlook-relay.net", "MarkAsRead": "True", "Priority": "1" },
+    "mfa:1": { "userPrincipalName": "jan.devries@contoso.nl", "isMfaRegistered": "True", "methodsRegistered": "mobilePhone", "defaultMfaMethod": "sms", "isPasswordlessCapable": "False" },
+    "admins:2": { "Role": "Global Administrator", "Principal": "adm.backup@contoso.nl", "Kind": "active", "lastSignIn": "2026-05-15 08:12:00" },
+    "oauth:1": { "clientId": "Microsoft Teams", "principalId": "jan.devries@contoso.nl", "consentType": "Principal", "scope": "offline_access User.Read" },
+  };
+  const PHASES = [
+    ["preserve", "Confirm & preserve", "00–12"], ["contain", "Contain & record", "12–24"], ["scope", "Establish impact", "24–36"],
+    ["evidence", "Preserve & export", "36–48"], ["handover", "Communicate & hand over", "48–60"],
+  ];
+  const STEPS = [
+    ["preserve", "Preserve investigation evidence", "gate", "Export the case before changing anything; remediation destroys evidence."],
+    ["revoke", "Revoke sign-in sessions", "action", "First, because most compromises are token theft: this invalidates the refresh tokens so the stolen session cannot be renewed."],
+    ["disable", "Disable the account", "action", "Disable, never delete. Blocks new sign-ins and closes the access-token window for CAE-capable workloads."],
+    ["password", "Reset the password", "action", "A throwaway password generated here, shown once, never sent anywhere but Microsoft Graph."],
+    ["methods", "Review and strip authentication methods", "methods", "If the attacker registered a phone or authenticator, the password reset hands the account straight back to them."],
+    ["rules", "Mailbox rules, forwarding & delegates", "rules", "Hidden rules and forwarding survive a password reset. Collected by the app; changes need the reviewed PowerShell steps."],
+    ["oauth", "Revoke OAuth consent grants", "oauth", "A malicious app holding Mail.ReadWrite plus offline_access does not need the password or the session."],
+  ];
+  const IMPACT = ["Other accounts from the same IPs", "Sign-ins with the same user agent", "Mailbox rules created tenant-wide", "OAuth grants added in the window", "Role changes in the window", "MFA method changes", "New devices registered", "Files downloaded from SharePoint / OneDrive", "Teams messages sent externally", "Password resets by admins", "Guest users invited", "Transport rules changed", "Domains added or federated"];
+  const TENANTS = { "contoso.com": ["Contoso", "7d3f2c1a-5b6e-4f70-9a8d-1c2b3e4f5a6b"], "contoso.nl": ["Contoso", "7d3f2c1a-5b6e-4f70-9a8d-1c2b3e4f5a6b"], "fabrikam.com": ["Fabrikam", "0b1c2d3e-4f50-4617-8293-a4b5c6d7e8f9"], "northwind.nl": ["Northwind Traders", "9e8d7c6b-5a49-4382-b716-05f4e3d2c1b0"] };
+
+  // =====================================================================
+  //  State, persistence, router
+  // =====================================================================
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const KEY = "triage-proto-v1";
+  const fresh = () => ({
+    surface: "app", tenantMode: "org", domain: "", tenant: null, signAs: "delegated", ready: null,
+    svc: { graph: { state: "idle" }, exchange: { state: "idle" }, response: { state: "idle" } },
+    scope: { mode: "user", upn: "", days: 7, preset: "standard", custom: PRESETS.standard.slice() },
+    kase: null, saved: [], filter: "", severity: "all",
+  });
+  let S = fresh();
+  try { const raw = localStorage.getItem(KEY); if (raw) { const v = JSON.parse(raw); if (v && v.svc) S = Object.assign(fresh(), v); } } catch (e) { /* storage unavailable */ }
+  // transient states never survive a reload: a waiting sign-in restarts, a running collection is marked interrupted
+  for (const k of Object.keys(S.svc)) if (["waiting", "checking"].includes(S.svc[k].state)) S.svc[k] = { state: "idle" };
+  if (S.ready === "checking") S.ready = null;
+  if (S.kase && S.kase.collecting) { S.kase.collecting = false; for (const s of S.kase.sources) if (s.state === "running" || s.state === "queued") s.state = "partial"; S.kase.collectionDone = true; }
+  let saveTimer = null;
+  function persist(immediate) {
+    if (S.kase) { S.kase.dirty = true; }
+    renderChips();
+    clearTimeout(saveTimer);
+    const write = () => { try { if (S.kase) { S.kase.dirty = false; S.kase.savedAt = new Date().toISOString(); } localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } renderChips(); };
+    if (immediate) write(); else saveTimer = setTimeout(write, 1500);
+  }
+  function parseRoute() {
+    const h = location.hash.replace(/^#\/?/, "");
+    const [path, qs] = h.split("?");
+    const q = Object.fromEntries(new URLSearchParams(qs || ""));
+    const p = path.split("/").filter(Boolean);
+    if (p[0] === "case") return { step: p[2] || "review", caseId: p[1], tab: p[3] || (p[2] === "respond" ? "preserve" : "overview"), ...q };
+    return { step: p[0] || "start", ...q };
+  }
+  function hashFor(r) {
+    const q = new URLSearchParams(); for (const k of ["f", "r", "s", "state"]) if (r[k]) q.set(k, r[k]);
+    const qs = q.toString() ? "?" + q.toString() : "";
+    if (["review", "respond", "handover"].includes(r.step)) return "#/case/" + (r.caseId || S.kase?.id || "none") + "/" + r.step + (r.step === "handover" ? "" : "/" + (r.tab || (r.step === "respond" ? "preserve" : "overview"))) + qs;
+    return "#/" + r.step + qs;
+  }
+  let route = parseRoute();
+  function navigate(r, replace) {
+    const target = hashFor({ ...r, caseId: r.caseId || S.kase?.id });
+    if (replace) history.replaceState(null, "", target); else if (target !== location.hash) history.pushState(null, "", target);
+    route = parseRoute(); render();
+  }
+  window.addEventListener("popstate", () => { route = parseRoute(); render(); });
+
+  // Which steps can be visited, and why not
+  const connected = () => S.svc.graph.state === "ready";
+  function stepState(id) {
+    const k = S.kase;
+    const order = ["start", "connect", "scope", "collect", "review", "respond", "handover"];
+    const cur = order.indexOf(route.step);
+    const i = order.indexOf(id);
+    const gate = {
+      start: [true, ""],
+      connect: [true, ""],
+      scope: [connected(), "Sign in first"],
+      collect: [!!k, "Choose the scope first"],
+      review: [!!k && k.collectionDone, "After collection"],
+      respond: [!!k && k.collectionDone, "After collection"],
+      handover: [!!k && k.collectionDone && k.respondVisited, "After Respond"],
+    }[id];
+    if (k && k.collecting && id !== "collect") return { cls: "todo", reason: "Collection is running" };
+    if (id === route.step) return { cls: "now", reason: "" };
+    if (!gate[0]) return { cls: "todo", reason: gate[1] };
+    const done = { start: !!k || connected(), connect: connected(), scope: !!k, collect: !!(k && k.collectionDone), review: !!(k && k.reviewVisited), respond: !!(k && k.respondVisited), handover: !!(k && k.handedOver) }[id];
+    return { cls: done ? "done" : (i < cur ? "done" : ""), reason: "" };
+  }
+  function stepStatus(id) {
+    const k = S.kase, g = S.svc.graph;
+    switch (id) {
+      case "start": return k ? (k.scope === "tenant" ? "Whole tenant" : k.subject) : (connected() ? "New investigation" : "Choose what to do");
+      case "connect": return g.state === "ready" ? g.account + " · " + (S.tenant?.name || "My organisation") : g.state === "waiting" ? "Waiting in your browser…" : "Not signed in";
+      case "scope": return k ? (k.scope === "tenant" ? "Whole tenant" : k.subject) + " · " + k.days + " days · " + k.presetLabel : connected() ? "Who, window, evidence" : "—";
+      case "collect": { if (!k) return "—"; const c = k.sources.filter(s => s.state === "complete").length; return k.collecting ? "collecting " + c + " / " + k.sources.length : c + " / " + k.sources.length + " complete" + (k.partial ? " · " + k.partial + " partial" : ""); }
+      case "review": { if (!k || !k.collectionDone) return "—"; const n = Object.values(k.dispositions).filter(d => d.state !== "unreviewed").length; return n + " of " + k.findings.length + " reviewed"; }
+      case "respond": { if (!k || !k.collectionDone) return "—"; const n = Object.keys(k.phaseOutcomes).length; return (k.armed ? "armed · " : "") + n + " / 5 phases"; }
+      case "handover": return k && k.handedOver ? "Handed over" : k && k.respondVisited ? "Ready when you are" : "After Respond";
+    }
+  }
+  function guard() {
+    // redirect a route the person may not visit yet
+    const st = stepState(route.step === "start" && S.kase ? "review" : route.step);
+    if (route.step === "start" && S.kase && !S.kase.collecting) { route = { step: "review", tab: "overview", caseId: S.kase.id }; history.replaceState(null, "", hashFor(route)); return; }
+    if (st.cls === "todo" && route.step !== "start") {
+      const fallback = S.kase ? (S.kase.collecting ? { step: "collect" } : S.kase.collectionDone ? { step: "review", tab: "overview" } : { step: "scope" }) : connected() ? { step: "scope" } : { step: "connect" };
+      toast(st.reason + " — " + ({ connect: "opening Connect", scope: "opening Scope", collect: "opening Collect", review: "opening Review" })[fallback.step]);
+      route = { ...fallback, caseId: S.kase?.id }; history.replaceState(null, "", hashFor(route));
+    }
+    if (["review", "respond", "handover"].includes(route.step) && S.kase && route.caseId !== S.kase.id) { route.caseId = S.kase.id; history.replaceState(null, "", hashFor(route)); }
+  }
+
+  // =====================================================================
+  //  Toast, dialogs
+  // =====================================================================
+  let toastTimer;
+  function toast(text, error) { const t = $("#toast"); t.textContent = text; t.className = "toast" + (error ? " error" : ""); t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, error ? 7000 : 4200); }
+  function dialog(html) { $("#overlay").innerHTML = `<div class="scrim" data-act="close-dialog"><div class="dialog" role="dialog" aria-modal="true">${html}</div></div>`; const first = $("#overlay .dialog button, #overlay .dialog input, #overlay .dialog select, #overlay .dialog textarea"); first && first.focus(); }
+  function closeDialog() { $("#overlay").innerHTML = ""; }
+  function sheet(html) { $("#overlay").innerHTML = `<div class="scrim" data-act="close-dialog"></div><div class="sheet">${html}</div>`; }
+  window.addEventListener("keydown", e => { if (e.key === "Escape") { if ($("#overlay").innerHTML) closeDialog(); else if (route.f || route.r) navigate({ ...route, f: "", r: "" }); } });
+  // =====================================================================
+  //  Header: brand · rail · chips
+  // =====================================================================
+  const STEP_NAMES = [["start", "Start"], ["connect", "Connect"], ["scope", "Scope"], ["collect", "Collect"], ["review", "Review"], ["respond", "Respond"], ["handover", "Hand over"]];
+  function railItems(compact) {
+    return STEP_NAMES.map(([id, name], i) => {
+      const st = stepState(id);
+      const label = { start: S.kase ? "Case open" : "New · Open · Sample", connect: "Sign in", scope: "Who · window · evidence", collect: "Progress", review: "Findings & evidence", respond: "First 60 minutes", handover: "Checklist · exports" }[id];
+      return `<li class="${st.cls}"><button type="button" data-step="${id}" ${st.cls === "todo" ? `aria-disabled="true" title="${esc(st.reason)}"` : ""} ${st.cls === "now" ? 'aria-current="step"' : ""}><span class="n">${i + 1} ${name}</span><b>${esc(label)}</b><span class="s">${esc(stepStatus(id))}</span></button></li>`;
+    }).join("");
+  }
+  function renderHeader() {
+    const i = STEP_NAMES.findIndex(s => s[0] === route.step);
+    $("#header").innerHTML = `<div class="appbar"><button type="button" class="brand" data-act="brand"><span class="mark"></span>triage<small>by Limon-IT</small><span class="beta">BETA 31</span></button><div class="chips" id="chips"></div></div>
+      <ol class="rail" aria-label="Steps">${railItems()}</ol>
+      <button type="button" class="rail-compact" data-act="rail-sheet"><span>Step ${i + 1} of 7 · ${STEP_NAMES[i]?.[1] || ""}</span><span>▾</span></button>`;
+    renderChips();
+  }
+  function renderChips() {
+    const el = $("#chips"); if (!el) return;
+    const k = S.kase, g = S.svc.graph, x = S.svc.exchange;
+    const time = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
+    const caseChip = k ? `<span class="chip ${k.dirty ? "dirty" : ""}"><b>${esc(k.scope === "tenant" ? "Whole tenant" : k.subject)}</b> · ${esc(k.tenantName)} · ${k.records.toLocaleString()} records · ${k.collecting ? '<span class="ok">Autosaving</span>' : k.dirty ? '<span class="warn">Unsaved changes</span>' : k.savedAt ? "Saved " + time(k.savedAt) : "Not saved"}${k.collecting ? "" : ' · <button type="button" data-act="new-case">New investigation</button>'}</span>` : "";
+    const sess = g.state === "ready" ? `<span class="chip">${esc(g.account)} · Graph <span class="ok">✓</span>${S.surface === "app" ? " Exchange " + (x.state === "ready" ? '<span class="ok">✓</span>' : '<span class="muted">—</span>') : ""} · Write: ${k && k.armed ? '<span class="warn">armed</span>' : "not armed"}</span>` : `<span class="chip muted">Not signed in</span>`;
+    el.innerHTML = caseChip + sess + `<button type="button" class="help" data-act="help">Help</button>`;
+  }
+  function renderProto() {
+    $("#proto").innerHTML = `<b>Prototype</b><span>Surface</span><span class="seg"><button type="button" data-surface="web" aria-pressed="${S.surface === "web"}">Web</button><button type="button" data-surface="app" aria-pressed="${S.surface === "app"}">Desktop app</button></span><span class="muted">changes Connect and Scope only · sign-ins and collection are simulated · use the browser's Back button, reload the page</span><span class="spacer"></span><button type="button" class="link" data-act="reset">Reset demo</button>`;
+  }
+
+  // =====================================================================
+  //  Views
+  // =====================================================================
+  const head = (n, title, sub, actions = "") => `<div class="page-head"><div><div class="eyebrow">Step ${n} of 7${S.surface === "app" && [2, 3].includes(n) ? " · desktop app" : S.surface === "web" && [2, 3].includes(n) ? " · web" : ""}</div><h1>${title}</h1><p>${sub}</p></div><div class="row">${actions}</div></div>`;
+  const foot = (back, next) => `<div class="wizard-foot">${back ? `<button type="button" class="btn ghost" data-step="${back[0]}">← ${back[1]}</button>` : "<span></span>"}${next || ""}</div>`;
+  const elapsed = (since) => { const s = Math.max(0, Math.round((Date.now() - since) / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+
+  function viewStart() {
+    const last = S.saved[0];
+    return `<div class="wizard">${head(1, "Start", "What do you need?")}
+      <div class="stack">
+        <button type="button" class="btn big primary" data-act="new-investigation"><span>New investigation<small>Sign in, choose who and how far back, collect, review, respond, hand over.</small></span><span>→</span></button>
+        <button type="button" class="btn big" data-act="open-case"><span>Open a case<small>A case file (.json), or a case saved on this ${S.surface === "app" ? "computer" : "device"}${S.saved.length ? " · " + S.saved.length + " saved" : ""}.</small></span><span>→</span></button>
+        <button type="button" class="btn big" data-act="sample"><span>Try the sample<small>Fictional Contoso tenant. Nothing is real, nothing is changed.</small></span><span>→</span></button>
+        ${S.surface === "app" && last ? `<button type="button" class="btn big" data-act="continue-last"><span>Continue last case<small>${esc(last.subject)} · ${esc(last.tenantName)} · saved ${new Date(last.savedAt).toLocaleString()}</small></span><span>→</span></button>` : ""}
+        ${S.surface === "app" ? `<button type="button" class="btn ghost" data-act="open-plan">Open a plan saved from the website…</button>` : `<button type="button" class="btn ghost" data-act="get-app">Get the desktop app — mailbox rules, forwarding, delegates, message trace</button>`}
+      </div></div>`;
+  }
+
+  function svcRow(key, title, sub, required) {
+    const s = S.svc[key];
+    let state, action;
+    if (s.state === "ready") { state = `<b>${esc(title)}</b><small class="okline">✓ ${esc(s.account)} · ${esc(s.tenantName)} · ${esc((s.tenantId || "").slice(0, 8))}…</small>`; action = `<span class="status-ok">Connected</span>`; }
+    else if (s.state === "waiting") { state = `<b>${esc(title)}</b><small>${esc(sub)}</small><small class="wait"><span class="spin"></span>Waiting for you in your browser… <span data-elapsed="${key}">${elapsed(s.since)}</span></small>`; action = `<button type="button" class="btn" data-act="cancel-signin" data-svc="${key}">Cancel</button>`; }
+    else if (s.state === "cert") { state = `<b>${esc(title)}</b><small class="wait"><span class="spin"></span>Authenticating with the customer certificate… no browser opens</small>`; action = ``; }
+    else if (s.state === "failed") { state = `<b>${esc(title)}</b><small class="badline">✕ ${esc(s.error)}</small>`; action = `<button type="button" class="btn" data-act="signin" data-svc="${key}">Try again</button>`; }
+    else { state = `<b>${esc(title)}</b><small>${esc(sub)}</small>`; action = `<button type="button" class="btn ${required ? "primary" : ""}" data-act="signin" data-svc="${key}" ${S.tenantMode === "customer" && !S.tenant ? "disabled" : ""}>Sign in${required ? "" : " (optional)"}</button>`; }
+    return `<div class="svc ${s.state}">${"<div>" + state + "</div>"}${action}</div>`;
+  }
+  function tenantBlock() {
+    return `<div class="panel"><div class="panel-body">
+      <div class="row between"><h2>Tenant</h2><span class="small muted">pinned before the sign-in window opens</span></div>
+      <div class="radio-row"><label><input type="radio" name="tenantMode" value="org" ${S.tenantMode === "org" ? "checked" : ""}> My organisation</label><label><input type="radio" name="tenantMode" value="customer" ${S.tenantMode === "customer" ? "checked" : ""}> Customer tenant</label></div>
+      ${S.tenantMode === "customer" ? `<div class="row"><label class="field" style="flex:1"><span>Customer domain</span><input id="domain" value="${esc(S.domain)}" placeholder="contoso.com" autocomplete="off"></label><button type="button" class="btn" data-act="resolve">Look up</button></div>
+      ${S.tenant ? `<div class="note good">✓ <b>${esc(S.tenant.name)}</b> · ${esc(S.tenant.id)} — resolved from the public OpenID configuration; the sign-in window will open for this tenant.</div>` : `<p class="small muted">Try contoso.com, fabrikam.com or northwind.nl. The domain is resolved to the tenant ID and name before sign-in, so partner accounts get a token for the customer, not for their home tenant.</p>`}` : `<p class="small muted">Sign in with an account that has read access in your own tenant. For a customer tenant choose the other option — the tenant has to be pinned before the browser opens.</p>`}
+    </div></div>`;
+  }
+  function viewConnect() {
+    const g = S.svc.graph;
+    let body;
+    if (S.surface === "web") {
+      body = tenantBlock() + `<div class="panel"><div class="panel-body">
+        <h2>Microsoft 365</h2>
+        ${g.state === "ready" ? `<div class="svc ready"><div><b>${esc(g.account)}</b><small class="okline">✓ ${esc(g.tenantName)} · ${esc(g.tenantId.slice(0, 8))}… · read-only permissions granted</small></div><button type="button" class="btn" data-act="disconnect">Disconnect</button></div>`
+        : g.state === "waiting" ? `<div class="svc"><div><b>Microsoft sign-in window</b><small class="wait"><span class="spin"></span>Waiting for the Microsoft window… <span data-elapsed="graph">${elapsed(g.since)}</span> · allow the pop-up if your browser blocks it</small></div><button type="button" class="btn" data-act="cancel-signin" data-svc="graph">Cancel</button></div>`
+        : `<div class="svc"><div><b>Sign in with Microsoft</b><small>A Microsoft window opens. Sign in with your analyst account; Microsoft may ask for MFA or consent.</small></div><button type="button" class="btn primary" data-act="signin" data-svc="graph" ${S.tenantMode === "customer" && !S.tenant ? "disabled" : ""}>Sign in with Microsoft</button></div>`}
+        <div class="note info">Nothing on any later screen opens a sign-in window. Arming containment (step 6) asks for write permissions once, and says so first.</div>
+      </div></div>`;
+    } else {
+      body = `<div class="panel"><div class="panel-body">
+        <div class="row between"><label class="field" style="min-width:280px"><span>Sign in as</span><select id="signAs"><option value="delegated" ${S.signAs === "delegated" ? "selected" : ""}>Analyst · delegated (passkey)</option><option value="profile" ${S.signAs === "profile" ? "selected" : ""}>Contoso · app + certificate (customer profile)</option></select></label><button type="button" class="btn ghost" data-act="manage-profiles">Manage customer profiles…</button></div>
+        ${S.ready === "ok" ? `<div class="note good">✓ Bundled PowerShell and collection modules ready — checked automatically</div>` : `<div class="note"><span class="spin"></span>Checking the bundled PowerShell runtime and collection modules…</div>`}
+        ${S.signAs === "profile" ? `<div class="note info">Profile <b>Contoso</b> · tenant 7d3f2c1a… · Graph app 4b2e… · Exchange app 91c0… · certificate expires 2027-03-01. No browser sign-in; the rows authenticate with the certificate.</div>` : tenantBlock().replace('class="panel"', 'class="panel" style="border:0"').replace('<div class="panel-body">', '<div class="panel-body" style="padding:0">')}
+        ${svcRow("graph", "Microsoft Graph · required", "Sign-ins, directory, risk, OAuth, MFA, audit log. Press the button when you are ready; the browser opens then, not before.", true)}
+        ${svcRow("exchange", "Exchange Online · optional", "Mailbox rules, forwarding, delegates, message trace. Choose the same account. Skip it and the Exchange evidence is hidden on Scope.", false)}
+        ${g.state === "waiting" || S.svc.exchange.state === "waiting" ? `<div class="note">Microsoft may ask for MFA or consent in the browser. Come back here when it says the window can be closed.</div>` : ""}
+      </div></div>`;
+    }
+    return `<div class="wizard">${head(2, "Connect", S.surface === "web" ? "Sign in with the analyst account that has read access to the tenant." : "Sign in once. Each service is a row; press the button when you are ready.")}
+      <div class="stack">${body}</div>
+      ${foot(["start", "Start"], `<button type="button" class="btn primary" data-step="scope" ${connected() ? "" : "disabled"}>Next: choose the scope →</button>`)}</div>`;
+  }
+
+  function viewScope() {
+    const sc = S.scope, app = S.surface === "app", exch = S.svc.exchange.state === "ready";
+    const q = sc.upn.toLowerCase();
+    const sugg = q.length >= 2 && !USERS.some(u => u[0] === sc.upn) ? USERS.filter(u => u[0].includes(q) || u[1].toLowerCase().includes(q)).slice(0, 4) : [];
+    const known = USERS.find(u => u[0] === sc.upn);
+    const presetBtn = (id, name, note, disabled, reason) => `<button type="button" data-preset="${id}" aria-pressed="${sc.preset === id}" ${disabled ? `disabled title="${esc(reason)}"` : ""}><b>${name}</b>${note}</button>`;
+    const presets = app
+      ? presetBtn("quick", "Quick", "Graph core · 8 sources · ~3 min") + presetBtn("standard", "Standard", "+ audit log, roles, devices, mailbox snapshot · 13 sources", sc.mode === "tenant" || !exch, sc.mode === "tenant" ? "The mailbox snapshot needs one affected account" : "Connect Exchange Online on step 2") + presetBtn("everything", "Everything", "All 20 sources · may exceed an hour · includes mail content", !exch, "Connect Exchange Online on step 2") + presetBtn("custom", "Custom", "Choose the sources yourself")
+      : presetBtn("quick", "Quick", "Graph core · 8 sources · ~3 min") + presetBtn("custom", "Custom", "Choose the Graph sources yourself");
+    const list = app ? CATALOG : CATALOG.filter(c => c[2] === "graph" && PRESETS.standard.includes(c[0]));
+    return `<div class="wizard">${head(3, "Scope", "Who, how far back, and how much evidence.")}
+      <div class="stack">
+        <div class="panel"><div class="panel-body">
+          <div class="row between"><div class="toggle" role="group" aria-label="Investigation scope"><button type="button" data-scope="user" aria-pressed="${sc.mode === "user"}">One account</button><button type="button" data-scope="tenant" aria-pressed="${sc.mode === "tenant"}">Whole tenant</button></div>
+            <label class="field" style="min-width:160px"><span>Lookback</span><select id="days">${[1, 7, 30, 90, 180].map(d => `<option value="${d}" ${sc.days == d ? "selected" : ""}>Last ${d} ${d === 1 ? "day" : "days"}</option>`).join("")}</select></label></div>
+          ${sc.mode === "user" ? `<label class="field"><span>Affected account</span><input id="upn" value="${esc(sc.upn)}" placeholder="name@contoso.nl" autocomplete="off" spellcheck="false"></label>
+            ${sugg.length ? `<div class="suggest">${sugg.map(u => `<button type="button" data-pick="${esc(u[0])}"><span>${esc(u[0])}</span><small>${esc(u[1])} · ${esc(u[2])}</small></button>`).join("")}</div>` : ""}
+            ${known ? `<div class="note good">✓ ${esc(known[1])} · ${esc(known[2])} · account found in ${esc(S.tenant?.name || "your organisation")}</div>` : sc.upn && !sugg.length && sc.upn.includes("@") ? `<div class="note bad">No account matches ${esc(sc.upn)} in this tenant. Check the address before collecting.</div>` : `<p class="small muted">Start typing a name or address; the tenant's users are suggested${app ? " (the connected Graph session answers the lookup)" : ""}.</p>`}` : `<p class="small muted">All accessible users and mailboxes in ${esc(S.tenant?.name || "your organisation")}. Response always targets one account; you choose it on step 6.</p>`}
+        </div></div>
+        <div class="panel"><div class="panel-body">
+          <div class="row between"><h2>Evidence</h2><span class="small muted">${app ? "PowerShell on this computer" : "Microsoft Graph in this browser"}</span></div>
+          <div class="presets">${presets}</div>
+          ${sc.preset === "custom" ? `<div class="checklist">${list.map(c => `<label><input type="checkbox" data-src="${c[0]}" ${sc.custom.includes(c[0]) ? "checked" : ""} ${c[2] === "exchange" && !exch ? "disabled" : ""}> ${esc(c[1])}${c[2] === "exchange" ? ' <span class="small muted">· Exchange</span>' : ""}</label>`).join("")}</div>` : ""}
+          ${!app ? `<div class="note info"><b>Need mailbox rules, forwarding, delegates or message trace?</b> Continue in the desktop app: 1 · Download 2 · Open 3 · <em>Open a plan</em> — then pick the plan you save here. <button type="button" class="btn" style="margin-left:8px" data-act="save-plan">Save plan</button></div>` : ""}
+        </div></div>
+        ${app ? `<details class="plain"><summary>Where evidence is stored · ~/Triage evidence</summary><div class="body">New collections write their raw checkpoints and the case file under <code>~/Triage evidence/cases/&lt;case-id&gt;/</code>; reviewed cases under <code>saved-cases/</code>. <button type="button" class="btn ghost" data-act="noop">Choose folder…</button></div></details>` : ""}
+      </div>
+      ${foot(["connect", "Connect"], `<button type="button" class="btn primary" data-act="start-collection">Start collection →</button>`)}</div>`;
+  }
+  const STATE_LABEL = { complete: "✓ Complete", running: "↻ Collecting", queued: "◷ Waiting", partial: "! Partial", failed: "✕ Failed", cancelled: "Ⅱ Cancelled", "not-collected": "— Not collected" };
+  const cov = (k) => { const c = k.sources.filter(s => s.state === "complete").length; return { c, n: k.sources.length, pct: k.sources.length ? Math.round(c / k.sources.length * 100) : 0 }; };
+  function sourceRows(k, expandable) {
+    return `<div class="list">${k.sources.map(s => {
+      const open = expandable && route.s === s.key;
+      const count = s.count ? s.count.toLocaleString() + " records" : s.state === "running" ? "awaiting records" : "";
+      const inner = `<span class="l"><span>${esc(LABEL[s.key])}</span><small>${esc(s.note || (s.state === "complete" ? "Ready to inspect" : s.state === "partial" ? "More pages exist — resume to finish" : s.state === "running" ? "Collecting evidence now" : s.state === "queued" ? "Waiting to start" : s.state === "cancelled" ? "Stopped before completion" : ""))}</small></span><span class="row"><span class="st ${s.state}">${STATE_LABEL[s.state]}</span><span class="small muted num">${count}</span>${expandable ? `<span aria-hidden="true">${open ? "−" : "+"}</span>` : ""}</span>`;
+      return expandable ? `<button type="button" data-act="toggle-source" data-src="${s.key}" aria-expanded="${open}">${inner}</button>${open ? `<div class="src-details"><p class="small muted">Query: <code>${esc(s.query || "beta/auditLogs/… · window " + k.window)}</code> · started ${esc(k.startedAt)} · ${esc(STATE_LABEL[s.state])}</p>${Object.keys(RECORDS).filter(r => r.startsWith(s.key + ":")).length ? `<div class="list" style="margin-top:8px">${Object.keys(RECORDS).filter(r => r.startsWith(s.key + ":")).map(r => `<button type="button" data-act="open-record" data-ref="${r}"><span class="l"><span>${esc(RECORDS[r]["Operation / event"] || RECORDS[r].Operation || RECORDS[r].Command || RECORDS[r].Role || RECORDS[r].User || RECORDS[r].clientId || RECORDS[r].userPrincipalName || r)}</span><small>${esc(r)} · ${esc(RECORDS[r]["Time (UTC)"] || RECORDS[r].CreationTime || RECORDS[r].riskLastUpdated || "current state")}</small></span><span aria-hidden="true">↗</span></button>`).join("")}</div>` : `<p class="small muted" style="margin-top:6px">${s.count ? "Records are shown for the sample sources only in this prototype." : "No records returned."}</p>`}</div>` : ""}` : `<div>${inner}</div>`;
+    }).join("")}</div>`;
+  }
+  function viewCollect() {
+    const k = S.kase; if (!k) return "";
+    const c = cov(k), running = k.sources.find(s => s.state === "running");
+    const done = k.collectionDone;
+    return `<div class="wizard">${head(4, done ? "Collection finished" : k.analyzing ? "Analyzing evidence" : "Collecting evidence", done ? "Review has the results." : "Keep this window open. Review opens by itself when collection ends.")}
+      <div class="stack">
+        <div class="row"><span class="chip">Graph <span class="ok">✓</span></span>${S.surface === "app" ? `<span class="chip">Exchange ${S.svc.exchange.state === "ready" ? '<span class="ok">✓</span>' : '<span class="muted">not connected</span>'}</span><span class="chip">PowerShell · this computer</span>` : `<span class="chip">Browser JavaScript</span>`}</div>
+        <div class="panel"><div class="panel-body">
+          <div class="meter"><i style="width:${c.pct}%"></i></div>
+          <div class="row between"><span><b class="num">${c.c} / ${c.n}</b> sources complete · ${c.pct}%</span><span class="st ${k.analyzing ? "running" : running ? "running" : done ? "complete" : "queued"}">${k.analyzing ? '<span class="spin"></span>Analyzing evidence with JavaScript…' : running ? "Collecting now · " + esc(LABEL[running.key]) + (running.key === "ual" ? " · audit query pending" : "") : done ? "Done" : "Preparing…"}</span></div>
+          ${sourceRows(k, false)}
+          <div class="row between">${k.collecting ? `<button type="button" class="btn" data-act="stop">Stop · keep what was collected</button>` : done ? `<button type="button" class="btn primary" data-step="review">Open Review →</button>` : "<span></span>"}<details class="plain" style="border:0;padding:0"><summary class="small muted">Collection details (${S.surface === "app" ? "PowerShell output" : "source activity"})</summary><div class="body mono">${k.log.filter(l => l.type.startsWith("source")).slice(-8).map(l => esc(l.detail)).join("<br>") || "—"}</div></details></div>
+        </div></div>
+      </div></div>`;
+  }
+
+  // ---------- Review ----------
+  function findingRow(f, k) {
+    const d = k.dispositions[f.id];
+    return `<button type="button" class="finding ${route.f === f.id ? "sel" : ""}" data-act="open-finding" data-id="${f.id}"><span class="sev ${f.sev}">${f.sev}</span><span><strong>${esc(f.title)}</strong><small>${esc(f.user)} · ${esc(f.analyzer)} · ${esc(f.time)}${d && d.state !== "unreviewed" ? " · " + esc(d.state) : ""}</small></span><span aria-hidden="true">↗</span></button>`;
+  }
+  function viewReview() {
+    const k = S.kase; k.reviewVisited = true;
+    const tab = route.tab || "overview";
+    const high = k.findings.filter(f => ["Critical", "High"].includes(f.sev)).length;
+    const reviewed = Object.values(k.dispositions).filter(d => d.state !== "unreviewed").length;
+    const c = cov(k);
+    const banner = k.partial ? `<div class="note" style="margin-bottom:14px"><b>${k.partial} source${k.partial > 1 ? "s" : ""} incomplete</b> — ${esc(k.sources.filter(s => s.state !== "complete").map(s => LABEL[s.key]).join(", "))}. The analysis ran on a partial set. <button type="button" class="btn" style="margin-left:8px" data-act="resume">${S.surface === "app" ? "Collect again" : "Resume"}</button></div>` : "";
+    const tabs = `<div class="tabs" role="tablist">${[["overview", "Overview"], ["findings", "Findings"], ["timeline", "Timeline"], ["evidence", "Evidence"]].map(([id, n]) => `<button type="button" role="tab" aria-selected="${tab === id}" data-tab="${id}">${n}${id === "findings" ? ` <span class="badge">${k.findings.length}</span>` : ""}</button>`).join("")}</div>`;
+    let body = "";
+    if (tab === "overview") body = `<div class="stats"><div class="stat attention"><span class="lbl">Priority signals</span><strong>${high}</strong><small>High / critical · requires review</small></div><div class="stat"><span class="lbl">Evidence records</span><strong>${k.records.toLocaleString()}</strong><small>Preserved in this case</small></div><div class="stat"><span class="lbl">Sources complete</span><strong>${c.c}<span class="muted" style="font-size:16px"> / ${c.n}</span></strong><small>${c.n - c.c} incomplete or not collected</small></div><div class="stat"><span class="lbl">Reviewed</span><strong>${reviewed}<span class="muted" style="font-size:16px"> / ${k.findings.length}</span></strong><small>Analyst decisions with a reason</small></div></div>
+      <div class="grid-2" style="margin-top:16px"><div class="panel"><div class="panel-body"><div class="row between"><h2>Signals to review</h2><button type="button" class="btn ghost" data-tab="findings">View all →</button></div><div class="list">${k.findings.slice(0, 6).map(f => findingRow(f, k)).join("")}</div></div></div>
+      <div class="panel"><div class="panel-body"><div class="row between"><h2>Collection coverage</h2><button type="button" class="btn ghost" data-tab="evidence">All sources →</button></div><div class="meter"><i style="width:${c.pct}%"></i></div>${sourceRows({ ...k, sources: k.sources.slice(0, 7) }, false)}</div></div></div>`;
+    if (tab === "findings") { const q = S.filter.toLowerCase(); const list = k.findings.filter(f => (S.severity === "all" || f.sev === S.severity) && (route.state !== "unreviewed" || !k.dispositions[f.id] || k.dispositions[f.id].state === "unreviewed") && (f.title + f.user + f.detail).toLowerCase().includes(q));
+      body = `<div class="filter"><input id="filter" value="${esc(S.filter)}" placeholder="Search account, finding or detail…" aria-label="Search findings"><select id="severity" aria-label="Severity">${["all", "Critical", "High", "Medium", "Low", "Info"].map(s => `<option ${S.severity === s ? "selected" : ""}>${s}</option>`).join("")}</select>${route.state ? `<button type="button" class="btn" data-act="clear-state-filter">Unreviewed only ✕</button>` : ""}</div><div class="list">${list.map(f => findingRow(f, k)).join("") || `<div><span class="muted">No findings match.</span></div>`}</div>`; }
+    if (tab === "timeline") { const rows = Object.entries(RECORDS).map(([ref, r]) => ({ ref, time: r["Time (UTC)"] || r.CreationTime || r.riskLastUpdated || r.lastSignIn || "", title: r["Operation / event"] || r.Operation || r.Command || r.Role || "Current state", user: r.Account || r.UserId || r["Initiated by"] || r.User || r.Principal || r.userPrincipalName || r.Mailbox || "" })).filter(x => x.time).sort((a, b) => b.time.localeCompare(a.time));
+      body = `<div class="panel">${rows.map(x => `<div class="tl"><time>${esc(x.time)}</time><div><strong>${esc(x.title)}</strong> <span class="small muted">${esc(x.user)}</span> <button type="button" class="ref" data-act="open-record" data-ref="${x.ref}">${x.ref} →</button></div></div>`).join("")}</div>`; }
+    if (tab === "evidence") body = `<div class="panel"><div class="panel-body"><div class="row between"><h2>Evidence sources</h2><span class="badge">${k.records.toLocaleString()} records</span></div><p class="small muted">Click a source to inspect its records and collection details; click a record to open it.</p>${sourceRows(k, true)}</div></div>`;
+    const drawer = route.f ? findingDrawer(k) : route.r ? recordDrawer(k, route.r, null) : "";
+    return `${head(5, "Review", k.findings.length + " signals · " + reviewed + " reviewed · " + (k.partial ? k.partial + " partial source" + (k.partial > 1 ? "s" : "") : "all sources complete"), `<button type="button" class="btn primary" data-step="respond">Respond →</button>`)}${banner}${tabs}<div class="layout ${drawer ? "with-drawer" : ""}"><div>${body}</div>${drawer}</div>`;
+  }
+  function findingDrawer(k) {
+    const f = k.findings.find(x => x.id === route.f); if (!f) return "";
+    if (route.r) return recordDrawer(k, route.r, f);
+    const d = k.dispositions[f.id] || { state: "unreviewed", note: "", reference: "" };
+    const err = k.reviewError || {};
+    return `<aside class="drawer" aria-label="Finding"><div class="head"><span class="eyebrow">Finding · ${f.id}</span><button type="button" class="btn ghost" data-act="close-drawer">✕ Close (Back)</button></div>
+      <h2><span class="sev ${f.sev}">${f.sev}</span> ${esc(f.title)}</h2><p class="small muted">${esc(f.user)} · ${esc(f.analyzer)} · ${esc(f.time)} · <span class="badge ${d.state}">${d.state}</span></p><p class="small">${esc(f.detail)}</p>
+      <form id="review-form" data-id="${f.id}" novalidate>
+        <div class="stack">
+          <label class="field"><span>Review decision</span><select name="state">${["unreviewed", "investigating", "confirmed", "benign"].map(s => `<option ${d.state === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+          <label class="field"><span>Reason and supporting facts (required)</span><textarea name="note">${esc(d.note)}</textarea>${err.note ? `<span class="field-error">${esc(err.note)}</span>` : ""}</label>
+          <label class="field"><span>Evidence reference</span><input name="reference" value="${esc(d.reference)}" placeholder="${f.refs[0] ? "e.g. " + f.refs[0] : "source:record"}">${err.reference ? `<span class="field-error">${esc(err.reference)}</span>` : ""}</label>
+          <div class="row between"><button type="submit" class="btn primary">Save review</button><button type="button" class="btn" data-act="contain-account" data-user="${esc(f.user)}">Contain this account →</button></div>
+        </div>
+      </form>
+      <div class="card" style="padding:10px 12px"><h3>Supporting evidence · ${f.refs.length} record${f.refs.length > 1 ? "s" : ""}</h3><div class="list">${f.refs.map(r => `<button type="button" data-act="open-record" data-ref="${r}"><span class="l"><span>${esc(RECORDS[r]?.["Operation / event"] || RECORDS[r]?.Operation || RECORDS[r]?.Command || RECORDS[r]?.Role || RECORDS[r]?.User || r)}</span><small>${r} · ${esc(RECORDS[r]?.["Time (UTC)"] || RECORDS[r]?.CreationTime || "current state")}</small></span><span aria-hidden="true">→</span></button>`).join("")}</div><p class="small muted">Copy a reference into the review to confirm the finding. Opening a record stays inside this drawer.</p></div>
+    </aside>`;
+  }
+  function recordDrawer(k, ref, f) {
+    const r = RECORDS[ref] || { Reference: ref, Note: "This prototype carries records for the sample findings only." };
+    return `<aside class="drawer" aria-label="Evidence record"><div class="head"><span class="eyebrow">Evidence · ${esc(ref)}</span><button type="button" class="btn ghost" data-act="close-drawer">✕ Close (Back)</button></div>
+      ${f ? `<button type="button" class="btn ghost" style="align-self:flex-start" data-act="back-to-finding">← Back to finding ${f.id}</button>` : ""}
+      <dl class="facts">${Object.entries(r).map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("")}</dl>
+      <p class="small muted">Use <code>${esc(ref)}</code> as the evidence reference in a review or a phase decision.</p>
+      <details class="plain"><summary>Original JSON</summary><pre class="mono" style="white-space:pre-wrap;margin:8px 0 0">${esc(JSON.stringify(r, null, 2))}</pre></details></aside>`;
+  }
+  // ---------- Respond ----------
+  function logRows(k, n) { return `<div class="log">${k.log.slice(-n).reverse().map(l => `<div><time>${esc(l.at)}<br><span class="small">${esc(l.actor)}</span></time><div><b>${esc(l.type)}</b><span>${esc(l.detail)}</span></div></div>`).join("") || `<div><span class="muted">Checks and decisions will appear here.</span></div>`}</div>`; }
+  function viewRespond() {
+    const k = S.kase; k.respondVisited = true;
+    const phase = route.tab || "preserve"; const idx = PHASES.findIndex(p => p[0] === phase); const P = PHASES[idx] || PHASES[0];
+    const target = k.responseTarget || (k.scope === "user" ? k.subject : "");
+    const c = cov(k);
+    const resp = S.svc.response;
+    let content = "";
+    if (phase === "preserve") content = `<div class="card"><h3>Confirm and preserve</h3>
+        <div class="check"><i class="ok">✓</i><span>Account and tenant confirmed · <b>${esc(target || "whole tenant")}</b> · ${esc(k.tenantName)}</span></div>
+        <div class="check"><i class="${c.c === c.n ? "ok" : "warn"}">${c.c === c.n ? "✓" : "!"}</i><span>Collection coverage · ${c.c} / ${c.n} sources complete${k.partial ? " · " + k.partial + " partial — recorded as a gap" : ""}</span></div>
+        <div class="check"><i class="${k.startingPointExported ? "ok" : ""}">${k.startingPointExported ? "✓" : ""}</i><span>Starting point preserved before any change ${k.startingPointExported ? "· exported " + esc(k.startingPointExported) : ""}</span> ${k.startingPointExported ? "" : `<button type="button" class="btn primary" style="margin-left:auto" data-act="export-starting-point">Export starting point</button>`}</div></div>`;
+    if (phase === "contain") content = `
+        <div class="row"><span class="chip"><b>Affected account</b> ${esc(target || "choose one")} ${k.scope === "tenant" ? `<button type="button" data-act="choose-account">change</button>` : ""}</span></div>
+        ${k.scope === "tenant" && !target ? `<div class="card"><h3>Choose the affected account</h3><p>Response always targets one account, even in a tenant-wide investigation.</p><div class="row">${USERS.slice(0, 4).map(u => `<button type="button" class="btn" data-act="pick-target" data-user="${esc(u[0])}">${esc(u[0])}</button>`).join("")}</div></div>` : `
+        <div class="svc ${resp.state === "ready" ? "ready" : ""}"><div><b>Response session</b>${resp.state === "ready" ? `<small class="okline">✓ reuses your Connect sign-in · ${esc(S.svc.graph.account)} · ${esc(k.tenantName)}</small>` : resp.state === "waiting" ? `<small class="wait"><span class="spin"></span>${S.surface === "app" ? "Waiting for you in your browser…" : "Checking the session…"} <span data-elapsed="response">${elapsed(resp.since)}</span></small>` : `<small>Read-only checks against ${esc(target)}: authentication methods, sessions, OAuth grants. ${S.surface === "app" ? "Until WP-41 lands this opens one browser window; after it, none." : "Silent — your Connect sign-in is reused."}</small>`}</div>${resp.state === "ready" ? `<span class="status-ok">Connected</span>` : resp.state === "waiting" ? `<button type="button" class="btn" data-act="cancel-signin" data-svc="response">Cancel</button>` : `<button type="button" class="btn primary" data-act="signin" data-svc="response">Connect checks</button>`}</div>
+        <div class="svc ${k.armed ? "ready" : ""}"><div><b>Arm containment</b>${k.armed ? `<small class="okline">✓ Write permissions held for ${esc(target)} · every action still confirms one by one</small>` : k.arming ? `<small class="wait"><span class="spin"></span>Microsoft permissions window open… <span data-elapsed="arm">${elapsed(k.arming)}</span></small>` : `<small>This opens a Microsoft permissions window (once per tenant). Actions below stay disabled until then, and each one still confirms.</small>`}</div>${k.armed ? `<button type="button" class="btn" data-act="disarm">Disarm</button>` : k.arming ? `<button type="button" class="btn" data-act="cancel-arm">Cancel</button>` : `<button type="button" class="btn primary" data-act="arm" ${resp.state === "ready" ? "" : "disabled title='Connect the checks first'"}>Arm</button>`}</div>
+        ${STEPS.filter(s => s[0] !== "preserve").map((s, i) => stepCard(k, s, i + 1)).join("")}`}`;
+    if (phase === "scope") content = `<div class="card"><h3>Establish the blast radius <span class="small muted">· ${k.impactRun ? "13 checks ran over " + k.days + " days" : "13 automated checks"}</span></h3><p>Which other accounts, apps and data the same actor touched. Checks are read-only and run against the connected session.</p>${resp.state === "ready" ? `<div class="row"><button type="button" class="btn primary" data-act="run-impact" ${k.impactRun ? "disabled" : ""}>${k.impactRun ? "Ran at " + esc(k.impactRun) : "Run all checks"}</button></div>` : `<div class="note">Connect the response checks on phase 2 first.</div>`}<div class="list">${IMPACT.map((t, i) => `<div><span>${i + 1} · ${esc(t)}</span><span class="st ${k.impactRun ? (i === 0 || i === 2 ? "partial" : "complete") : "queued"}">${k.impactRun ? (i === 0 ? "! 2 accounts" : i === 2 ? "! 1 rule" : "✓ clear") : "—"}</span></div>`).join("")}</div></div>`;
+    if (phase === "evidence") content = `<div class="card"><h3>Preserve this investigation</h3><p>Every source record, collection error, review and the action log, in one integrity-checked file.</p><div class="row"><button type="button" class="btn primary" data-act="export" data-what="Case file">Export case</button><span class="small muted">${k.exports["Case file"] ? "Exported " + esc(k.exports["Case file"]) : "Not exported yet"}</span></div></div><div class="card"><h3>Sources with gaps</h3>${sourceRows({ ...k, sources: k.sources.filter(s => s.state !== "complete") }, false).replace('<div class="list"></div>', '<p class="small muted">Every selected source completed.</p>')}</div>`;
+    if (phase === "handover") content = `<div class="card"><h3>Communication templates</h3><p>Drafts for the incident owner, the user, leadership and privacy/legal. A download is a draft, never a record that it was sent.</p><div class="row">${["Incident owner", "Affected user", "Leadership", "Privacy / legal"].map(t => `<button type="button" class="btn" data-act="template" data-what="${t}">${t}</button>`).join("")}</div></div><div class="card"><h3>Ready to hand over?</h3><p>The handover checklist and exports live on step 7.</p><button type="button" class="btn primary" style="align-self:flex-start" data-step="handover">Hand over →</button></div>`;
+    const outcome = k.phaseOutcomes[phase];
+    return `${head(6, "Respond", "First 60 minutes. Every check, decision and action stays with this case.", `<button type="button" class="btn" data-step="handover" ${k.respondVisited ? "" : "disabled"}>Hand over →</button>`)}
+      <div class="phases">${PHASES.map((p, i) => `<button type="button" data-phase="${p[0]}" ${phase === p[0] ? 'aria-current="step"' : ""} class="${k.phaseOutcomes[p[0]] ? "done" : ""}"><span>${p[2]} min</span><b>${i + 1} · ${p[1]}</b><span>${esc(k.phaseOutcomes[p[0]]?.outcome || "not reviewed")}</span></button>`).join("")}</div>
+      <div class="layout with-drawer"><div class="stack">
+        <div class="row between"><h2>${idx + 1} · ${esc(P[1])}</h2><button type="button" class="btn ghost" data-act="phase-note">＋ Note or decision</button></div>
+        ${content}
+        ${outcome ? `<div class="note good">Latest decision · <b>${esc(outcome.outcome)}</b> · ${esc(outcome.detail)}${outcome.reference ? " [" + esc(outcome.reference) + "]" : ""}</div>` : ""}
+        <div class="row between">${idx > 0 ? `<button type="button" class="btn ghost" data-phase="${PHASES[idx - 1][0]}">← ${esc(PHASES[idx - 1][1])}</button>` : "<span></span>"}${idx < 4 ? `<button type="button" class="btn primary" data-phase="${PHASES[idx + 1][0]}">Next phase: ${esc(PHASES[idx + 1][1])} →</button>` : ""}</div>
+      </div>
+      <aside class="side"><div class="card"><div class="row between"><h3>Case action log</h3><span class="badge">UTC</span></div>${logRows(k, 8)}<button type="button" class="btn ghost" data-act="phase-note" style="align-self:flex-start">＋ Note or external action</button></div></aside></div>`;
+  }
+  function stepCard(k, s, n) {
+    const [key, title, kind, why] = s; const st = k.steps[key] || {};
+    const flagged = k.findings.some(f => ["confirmed", "investigating"].includes(k.dispositions[f.id]?.state) ? false : false) || { revoke: true, methods: true, rules: true, oauth: true }[key];
+    const disabled = !k.armed ? "disabled" : "";
+    let action = "";
+    if (kind === "action") action = `<button type="button" class="btn ${key === "disable" ? "danger" : "primary"}" data-act="write" data-key="${key}" ${disabled || (st.status === "done" ? "disabled" : "")}>${{ revoke: "Revoke sessions now", disable: "Disable account", password: "Generate & set a temporary password" }[key]}</button>`;
+    if (kind === "methods") action = `<button type="button" class="btn primary" data-act="load" data-key="methods" ${S.svc.response.state === "ready" ? "" : "disabled"}>Load authentication methods</button>${st.loaded ? `<div class="list" style="margin-top:8px"><div><span class="l"><span>Microsoft Authenticator · iPhone 15</span><small>registered 2024-02-11 · default</small></span><span class="st complete">keep</span></div><div><span class="l"><span>Phone · +31 6 12 34 56 78 (SMS)</span><small>registered 2026-07-15 03:42 UTC · during the incident window</small></span><button type="button" class="btn" data-act="write" data-key="methods-delete" ${disabled}>Remove</button></div></div>` : ""}`;
+    if (kind === "rules") { const snap = k.sources.find(x => x.key === "exchange" && x.state === "complete"); action = snap ? `<div class="note">1 enabled forwarding rule → jan.devries.mail@outlook-relay.net · 2 full-access delegates (svc-scan, adm.piet)</div><div class="row"><button type="button" class="btn" data-act="open-record" data-ref="exchange:3">Inspect rule</button><button type="button" class="btn" data-act="phase-note">Record decision</button><details class="plain" style="flex:1 1 100%"><summary>Manual Exchange response · PowerShell</summary><pre class="mono" style="white-space:pre-wrap;margin:8px 0 0">Connect-ExchangeOnline -UserPrincipalName analyst@contoso.nl\nRemove-InboxRule -Mailbox jan.devries@contoso.nl -Identity "."\nSet-Mailbox jan.devries@contoso.nl -ForwardingSmtpAddress $null\nRemove-MailboxPermission jan.devries@contoso.nl -User svc-scan@contoso.nl -AccessRights FullAccess</pre></details></div>` : `<div class="note">No mailbox snapshot in this case. ${S.surface === "app" ? '<button type="button" class="btn" style="margin-left:6px" data-act="collect-mailbox">Add mailbox evidence</button>' : "Mailbox evidence needs the desktop app."}</div>`; }
+    if (kind === "oauth") action = `<button type="button" class="btn primary" data-act="load" data-key="oauth" ${S.svc.response.state === "ready" ? "" : "disabled"}>Load OAuth grants</button>${st.loaded ? `<div class="list" style="margin-top:8px"><div><span class="l"><span>Microsoft Teams</span><small>offline_access User.Read · first-party</small></span><span class="st complete">keep</span></div><div><span class="l"><span>"Mail Backup Pro"</span><small>Mail.ReadWrite offline_access · consented 2026-07-15 03:44 UTC</small></span><button type="button" class="btn" data-act="write" data-key="oauth-revoke" ${disabled}>Revoke</button></div></div>` : ""}`;
+    return `<div class="card ${st.status || ""}"><h3>${n} · ${esc(title)} ${flagged ? '<span class="flag">flagged by triage</span>' : ""}<span class="badge ${st.status === "done" ? "benign" : ""}" style="margin-left:auto">${st.status === "done" ? "done · " + esc(st.at) : st.status === "skipped" ? "deliberately skipped" : "verification pending"}</span></h3><p>${esc(why)}</p><div class="row">${action}${kind === "action" || kind === "methods" || kind === "oauth" ? `<label class="check"><input type="checkbox" data-skip="${key}" ${st.status === "skipped" ? "checked" : ""}> Deliberately skipped</label>` : ""}</div></div>`;
+  }
+
+  // ---------- Hand over ----------
+  function viewHandover() {
+    const k = S.kase;
+    const unreviewed = k.findings.filter(f => !k.dispositions[f.id] || k.dispositions[f.id].state === "unreviewed").length;
+    const phases = Object.keys(k.phaseOutcomes).length;
+    const gaps = k.sources.filter(s => s.state !== "complete");
+    const exp = (name, sub) => `<div><span class="l"><span><b>${name}</b> · ${sub}</span>${k.exports[name] ? `<small class="okline">✓ ${S.surface === "app" ? "saved to ~/Triage evidence/saved-cases/" : "downloaded"} · ${esc(k.exports[name])}</small>` : ""}</span><button type="button" class="btn" data-act="export" data-what="${name}">${k.exports[name] ? "Export again" : S.surface === "app" ? "Save" : "Download"}</button></div>`;
+    return `<div class="wizard">${head(7, "Hand over", "What the next owner gets, and what is still open.")}
+      <div class="stack">
+        <div class="panel"><div class="panel-body">
+          <div class="check"><i class="${unreviewed ? "warn" : "ok"}">${unreviewed ? "!" : "✓"}</i><span>${k.findings.length} signals · <b>${k.findings.length - unreviewed} reviewed</b>${unreviewed ? ` · ${unreviewed} unreviewed → <button type="button" class="btn ghost" data-act="review-unreviewed">review them</button>` : ""}</span></div>
+          <div class="check"><i class="${phases === 5 ? "ok" : "warn"}">${phases === 5 ? "✓" : "!"}</i><span>First 60 minutes · <b>${phases} / 5</b> phases with a recorded decision</span></div>
+          <div class="check"><i class="${gaps.length ? "warn" : "ok"}">${gaps.length ? "!" : "✓"}</i><span>${gaps.length ? gaps.length + " source" + (gaps.length > 1 ? "s" : "") + " incomplete · " + esc(gaps.map(g => LABEL[g.key]).join(", ")) + " — recorded as a gap in the handover" : "Every selected source completed"}</span></div>
+          <div class="check"><i class="${k.armed ? "warn" : "ok"}">${k.armed ? "!" : "✓"}</i><span>${k.armed ? "Containment is still armed — disarm before handing over" : "Containment not armed"}</span></div>
+        </div></div>
+        <div class="list">${exp("Case file", "JSON, integrity-checked")}${exp("Handover", "Markdown for the ticket")}${exp("Action log", "CSV")}</div>
+      </div>
+      ${foot(["respond", "Respond"], `<button type="button" class="btn primary" data-act="next-investigation">Start next investigation →</button>`)}</div>`;
+  }
+
+  // =====================================================================
+  //  Render
+  // =====================================================================
+  function render() {
+    guard();
+    renderProto(); renderHeader();
+    const v = { start: viewStart, connect: viewConnect, scope: viewScope, collect: viewCollect, review: viewReview, respond: viewRespond, handover: viewHandover }[route.step] || viewStart;
+    $("#main").innerHTML = v();
+    document.title = "Triage · " + (STEP_NAMES.find(s => s[0] === route.step)?.[1] || "Start");
+  }
+  // =====================================================================
+  //  Case model + simulations
+  // =====================================================================
+  const now = () => new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  const shortTime = () => new Date().toISOString().slice(11, 16) + " UTC";
+  const actor = () => S.svc.graph.account || "Local analyst";
+  function log(type, detail, who) { if (!S.kase) return; S.kase.log.push({ at: shortTime(), actor: who || actor(), type, detail }); persist(); }
+  function newCase(sources) {
+    const sc = S.scope;
+    return {
+      id: crypto.randomUUID(), subject: sc.mode === "user" ? sc.upn : "", scope: sc.mode, tenantName: S.tenant?.name || "My organisation", days: sc.days,
+      presetLabel: sc.preset[0].toUpperCase() + sc.preset.slice(1), window: sc.days + " days", startedAt: now(), collectionMethod: S.surface === "app" ? "PowerShell" : "Browser JavaScript",
+      sources: sources.map(k => ({ key: k, state: "queued", count: 0 })), records: 0, findings: [], dispositions: {}, log: [], phaseOutcomes: {}, steps: {}, exports: {},
+      collecting: true, collectionDone: false, analyzing: false, partial: 0, armed: false, dirty: false, savedAt: null, reviewVisited: false, respondVisited: false, handedOver: false,
+    };
+  }
+  const timers = {};
+  function startCollection() {
+    const sc = S.scope;
+    if (sc.mode === "user" && !USERS.some(u => u[0] === sc.upn)) { toast("Enter an account that exists in this tenant.", true); return; }
+    const sources = sc.preset === "custom" ? sc.custom.slice() : PRESETS[sc.preset].slice();
+    const allowed = sources.filter(k => S.surface === "app" || CATALOG.find(c => c[0] === k)[2] === "graph").filter(k => CATALOG.find(c => c[0] === k)[2] !== "exchange" || S.svc.exchange.state === "ready");
+    if (!allowed.length) { toast("Select at least one source.", true); return; }
+    S.kase = newCase(allowed); S.svc.response = { state: "idle" };
+    log("collection-start", "Started " + (S.surface === "app" ? "delegated collection with PowerShell on this computer" : "delegated Microsoft Graph collection in this browser") + " · " + allowed.length + " sources");
+    navigate({ step: "collect" });
+    let i = 0;
+    const step = () => {
+      const k = S.kase; if (!k || !k.collecting) return;
+      if (i > 0) { const prev = k.sources[i - 1]; if (prev.state === "running") finishSource(k, prev); }
+      if (i >= k.sources.length) { endCollection(); return; }
+      k.sources[i].state = "running"; i++;
+      render(); timers.collect = setTimeout(step, k.sources[i - 1].key === "ual" ? 1600 : 650);
+    };
+    timers.collect = setTimeout(step, 400);
+  }
+  function finishSource(k, s) {
+    const partial = s.key === "mfa" && S.surface === "web" || s.key === "ual" && S.surface === "app" && k.days >= 30;
+    s.state = partial ? "partial" : "complete"; s.count = COUNTS[s.key] || 0; if (partial) { s.count = Math.round(s.count * 0.6); s.note = s.key === "ual" ? "Audit query still pending after the wait — query ID preserved" : "More pages exist — resume to finish"; }
+    k.records += s.count;
+    log("source-result", LABEL[s.key] + " · " + s.state + " · " + s.count + " records", S.surface === "app" ? "Desktop collector" : "Browser collector");
+  }
+  function endCollection(stopped) {
+    const k = S.kase; if (!k) return; clearTimeout(timers.collect);
+    for (const s of k.sources) { if (s.state === "running") { if (stopped) { s.state = "cancelled"; s.count = Math.round((COUNTS[s.key] || 0) / 3); k.records += s.count; } else finishSource(k, s); } else if (s.state === "queued") s.state = stopped ? "cancelled" : "not-collected"; }
+    k.collecting = false; k.analyzing = true; k.partial = k.sources.filter(s => s.state !== "complete").length;
+    log("collection-end", stopped ? "Collection stopped; completed checkpoints preserved." : "Collection ended; inspect coverage for incomplete sources.");
+    render();
+    timers.analyze = setTimeout(() => {
+      const k2 = S.kase; if (!k2) return;
+      const have = new Set(k2.sources.filter(s => s.state !== "not-collected" && s.state !== "cancelled" || s.count).map(s => s.key));
+      k2.findings = FINDINGS.filter(f => have.has(f.src) && (k2.scope === "tenant" || f.user === k2.subject || f.user === "adm.piet@contoso.nl" && k2.subject === "jan.devries@contoso.nl"));
+      k2.analyzing = false; k2.collectionDone = true;
+      log("analysis", k2.findings.length + " signals from " + [...have].length + " sources · analyzed with JavaScript on this " + (S.surface === "app" ? "computer" : "browser"));
+      persist(true);
+      navigate({ step: "review", tab: "overview" }, true);
+      toast("Collection finished · " + cov(k2).c + " / " + cov(k2).n + " sources complete" + (k2.partial ? ", " + k2.partial + " partial" : ""));
+    }, 1500);
+  }
+  function signIn(svc) {
+    const cert = S.surface === "app" && S.signAs === "profile" && svc !== "response";
+    S.svc[svc] = { state: cert ? "cert" : "waiting", since: Date.now() }; render();
+    timers[svc] = setTimeout(() => {
+      const t = S.tenant || (S.signAs === "profile" ? { name: "Contoso", id: TENANTS["contoso.com"][1] } : { name: "My organisation", id: "0000aaaa-1111-2222-3333-444455556666" });
+      const account = cert ? "App · 4b2e91c0 (Contoso profile)" : (S.signAs === "profile" ? "App" : "analyst@" + (S.tenant ? S.tenant.name.toLowerCase().split(" ")[0] + ".nl" : "limon-it.nl"));
+      S.svc[svc] = { state: "ready", account, tenantName: t.name, tenantId: t.id };
+      if (svc === "graph" && !S.tenant) S.tenant = t;
+      if (svc === "response") log("response-connect", "Response checks connected for " + (S.kase.responseTarget || S.kase.subject) + " · " + account);
+      persist(true); render();
+      toast(svc === "graph" ? "Signed in · " + account + " · " + t.name : svc === "exchange" ? "Exchange Online connected" : "Response checks connected");
+    }, cert ? 1800 : 2600);
+  }
+  function cancelSignIn(svc) { clearTimeout(timers[svc]); S.svc[svc] = { state: "idle" }; persist(true); render(); toast("Sign-in cancelled"); }
+  function arm() {
+    const k = S.kase; k.arming = Date.now(); render();
+    timers.arm = setTimeout(() => { const k2 = S.kase; if (!k2 || !k2.arming) return; k2.arming = 0; k2.armed = true; log("response-armed", "Write permissions granted for " + (k2.responseTarget || k2.subject) + " · consent recorded once for " + k2.tenantName); render(); toast("Containment armed · every action still confirms"); }, 2200);
+  }
+  function writeAction(key) {
+    const k = S.kase; const target = k.responseTarget || k.subject;
+    const names = { revoke: ["Revoke sign-in sessions", "POST /users/" + target + "/revokeSignInSessions"], disable: ["Disable the account", "PATCH /users/" + target + " {accountEnabled:false}"], password: ["Set a temporary password", "PATCH /users/" + target + " {passwordProfile}"], "methods-delete": ["Remove the SMS method +31 6 12 34 56 78", "DELETE /users/" + target + "/authentication/phoneMethods/…"], "oauth-revoke": ["Revoke the grant for \"Mail Backup Pro\"", "DELETE /oauth2PermissionGrants/…"] };
+    const [title, path] = names[key];
+    dialog(`<h2>Confirm account response</h2><p><b>${esc(title)}</b></p><dl class="facts"><dt>Tenant</dt><dd>${esc(k.tenantName)}</dd><dt>Account</dt><dd>${esc(target)}</dd><dt>Operator</dt><dd>${esc(actor())}</dd><dt>Request</dt><dd class="mono">${esc(path)}</dd></dl><p class="small muted">This changes Microsoft 365. The action is recorded in the case action log and the device journal.</p><div class="row between"><button type="button" class="btn" data-act="close-dialog">Cancel</button><button type="button" class="btn danger" data-act="execute" data-key="${key}">Execute approved action</button></div>`);
+  }
+  function execute(key) {
+    const k = S.kase; closeDialog();
+    const base = key.split("-")[0];
+    if (["revoke", "disable", "password"].includes(key)) k.steps[key] = { status: "done", at: shortTime() };
+    if (key === "methods-delete") k.steps.methods = { status: "done", at: shortTime(), loaded: true };
+    if (key === "oauth-revoke") k.steps.oauth = { status: "done", at: shortTime(), loaded: true };
+    log("response-result", ({ revoke: "Revoke sessions: accepted · verification pending", disable: "Disable account: accepted", password: "Temporary password set · shown once, not stored", "methods-delete": "Removed SMS method registered during the incident window", "oauth-revoke": "Revoked delegated grant for \"Mail Backup Pro\"" })[key]);
+    render(); toast("Recorded · " + base);
+  }
+  function exportThing(what) { const k = S.kase; k.exports[what] = shortTime(); log("case-exported", what + " exported"); render(); toast((S.surface === "app" ? "Saved · " : "Downloaded · ") + what + " (simulated in this prototype)"); }
+  function phaseNoteDialog() {
+    const phase = route.tab || "preserve"; const P = PHASES.find(p => p[0] === phase);
+    dialog(`<h2>Record a decision · ${esc(P[1])}</h2><form id="phase-form"><div class="stack"><label class="field"><span>Outcome</span><select name="outcome"><option value="in progress">In progress</option><option value="reviewed">Reviewed by analyst</option><option value="needs follow-up">Needs follow-up</option></select></label><label class="field"><span>Decision, reason and next owner</span><textarea name="detail" required></textarea></label><label class="field"><span>Evidence reference</span><input name="reference" placeholder="e.g. interactive:12"></label><p class="small muted">An analyst review is not proof that a response action executed.</p><div class="row between"><button type="button" class="btn" data-act="close-dialog">Cancel</button><button type="submit" class="btn primary">Add to action log</button></div></div></form>`);
+  }
+  function openCaseDialog() {
+    dialog(`<h2>Open a case</h2><div class="stack"><button type="button" class="btn big" data-act="pick-file"><span>Choose a case file…<small>.json, integrity-checked before analysis</small></span><span>→</span></button><h3>Saved on this ${S.surface === "app" ? "computer" : "device"}</h3>${S.saved.length ? `<div class="list">${S.saved.map(c => `<div><span class="l"><span>${esc(c.subject)} · ${esc(c.tenantName)}</span><small>saved ${new Date(c.savedAt).toLocaleString()} · ${c.findings} signals</small></span><span class="row"><button type="button" class="btn primary" data-act="open-saved" data-id="${c.id}">Open</button><button type="button" class="btn ghost" data-act="remove-saved" data-id="${c.id}">Remove</button></span></div>`).join("")}</div>` : `<p class="small muted">No saved cases yet. Finish an investigation with "Start next investigation" and it appears here.</p>`}<div class="row between"><button type="button" class="btn" data-act="close-dialog">Close</button></div></div>`);
+  }
+  function helpDialog() {
+    dialog(`<h2>Help · seven steps</h2><ol style="margin:0;padding-left:18px;display:grid;gap:6px;font-size:13px"><li><b>Start</b> — new investigation, open a case, or the sample.</li><li><b>Connect</b> — sign in once. Pin the tenant (my organisation or a customer domain) before the Microsoft window opens. In the app: Graph required, Exchange optional, or a customer certificate.</li><li><b>Scope</b> — who, how far back, which evidence preset.</li><li><b>Collect</b> — one screen with progress and Stop; Review opens by itself.</li><li><b>Review</b> — Overview, Findings, Timeline, Evidence. A finding opens in a drawer with its supporting records; Back closes it.</li><li><b>Respond</b> — the five first-hour phases. Arm is the only step-up, and it says so first.</li><li><b>Hand over</b> — the checklist and the three exports; then the next investigation.</li></ol><p class="small muted">Back and reload work: the step, tab and open drawer live in the URL; the case is autosaved (the chip says when).</p><div class="row between"><button type="button" class="btn ghost" data-act="coverage">Coverage contract</button><button type="button" class="btn" data-act="close-dialog">Close</button></div>`);
+  }
+  function loadSample() {
+    S.svc.graph = { state: "ready", account: "demo.analyst@contoso.nl", tenantName: "Contoso · demonstration", tenantId: TENANTS["contoso.com"][1] };
+    S.tenant = { name: "Contoso · demonstration", id: TENANTS["contoso.com"][1] };
+    if (S.surface === "app") S.svc.exchange = { ...S.svc.graph };
+    S.scope = { mode: "user", upn: "jan.devries@contoso.nl", days: 30, preset: S.surface === "app" ? "standard" : "quick", custom: PRESETS.standard.slice() };
+    const k = newCase((S.surface === "app" ? PRESETS.standard : PRESETS.quick).slice());
+    k.tenantName = "Contoso · demonstration"; k.sample = true;
+    for (const s of k.sources) { s.state = "complete"; s.count = COUNTS[s.key]; k.records += s.count; }
+    k.collecting = false; k.collectionDone = true; k.findings = FINDINGS.filter(f => S.surface === "app" || f.src !== "exchange");
+    k.log.push({ at: shortTime(), actor: "Local analyst", type: "case-opened", detail: "Opened fictional sample evidence." });
+    S.kase = k; persist(true); navigate({ step: "review", tab: "overview" }); toast("Sample case · fictional data, nothing is real");
+  }
+  function finishAndReset() {
+    const k = S.kase;
+    if (k) { k.handedOver = true; S.saved.unshift({ id: k.id, subject: k.scope === "tenant" ? "Whole tenant" : k.subject, tenantName: k.tenantName, savedAt: new Date().toISOString(), findings: k.findings.length, snapshot: k }); S.saved = S.saved.slice(0, 5); }
+    S.kase = null; S.svc.response = { state: "idle" }; S.scope.upn = ""; S.filter = ""; S.severity = "all";
+    persist(true); navigate({ step: "start" }); toast("Case saved on this " + (S.surface === "app" ? "computer" : "device") + " · ready for the next investigation");
+  }
+
+  // =====================================================================
+  //  Events
+  // =====================================================================
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("button, [data-act]"); if (!b) return;
+    if (b.classList.contains("scrim")) { if (e.target === b) closeDialog(); return; }
+    const k = S.kase;
+    if (b.dataset.surface) { S.surface = b.dataset.surface; if (S.surface === "web") { S.svc.exchange = { state: "idle" }; S.signAs = "delegated"; if (S.scope.preset !== "quick" && S.scope.preset !== "custom") S.scope.preset = "quick"; } else if (S.scope.preset === "quick" && !k) S.scope.preset = "standard"; persist(true); render(); return; }
+    if (b.dataset.step) { const st = stepState(b.dataset.step); if (st.cls === "todo") { toast(st.reason, true); return; } if (["connect", "scope"].includes(b.dataset.step) && k && !k.collecting && b.closest(".rail")) { dialog(`<h2>Go back to ${b.dataset.step === "scope" ? "Scope" : "Connect"}?</h2><p>The current case stays saved. Changing the scope or the sign-in starts a <b>new</b> collection; the current case is listed under Open a case.</p><div class="row between"><button type="button" class="btn" data-act="close-dialog">Stay here</button><button type="button" class="btn primary" data-act="go-back-new" data-step="${b.dataset.step}">Go back and start a new case</button></div>`); return; } closeDialog(); navigate({ step: b.dataset.step, caseId: k?.id, tab: b.dataset.step === "review" ? "overview" : b.dataset.step === "respond" ? (route.step === "respond" ? route.tab : "preserve") : undefined }); return; }
+    if (b.dataset.tab) { S.filter = ""; navigate({ ...route, tab: b.dataset.tab, f: "", r: "", s: "", state: "" }); return; }
+    if (b.dataset.phase) { navigate({ ...route, tab: b.dataset.phase }); return; }
+    if (b.dataset.preset) { S.scope.preset = b.dataset.preset; if (b.dataset.preset !== "custom") S.scope.custom = PRESETS[b.dataset.preset].slice(); persist(); render(); return; }
+    if (b.dataset.scope) { S.scope.mode = b.dataset.scope; if (S.scope.mode === "tenant" && S.scope.preset === "standard") S.scope.preset = "quick"; persist(); render(); return; }
+    if (b.dataset.pick) { S.scope.upn = b.dataset.pick; persist(); render(); return; }
+    const act = b.dataset.act; if (!act) return;
+    switch (act) {
+      case "reset": clearTimeout(timers.collect); clearTimeout(timers.analyze); S = fresh(); try { localStorage.removeItem(KEY); } catch (e) {} navigate({ step: "start" }); toast("Demo reset"); break;
+      case "brand": navigate(k ? { step: "review", tab: "overview" } : { step: "start" }); break;
+      case "help": helpDialog(); break;
+      case "coverage": closeDialog(); toast("Coverage contract: the existing Help · coverage page (coverage.js) stays as is"); break;
+      case "rail-sheet": sheet(`<ol class="rail">${railItems(true)}</ol>`); break;
+      case "close-dialog": closeDialog(); break;
+      case "new-investigation": navigate(connected() ? { step: "scope" } : { step: "connect" }); break;
+      case "open-case": openCaseDialog(); break;
+      case "pick-file": closeDialog(); toast("A file picker would open here; the case is integrity-checked, then Review opens."); break;
+      case "open-saved": { const c = S.saved.find(x => x.id === b.dataset.id); if (c) { closeDialog(); S.kase = { ...c.snapshot, handedOver: false, dirty: false }; S.svc.response = { state: "idle" }; S.kase.armed = false; if (!connected()) { S.svc.graph = { state: "ready", account: "analyst@limon-it.nl", tenantName: c.tenantName, tenantId: "…" }; } persist(true); navigate({ step: "review", tab: "overview", caseId: S.kase.id }); toast("Opened saved case · " + c.subject); } break; }
+      case "remove-saved": S.saved = S.saved.filter(x => x.id !== b.dataset.id); persist(true); openCaseDialog(); break;
+      case "continue-last": { const c = S.saved[0]; if (c) { S.kase = { ...c.snapshot, handedOver: false, dirty: false }; S.kase.armed = false; S.svc.response = { state: "idle" }; persist(true); navigate({ step: "review", tab: "overview", caseId: S.kase.id }); } break; }
+      case "sample": loadSample(); break;
+      case "open-plan": toast("A file picker would open; the plan fills Scope and you continue from there."); break;
+      case "get-app": toast("Links to the GitHub Release assets (macOS arm64 / Windows x64)."); break;
+      case "resolve": { const d = ($("#domain")?.value || S.domain).trim().toLowerCase(); S.domain = d; const t = TENANTS[d]; if (t) { S.tenant = { name: t[0], id: t[1] }; toast("Resolved " + d + " → " + t[0]); } else { S.tenant = null; toast("No tenant found for " + (d || "that domain") + " — try contoso.com, fabrikam.com or northwind.nl", true); } persist(); render(); break; }
+      case "signin": if (b.dataset.svc === "response" && S.surface === "web") { S.svc.response = { state: "ready" }; log("response-connect", "Response checks use the Connect sign-in · " + actor()); render(); toast("Response checks connected — no new window on the web"); } else signIn(b.dataset.svc); break;
+      case "cancel-signin": cancelSignIn(b.dataset.svc); break;
+      case "disconnect": clearTimeout(timers.graph); S.svc.graph = { state: "idle" }; S.svc.exchange = { state: "idle" }; S.svc.response = { state: "idle" }; persist(true); render(); break;
+      case "manage-profiles": dialog(`<h2>Customer connections</h2><p class="small muted">Local PowerShell connections: choose a customer certificate profile or keep delegated sign-in. The profile forms are the existing dialogs — they collect a form, they never navigate.</p><div class="list"><div><span class="l"><span>Contoso</span><small>7d3f2c1a… · Graph 4b2e… · Exchange 91c0… · certificate expires 2027-03-01</small></span><button type="button" class="btn ghost">Remove</button></div></div><div class="row between"><button type="button" class="btn" data-act="close-dialog">Close</button><span class="row"><button type="button" class="btn">Use existing registration</button><button type="button" class="btn">Create registrations…</button></span></div>`); break;
+      case "save-plan": toast("Plan saved · triage-plan-….json — open it in the desktop app with Open a plan (simulated)"); break;
+      case "start-collection": startCollection(); break;
+      case "stop": endCollection(true); break;
+      case "resume": if (k) { for (const s of k.sources) if (s.state !== "complete") { s.state = "complete"; s.count = COUNTS[s.key]; s.note = ""; } k.records = k.sources.reduce((n, s) => n + s.count, 0); k.partial = 0; log("collection-end", "Incomplete sources resumed and completed."); render(); toast("Incomplete sources completed"); } break;
+      case "open-finding": navigate({ ...route, tab: "findings", f: b.dataset.id, r: "" }); break;
+      case "open-record": closeDialog(); navigate({ ...route, step: route.step === "respond" ? "review" : route.step, tab: route.step === "respond" ? "evidence" : route.tab, r: b.dataset.ref, s: route.step === "respond" ? b.dataset.ref.split(":")[0] : route.s }); break;
+      case "back-to-finding": navigate({ ...route, r: "" }); break;
+      case "close-drawer": history.back(); break;
+      case "toggle-source": navigate({ ...route, s: route.s === b.dataset.src ? "" : b.dataset.src, r: "" }, true); break;
+      case "clear-state-filter": navigate({ ...route, state: "" }); break;
+      case "contain-account": k.responseTarget = b.dataset.user; persist(); navigate({ step: "respond", tab: "contain", caseId: k.id }); break;
+      case "choose-account": k.responseTarget = ""; render(); break;
+      case "pick-target": k.responseTarget = b.dataset.user; log("note", "Affected account for response: " + b.dataset.user); render(); break;
+      case "export-starting-point": k.startingPointExported = shortTime(); k.exports["Case file"] = k.startingPointExported; log("case-exported", "Starting point exported before response"); render(); toast("Starting point exported (simulated)"); break;
+      case "arm": arm(); break;
+      case "cancel-arm": clearTimeout(timers.arm); k.arming = 0; render(); break;
+      case "disarm": k.armed = false; log("response-disarmed", "Write permissions released"); render(); break;
+      case "write": writeAction(b.dataset.key); break;
+      case "execute": execute(b.dataset.key); break;
+      case "load": k.steps[b.dataset.key] = { ...(k.steps[b.dataset.key] || {}), loaded: true }; log("response-result", (b.dataset.key === "methods" ? "Loaded 2 authentication methods" : "Loaded 2 OAuth grants") + " for " + (k.responseTarget || k.subject)); render(); break;
+      case "run-impact": k.impactRun = shortTime(); log("response-result", "Ran 13 blast-radius checks over " + k.days + " days · 2 need attention"); render(); break;
+      case "collect-mailbox": { const s = k.sources.find(x => x.key === "exchange"); if (s) { s.state = "complete"; s.count = COUNTS.exchange; } else k.sources.push({ key: "exchange", state: "complete", count: COUNTS.exchange }); k.records += COUNTS.exchange; k.partial = k.sources.filter(x => x.state !== "complete").length; if (!k.findings.some(f => f.id === "F9")) k.findings.push(FINDINGS.find(f => f.id === "F9")); log("source-result", "Mailbox configuration snapshot · complete · 14 records"); render(); toast("Mailbox evidence added to the case"); break; }
+      case "template": toast("Draft downloaded · " + b.dataset.what + " · not a record that it was sent"); log("note", "Downloaded template: " + b.dataset.what + " · draft only"); break;
+      case "phase-note": phaseNoteDialog(); break;
+      case "export": exportThing(b.dataset.what); break;
+      case "review-unreviewed": navigate({ step: "review", tab: "findings", state: "unreviewed", caseId: k.id }); break;
+      case "next-investigation": finishAndReset(); break;
+      case "new-case": dialog(`<h2>Start a new investigation?</h2><p>The current case is saved on this ${S.surface === "app" ? "computer" : "device"} and stays listed under Open a case. ${k && k.exports["Case file"] ? "" : "It has not been exported as a file yet."}</p><div class="row between"><button type="button" class="btn" data-act="close-dialog">Stay with this case</button><button type="button" class="btn primary" data-act="confirm-new">Save & start new →</button></div>`); break;
+      case "confirm-new": closeDialog(); finishAndReset(); break;
+      case "go-back-new": { const step = b.dataset.step; closeDialog(); if (k) { S.saved.unshift({ id: k.id, subject: k.scope === "tenant" ? "Whole tenant" : k.subject, tenantName: k.tenantName, savedAt: new Date().toISOString(), findings: k.findings.length, snapshot: k }); } S.kase = null; S.svc.response = { state: "idle" }; persist(true); navigate({ step }); break; }
+      case "noop": toast("Folder picker (native dialog) — simulated"); break;
+    }
+  });
+  document.addEventListener("submit", (e) => {
+    e.preventDefault(); const k = S.kase;
+    if (e.target.id === "review-form") {
+      const f = e.target, id = f.dataset.id, state = f.elements.state.value, note = f.elements.note.value.trim(), reference = f.elements.reference.value.trim();
+      const err = {}; if (!note) err.note = "Add your reason and supporting facts before saving."; if (state === "confirmed" && !RECORDS[reference]) err.reference = "Confirmation needs an existing evidence reference, e.g. " + (k.findings.find(x => x.id === id)?.refs[0] || "interactive:12") + ".";
+      k.reviewError = err; if (Object.keys(err).length) { render(); return; }
+      k.dispositions[id] = { state, note, reference, at: shortTime() }; log("finding-review", id + " · " + state + (reference ? " [" + reference + "]" : "") + " — " + note);
+      history.back(); toast("Review saved · " + state);
+    }
+    if (e.target.id === "phase-form") {
+      const f = e.target, detail = f.elements.detail.value.trim(); if (!detail) { f.elements.detail.focus(); return; }
+      k.phaseOutcomes[route.tab || "preserve"] = { outcome: f.elements.outcome.value, detail, reference: f.elements.reference.value.trim() };
+      log("phase-outcome", (PHASES.find(p => p[0] === (route.tab || "preserve"))?.[1] || "") + ": " + f.elements.outcome.value + " — " + detail); closeDialog(); render(); toast("Decision added to the action log");
+    }
+  });
+  document.addEventListener("input", (e) => {
+    const t = e.target;
+    if (t.id === "upn") { S.scope.upn = t.value; persist(); const pos = t.selectionStart; render(); const el = $("#upn"); if (el) { el.focus(); el.setSelectionRange(pos, pos); } }
+    if (t.id === "domain") { S.domain = t.value; if (S.tenant && TENANTS[t.value.trim().toLowerCase()]?.[0] !== S.tenant.name) { S.tenant = null; render(); const el = $("#domain"); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } } }
+    if (t.id === "filter") { S.filter = t.value; const pos = t.selectionStart; render(); const el = $("#filter"); if (el) { el.focus(); el.setSelectionRange(pos, pos); } }
+  });
+  document.addEventListener("change", (e) => {
+    const t = e.target, k = S.kase;
+    if (t.name === "tenantMode") { S.tenantMode = t.value; S.tenant = null; persist(); render(); }
+    if (t.id === "signAs") { S.signAs = t.value; S.svc.graph = { state: "idle" }; S.svc.exchange = { state: "idle" }; persist(); render(); }
+    if (t.id === "days") { S.scope.days = Number(t.value); persist(); }
+    if (t.id === "severity") { S.severity = t.value; render(); }
+    if (t.dataset.src) { const set = new Set(S.scope.custom); t.checked ? set.add(t.dataset.src) : set.delete(t.dataset.src); S.scope.custom = [...set]; persist(); }
+    if (t.dataset.skip && k) { k.steps[t.dataset.skip] = { ...(k.steps[t.dataset.skip] || {}), status: t.checked ? "skipped" : "" }; log("checklist", (t.checked ? "Deliberately skipped: " : "Un-skipped: ") + STEPS.find(s => s[0] === t.dataset.skip)[1]); render(); }
+    if (t.id === "domain") { const d = t.value.trim().toLowerCase(); if (TENANTS[d]) { S.domain = d; S.tenant = { name: TENANTS[d][0], id: TENANTS[d][1] }; persist(); render(); } }
+  });
+  // elapsed timers tick without a full render (typing is never interrupted)
+  setInterval(() => { for (const el of document.querySelectorAll("[data-elapsed]")) { const key = el.dataset.elapsed; const since = key === "arm" ? S.kase?.arming : S.svc[key]?.since; if (since) el.textContent = elapsed(since); } }, 1000);
+  // readiness check runs itself when Connect opens in the app
+  const bootReady = () => { if (S.surface === "app" && route.step === "connect" && S.ready !== "ok" && S.ready !== "checking") { S.ready = "checking"; setTimeout(() => { S.ready = "ok"; persist(true); if (route.step === "connect") render(); }, 1400); } };
+  window.addEventListener("popstate", bootReady);
+  const _navigate = navigate;
+  render(); bootReady();
+  document.addEventListener("click", () => setTimeout(bootReady, 0), true);
+})();
+</script>

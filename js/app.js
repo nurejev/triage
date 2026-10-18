@@ -280,27 +280,12 @@
   // Leaving the demo and signing out land in the same place - the login screen
   // with nothing carried over - so they are the same code path.
   async function endSession() {
-    if (!demoMode) await G.signOut();
-    const wasDemo = demoMode;
-    demoMode = false;
-    $("whoBox").style.display = "none";
-    $("signOutBtn").style.display = "none";
-    $("homeBtn").style.display = "none";
-    $("demoBanner").style.display = "none";
-    $("demoPill").style.display = "none";
-    $("signOutBtn").textContent = "Sign out";
-    $("signOutBtn").title = "";
-    // Otherwise ?demo=1 puts you straight back in the simulated tenant on the
-    // next refresh, which looks like the exit button did not work.
-    if (wasDemo && /[?&]demo=1/.test(location.search)) {
-      const url = new URL(location.href);
-      url.searchParams.delete("demo");
-      history.replaceState(null, "", url.pathname + url.search + url.hash);
-    }
-    // Forensic hygiene: a fresh session starts with no tabs from the last one.
-    openTabs = []; activeTab = null;
-    toolScreen.triage = toolScreen.contain = "screen-search";
-    showScreen("screen-login");
+    window.TriageCase.reset();
+    window.TriageContain.reset();
+    document.body.inert = true;
+    try { if (!demoMode) await G.signOut(); await G.forgetSession(); }
+    finally { location.replace(location.pathname); }
+
   }
   $("signOutBtn").addEventListener("click", endSession);
   $("demoExitBtn").addEventListener("click", endSession);
@@ -349,7 +334,10 @@
     clearTimeout(suggTimer);
     if (q.length < 2) { suggestions = []; renderSugg(); return; }
     suggTimer = setTimeout(async function () {
-      suggestions = await searchUsers(q);
+      const version = window.TriageCase.generation;
+      const found = await searchUsers(q);
+      if (version !== window.TriageCase.generation || q !== upnInput.value.trim()) return;
+      suggestions = found;
       suggSel = -1;
       renderSugg();
       // Typed the whole UPN without touching the list? Select it anyway, so the
@@ -401,88 +389,65 @@
   }
 
   async function collect(upn, days, withUal) {
-    const ev = { upn: upn, days: days, demo: false, skipped: [], signIns: [], ualRecords: [],
-      oauthGrants: [], riskyUsers: [], riskDetections: [], directoryAudits: [],
-      authMethods: { loaded: false, methods: [] }, user: {} };
-    const start = new Date(Date.now() - days * 864e5).toISOString();
-    const end = new Date().toISOString();
-    const uq = "'" + upn.replace(/'/g, "''") + "'";
-
-    async function step(key, fn, optional) {
-      setStep(key, "run");
-      try {
-        await fn();
-        setStep(key, "ok");
-      } catch (e) {
-        setStep(key, optional ? "skip" : "fail", (e.message || "").slice(0, 90));
-        ev.skipped.push(key);
+    const C = window.TriageCase, version = C.generation;
+    const end = new Date().toISOString(), start = new Date(Date.now()-days*864e5).toISOString();
+    const ev=C.ensure({upn,days,demo:false,tenantId:G.account?.tenantId,window:{start,end},skipped:[],signIns:[],ualRecords:[],oauthGrants:[],riskyUsers:[],riskDetections:[],directoryAudits:[],authMethods:{loaded:false,methods:[]},user:{}});
+    C.current=ev;
+    let activeSource='';
+    async function all(url,cap){const result=await G.pages(url,cap);const {records,...meta}=result;const m=ev.manifest[activeSource];m.queries ||= [];m.queries.push(meta);m.pages=(m.pages||0)+result.pages;
+      if(result.state!=='complete')throw Object.assign(Error(result.error||'Page limit reached'),{collection:meta,records});return records;}
+    const uq="'"+upn.replace(/'/g,"''")+"'";
+    async function step(key,fn) {
+      C.assert(version); activeSource=key; setStep(key,'run');
+      ev.manifest[key]={state:'running',window:{start,end},startedAt:new Date().toISOString()};
+      try { await fn(); C.assert(version); ev.manifest[key].state='complete'; setStep(key,'ok'); }
+      catch(e) {
+        if(e.name==='AbortError') throw e;
+        Object.assign(ev.manifest[key],e.collection || {},{state:e.collection?.state || (e.status===403?'unavailable':'failed'),error:e.message});
+        delete ev.manifest[key].records;
+        const field={signins:'signIns',audits:'directoryAudits',ual:'ualRecords',oauth:'oauthGrants'}[key];
+        if(field && e.records) ev[field]=e.records;
+        ev.skipped.push(key); setStep(key,'fail',ev.manifest[key].state+': '+e.message);
       }
+      ev.manifest[key].completedAt=new Date().toISOString();
+      const field={signins:'signIns',audits:'directoryAudits',ual:'ualRecords',oauth:'oauthGrants'}[key];
+      if(field){const rows=ev[field];ev.manifest[key].count=rows.length;const dates=rows.map(r=>r.createdDateTime||r.activityDateTime).filter(Boolean).sort();ev.manifest[key].observedRange={start:dates[0]||null,end:dates.at(-1)||null};}
     }
-
-    await step("profile", async function () {
-      ev.user = await G.gfetch(A.graphV1 + "/users/" + encodeURIComponent(upn) +
-        "?$select=id,displayName,userPrincipalName,accountEnabled,createdDateTime,lastPasswordChangeDateTime,jobTitle,department,onPremisesSyncEnabled");
+    await step('profile',async()=>{ev.user=await G.gfetch(A.graphV1+'/users/'+encodeURIComponent(upn)+'?$select=id,displayName,userPrincipalName,accountEnabled,createdDateTime,lastPasswordChangeDateTime,jobTitle,department,onPremisesSyncEnabled');});
+    const uid=ev.user.id;
+    await step('signins',async()=>{
+      const result=await G.pages(A.graphBase+'/auditLogs/signIns?$top=500&$filter='+encodeURIComponent('userPrincipalName eq '+uq+' and createdDateTime ge '+start+' and createdDateTime le '+end+" and signInEventTypes/any(t:t eq 'interactiveUser' or t eq 'nonInteractiveUser')"),20);
+      ev.signIns=result.records; Object.assign(ev.manifest.signins,result); delete ev.manifest.signins.records;
+      if(result.state!=='complete') throw Object.assign(Error(result.error || 'Page limit reached; coverage is partial'),{collection:result,records:result.records});
+      setStep('signins','ok',result.records.length+' events');
     });
-    const uid = ev.user.id;
-
-    await step("signins", async function () {
-      ev.signIns = await G.gall(A.graphBase + "/auditLogs/signIns?$top=500&$filter=" +
-        encodeURIComponent("userPrincipalName eq " + uq + " and createdDateTime ge " + start), 20);
-      setStep("signins", "ok", ev.signIns.length + " events");
+    await step('audits',async()=>{
+      if(!uid) throw Error('Canonical user ID is unavailable');
+      const common='activityDateTime ge '+start+' and activityDateTime le '+end;
+      const actor=await G.pages(A.graphV1+'/auditLogs/directoryAudits?$top=500&$filter='+encodeURIComponent(common+' and initiatedBy/user/userPrincipalName eq '+uq),6);
+      const target=await G.pages(A.graphV1+'/auditLogs/directoryAudits?$top=500&$filter='+encodeURIComponent(common+" and targetResources/any(t:t/id eq '"+uid+"')"),6);
+      const seen=new Set(); ev.directoryAudits=[...actor.records,...target.records].filter(r=>{const k=r.id || JSON.stringify(r);if(seen.has(k))return false;seen.add(k);return true;});
+      ev.manifest.audits.queries=[actor,target].map(({records,...metadata})=>metadata);
+      if(actor.state!=='complete'||target.state!=='complete') throw Object.assign(Error('Actor/target audit coverage is incomplete'),{collection:{state:'partial'},records:ev.directoryAudits});
     });
-
-    await step("audits", async function () {
-      ev.directoryAudits = await G.gall(A.graphV1 + "/auditLogs/directoryAudits?$top=500&$filter=" +
-        encodeURIComponent("activityDateTime ge " + start + " and initiatedBy/user/userPrincipalName eq " + uq), 6);
-      setStep("audits", "ok", ev.directoryAudits.length + " events");
-    }, true);
-
-    await step("risky", async function () {
-      ev.riskyUsers = await G.gall(A.graphV1 + "/identityProtection/riskyUsers?$filter=" +
-        encodeURIComponent("userPrincipalName eq " + uq), 2);
-      ev.riskDetections = await G.gall(A.graphV1 + "/identityProtection/riskDetections?$filter=" +
-        encodeURIComponent("userPrincipalName eq " + uq), 4);
-    }, true);
-
-    await step("mfa", async function () {
-      const m = await G.gall(A.graphV1 + "/users/" + uid + "/authentication/methods", 2);
-      ev.authMethods = { loaded: true, methods: m };
-      setStep("mfa", "ok", m.length + " method(s)");
-    }, true);
-
-    await step("oauth", async function () {
-      const grants = await G.gall(A.graphV1 + "/users/" + uid + "/oauth2PermissionGrants", 4);
-      // resolve app names
-      const spIds = Array.from(new Set(grants.map(function (g) { return g.clientId; }))).slice(0, 40);
-      const names = {};
-      for (const id of spIds) {
-        try {
-          const sp = await G.gfetch(A.graphV1 + "/servicePrincipals/" + id + "?$select=displayName,appId");
-          names[id] = sp.displayName;
-        } catch (e) { names[id] = id; }
+    await step('risky',async()=>{
+      ev.riskyUsers=await all(A.graphV1+'/identityProtection/riskyUsers?$filter='+encodeURIComponent('userPrincipalName eq '+uq),2);
+      ev.riskDetections=await all(A.graphV1+'/identityProtection/riskDetections?$filter='+encodeURIComponent('userPrincipalName eq '+uq+' and detectedDateTime ge '+start+' and detectedDateTime le '+end),4);
+    });
+    await step('mfa',async()=>{if(!uid)throw Error('Canonical user ID is unavailable');ev.authMethods={loaded:true,methods:await all(A.graphV1+'/users/'+uid+'/authentication/methods',2)};});
+    await step('oauth',async()=>{
+      if(!uid)throw Error('Canonical user ID is unavailable');
+      ev.oauthGrants=await all(A.graphV1+'/users/'+uid+'/oauth2PermissionGrants',4);
+      for(const grant of ev.oauthGrants){
+        grant.principalUpn=upn;
+        try {const sp=await G.gfetch(A.graphV1+'/servicePrincipals/'+grant.clientId+'?$select=displayName,appId');grant.appName=sp.displayName;grant.appId=sp.appId;}
+        catch(e){if(e.name==='AbortError')throw e;grant.appName=grant.clientId;}
       }
-      ev.oauthGrants = grants.map(function (g) {
-        return { appName: names[g.clientId], clientId: g.clientId, scope: g.scope,
-          consentType: g.consentType, createdDateTime: null };
-      });
-      setStep("oauth", "ok", grants.length + " grant(s)");
-    }, true);
-
-    if (withUal) {
-      await step("ual", async function () {
-        const recs = await G.ualQuery(upn, start, end, function (status, sec) {
-          setStep("ual", "run", status + " · " + sec + "s");
-        });
-        ev.ualRecords = recs.map(function (r) {
-          return { createdDateTime: r.createdDateTime, operation: r.operation,
-            userPrincipalName: r.userPrincipalName, auditData: r.auditData || {} };
-        });
-        setStep("ual", "ok", ev.ualRecords.length + " events");
-      }, true);
-    } else {
-      setStep("ual", "skip", "disabled");
-      ev.skipped.push("ual");
-    }
+    });
+    if(withUal) await step('ual',async()=>{
+      const recs=await G.ualQuery(upn,start,end,(status,sec)=>{C.assert(version);setStep('ual','run',status+' · '+sec+'s');},meta=>Object.assign(ev.manifest.ual,meta));
+      ev.ualRecords=recs.map(r=>({...r,auditData:r.auditData || {}}));
+    }); else {ev.manifest.ual={state:'not-collected',window:{start,end},note:'Not selected'};ev.skipped.push('ual');setStep('ual','skip','not selected');}
     return ev;
   }
 
@@ -491,6 +456,9 @@
     const upn = (selectedUser && selectedUser.userPrincipalName) || upnInput.value.trim();
     if (!upn) return;
     if (scanning && !confirm("A scan is still running. Start a new one anyway? The running scan's progress will be discarded.")) return;
+    window.TriageContain.reset();
+    window.TriageCase.reset();
+    const version = window.TriageCase.generation;
     const days = parseInt($("daysSel").value, 10);
     const withUal = $("ualChk").checked;
     $("progTitle").textContent = "Collecting evidence for " + upn + "…";
@@ -506,13 +474,43 @@
         for (const s of STEPS) {
           setStep(s[0], "run");
           await new Promise(function (r) { setTimeout(r, 180); });
+          window.TriageCase.assert(version);
           setStep(s[0], "ok");
         }
       } else {
         ev = await collect(upn, days, withUal);
       }
-    } finally { scanning = false; }
+    } catch(e) { if(e.name !== 'AbortError') alert(e.message); return; }
+    finally { if(version === window.TriageCase.generation) scanning = false; }
+    if(version !== window.TriageCase.generation) return;
     showEvidence(ev);
+  }
+  const progressActions=document.createElement('div');progressActions.className='actions';
+  progressActions.innerHTML='<button class="btn" id="reviewCollected">Review collected evidence</button><button class="btn" id="cancelQuick">Cancel collection</button>';
+  $('screen-progress').append(progressActions);
+  $('reviewCollected').onclick=()=>{const ev=window.TriageCase.current;if(ev){window.TriageReport.show(ev,window.TriageDetections.analyze(ev));lastEvidence=ev;showScreen('screen-report');$('containFromReportBtn').style.display='none';}};
+  $('cancelQuick').onclick=()=>{const ev=window.TriageCase.current;window.TriageCase.reset();scanning=false;if(ev){for(const m of Object.values(ev.manifest))if(m.state==='running')m.state='cancelled';showEvidence(ev);}};
+  async function resumePages() {
+    const ev=lastEvidence;
+    if(scanning || !ev || ev.imported || ev.demo || ev.tenantId !== G.account?.tenantId) return;
+    window.TriageContain.reset();window.TriageCase.reset();window.TriageCase.current=ev;
+    const version=window.TriageCase.generation;scanning=true;
+    try {
+      for(const [key,m] of Object.entries(ev.manifest)) {
+        const field={signins:'signIns',audits:'directoryAudits',ual:'ualRecords',oauth:'oauthGrants'}[key];
+        if(!field)continue;
+        const queries=m.queries || [m];
+        for(const q of queries) {
+          if(!q.nextLink)continue;
+          const result=await G.pages(q.nextLink,20);window.TriageCase.assert(version);
+          const seen=new Set();ev[field]=[...ev[field],...result.records].filter(r=>{const id=r.id||JSON.stringify(r);if(seen.has(id))return false;seen.add(id);return true;});
+          const {records,...metadata}=result;Object.assign(q,metadata,{pages:(q.pages||0)+result.pages});
+        }
+        m.state=queries.every(q=>q.state==='complete')?'complete':'partial';m.count=ev[field].length;
+      }
+      showEvidence(ev);
+    }catch(e){if(e.name!=='AbortError')alert(e.message);}
+    finally{if(version===window.TriageCase.generation)scanning=false;}
   }
   // ---------- containment ----------
   // Runs off exactly the same search as triage: whatever account is selected
@@ -527,12 +525,12 @@
       try {
         user = await G.gfetch(A.graphV1 + "/users/" + encodeURIComponent(upn) +
           "?$select=id,displayName,userPrincipalName,accountEnabled");
-      } catch (e) { /* UPN alone is a valid Graph key - carry on */ }
+      } catch (e) { alert('Cannot resolve the target account: '+e.message); return; }
     }
     openContain(user);
   }
   function openContain(user) {
-    const same = lastEvidence && lastEvidence.upn &&
+    const same = lastEvidence && (demoMode || (lastEvidence.tenantId === G.account?.tenantId && lastEvidence.user?.id === user.id)) && lastEvidence.upn &&
       lastEvidence.upn.toLowerCase() === String(user.userPrincipalName || "").toLowerCase();
     window.TriageContain.start(user, {
       demo: demoMode,
@@ -540,22 +538,44 @@
     });
     showScreen("screen-contain");
   }
-  $("containFromReportBtn").addEventListener("click", function () {
+  $("containFromReportBtn").addEventListener("click", async function () {
+    if (lastEvidence?.imported) {
+      try {
+        const expected = {...lastEvidence.subject, tenantId:lastEvidence.tenantId, caseId:lastEvidence.caseId};
+        if (!G.account) await G.signIn();
+        if (!expected.tenantId || expected.tenantId !== G.account?.tenantId) throw Error("Sign in to the verified case tenant before responding.");
+        const resolved = await G.gfetch(A.graphV1+"/users/"+encodeURIComponent(expected.upn)+"?$select=id,userPrincipalName,displayName,accountEnabled");
+        if (!expected.objectId || resolved.id !== expected.objectId || lastEvidence.caseId !== expected.caseId) throw Error("The imported subject identity cannot be verified. Run a new quick check.");
+        demoMode=false; openContain(resolved);
+      } catch(e) { alert(e.message); }
+      return;
+    }
     const u = (selectedUser && lastEvidence && selectedUser.userPrincipalName === lastEvidence.upn)
       ? selectedUser : { userPrincipalName: (lastEvidence && lastEvidence.upn) || "" };
     if (!u.userPrincipalName) return;
-    openContain(u);
+    openContain({...u,...(lastEvidence?.user || {})});
   });
 
   // Analyze an evidence object and render the report. Shared by live triage,
   // the demo, and the imported-evidence viewer (js/import.js).
-  function showEvidence(ev) {
-    const findings = window.TriageDetections.analyze(ev);
+  function showEvidence(ev, analyzed) {
+    if (window.TriageCase.current !== ev) { window.TriageContain.reset(); window.TriageCase.reset(); }
+    window.TriageCase.ensure(ev);
+    window.TriageCase.current = ev;
+    if(!analyzed && window.TriageAnalysis.count(ev)>10000){
+      const version=window.TriageCase.generation;$('progTitle').textContent='Analyzing the case in the background…';showScreen('screen-progress');$('containFromReportBtn').style.display='none';
+      window.TriageAnalysis.run(ev,'quick',window.TriageCase.signal).then(findings=>{if(version===window.TriageCase.generation)showEvidence(ev,findings);}).catch(e=>{if(e.name!=='AbortError')alert(e.message);});return;
+    }
+    const findings = analyzed || window.TriageDetections.analyze(ev);
     lastEvidence = ev; lastFindings = findings;
     window.TriageReport.show(ev, findings);
+    let resume=$('resumeQuick');
+    if(!resume){resume=document.createElement('button');resume.id='resumeQuick';resume.className='btn';resume.textContent='Continue remaining pages';resume.onclick=resumePages;$('repMeta').after(resume);}
+    resume.hidden=!!ev.imported || !!ev.demo || !Object.values(ev.manifest).some(m=>m.nextLink || m.queries?.some(q=>q.nextLink));
     // Imported evidence has no live tenant behind it - containment would have
     // nothing to act on, so the hand-off button only shows for a live/demo run.
-    $("containFromReportBtn").style.display = ev.imported ? "none" : "";
+    $("containFromReportBtn").style.display = ev.imported && (!ev.tenantId || !ev.user?.id) ? "none" : "";
+    $("containFromReportBtn").textContent = ev.imported ? "Verify identity to respond" : "Contain this account";
     // A scan can finish while the analyst is on another tab. Don't yank them
     // over - the report quietly becomes where the Triage tab resumes.
     const watching = !shownScreen || shownScreen === "screen-import" || toolFor(shownScreen) === "triage";
@@ -592,7 +612,7 @@
   };
 
   // ---------- boot ----------
-  (async function () {
+  window.TriageApp.ready = (async function () {
     const params = new URLSearchParams(window.location.search);
 
     // Deep link: /?demo=1 jumps straight into the simulated tenant, so the demo

@@ -11,3 +11,19 @@ audit/
 evidence/
 .DS_Store
 node_modules/
+
+# Local beta credentials and generated runtime configuration
+beta-runtime/
+node_modules/
+test-results/
+
+# Portable desktop build artifacts (no case evidence in source control)
+desktop/runtime/
+desktop/.cache/
+desktop/.stage/
+desktop/out/
+BETA/downloads/
+
+# Local scratch: files waiting to be removed and Claude session screenshots
+_to_delete/
+Claude outputs/

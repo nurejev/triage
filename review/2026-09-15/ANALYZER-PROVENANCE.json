@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-09-15",
+  "localGitHead": "8fb921c5c8f5bdb208143ee27a3b5194a8ed315f",
+  "upstreamRevision": "unverified: no exact source revision was recorded in the supplied working tree",
+  "upstreamLicense": "unverified for the exact copied revision; do not infer from local MIT attribution or upstream current main",
+  "files": {
+    "BETA/js/blacklists.js": "7c941714e418ca9595286f5f3beadcb8b8d32c63a462b6048ee50bc299315524",
+    "BETA/js/analyzers.js": "034d7c684e1cad7ec578c8de3500768aab1fb588081ce0b503f7cc862c9550a5",
+    "js/detections.js": "c5eb97cb1b6b417d7f2b6c225762d58a000d8a80d3da37a39e5fe9d9432533a5"
+  },
+  "restriction": "No upstream refresh or public promotion performed. Resolve exact upstream revision and license before distributing updated derived code."
+}

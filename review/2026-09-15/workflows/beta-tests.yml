@@ -1,0 +1,49 @@
+name: beta-validation
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  beta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: beta-browser-results
+          path: test-results/
+  windows-smoke:
+    # The Windows build had only been cross-packaged from macOS; this proves it starts on Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - run: python desktop/scripts/prepare-runtime.py win32-x64
+      - run: npm run desktop:package:win
+      - name: Launch check
+        shell: pwsh
+        run: |
+          Expand-Archive BETA/downloads/Triage-Windows-x64.zip -DestinationPath smoke
+          $exe = Get-ChildItem smoke -Recurse -Filter Triage.exe | Select-Object -First 1
+          $out = & $exe.FullName --smoke-test 2>&1 | Out-String
+          Write-Host $out
+          if ($out -notmatch '"loaded":true' -or $out -notmatch '"ready":true') { throw 'Windows smoke test failed' }

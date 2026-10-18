@@ -15,6 +15,7 @@
   const CFG = window.TRIAGE_CONFIG || {};
   let health = null;      // cached /api/health result
   let probed = false;
+  let caseContext = null, queue = Promise.resolve();
 
   function configured() { return !!CFG.backendAppId; }
   function scope() { return "api://" + CFG.backendAppId + "/" + (health && health.apiScope || "Contain.Exchange"); }
@@ -50,23 +51,35 @@
 
   async function call(pathName, body) {
     if (!available()) throw new Error("No Exchange backend is available for this tenant.");
+    const version=window.TriageCase.generation;
+    const bound={...caseContext};
+    if(!bound.objectId || !bound.caseId || bound.tenantId !== G.account?.tenantId) throw Error("Resolve the case and target before requesting Exchange access.");
+    if(/\/(remove|clear|disable)$/.test(pathName) && !window.TriageContain?.armed) throw Error('Containment must be armed');
+    const operationId=crypto.randomUUID();
     const token = await G.token([scope()]);
+    window.TriageCase.assert(version);
     const r = await fetch(base() + pathName, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify(body || {})
+      signal:window.TriageCase.signal,
+      body: JSON.stringify({...body,...bound,operationId})
     });
     const j = await r.json().catch(function () { return null; });
     if (!r.ok) throw new Error((j && j.error) || ("HTTP " + r.status));
+    window.TriageCase.assert(version);
     return j;
   }
 
+  const execute=call;
+  call=function(path,body){const version=window.TriageCase.generation;const job=queue.then(()=>{window.TriageCase.assert(version);return execute(path,body);});queue=job.catch(()=>{});return job;};
   window.TriageBackend = {
+    bindCase(value){caseContext={...value};},
     configured: configured,
     probe: probe,
     available: available,
     get health() { return health; },
     scope: scope,
+    mailboxSnapshot: function(upn){return call("/exo/snapshot",{upn});},
     rulesList: function (upn) { return call("/exo/rules/list", { upn: upn }); },
     rulesRemove: function (upn, ruleId) { return call("/exo/rules/remove", { upn: upn, ruleId: ruleId }); },
     rulesDisable: function (upn, ruleId) { return call("/exo/rules/disable", { upn: upn, ruleId: ruleId }); },

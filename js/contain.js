@@ -21,9 +21,13 @@
   let ctx = null;       // triage evidence+findings for this user, when we have it
   let log = [];
   let st = {};          // step key -> { status, note }
+  let previewOnly = false;
+  let embedded = false; // hosted inside the BETA's Respond step: no header, no report buttons
   let checks = {};      // checklist item id -> true
   let tempPwd = "";
   let confirmCb = null;
+  let preservation = null;
+  let epoch = 0, caseIdentity = null, focusBeforeConfirm = null;
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -41,7 +45,8 @@
   // ---------------------------------------------------------------- log ---
   function logAdd(step, action, result, detail) {
     log.push({ ts: nowIso(), step: step, action: action, result: result,
-      detail: detail || "", target: target ? target.userPrincipalName : "", by: who(), demo: demo });
+      ...caseIdentity, detail: detail || "", target: target ? target.userPrincipalName : "", by: who(), demo: demo });
+    document.dispatchEvent(new CustomEvent("triage:containment-log", {detail:log[log.length - 1]}));
     renderLog();
     return log[log.length - 1];
   }
@@ -53,7 +58,7 @@
       const p = el.querySelector(".cs-pill");
       if (p) {
         p.className = "cs-pill " + status;
-        p.textContent = { pending: "not done", running: "running…", done: "done",
+        p.textContent = { pending: "verification pending", running: "running…", done: "done",
           failed: "failed", skipped: "skipped", manual: "manual" }[status] || status;
       }
       const n = el.querySelector(".cs-note");
@@ -106,16 +111,20 @@
 
   // -------------------------------------------------------- confirm modal --
   function confirmAction(title, body, okLabel, cb) {
+    const version = epoch;
+    focusBeforeConfirm = document.activeElement;
     $("cfTitle").textContent = title;
     $("cfBody").innerHTML = body;
     $("cfOk").textContent = okLabel;
     $("confirmModal").classList.add("open");
-    confirmCb = cb;
+    confirmCb = () => { if(version !== epoch || !armed) return; return cb(); };
+    $('cfCancel').focus();
   }
   function closeConfirm(run) {
     $("confirmModal").classList.remove("open");
     const cb = confirmCb; confirmCb = null;
-    if (run && cb) cb();
+    focusBeforeConfirm?.focus();
+    if (run && cb) Promise.resolve(cb()).catch(e=>{if(e.name!=="AbortError") alert(e.message);});
   }
 
   // ====================================================================
@@ -148,7 +157,7 @@
         if (demo) { await sleep(600); return "refresh tokens invalidated (simulated)"; }
         await G.gwrite(A.graphV1 + "/users/" + encodeURIComponent(target.id || target.userPrincipalName) +
           "/revokeSignInSessions", "POST", {});
-        return "refresh tokens invalidated";
+        return "Revocation accepted; previously issued access tokens may remain valid";
       }
     },
     {
@@ -166,7 +175,9 @@
         if (demo) { await sleep(500); return "accountEnabled = false (simulated)"; }
         await G.gwrite(A.graphV1 + "/users/" + encodeURIComponent(target.id || target.userPrincipalName),
           "PATCH", { accountEnabled: false });
-        return "accountEnabled = false";
+        const readback = await G.gfetch(A.graphV1+"/users/"+encodeURIComponent(target.id)+"?$select=id,accountEnabled");
+        if(readback.id !== target.id || readback.accountEnabled !== false) throw Error("Disable request accepted but readback did not confirm disabled state");
+        return "Verified: accountEnabled = false";
       },
       extra: { label: "Re-enable account", danger: true,
         confirm: "Only re-enable once containment is verified: sessions revoked, password reset, " +
@@ -175,7 +186,9 @@
           if (demo) { await sleep(400); return "accountEnabled = true (simulated)"; }
           await G.gwrite(A.graphV1 + "/users/" + encodeURIComponent(target.id || target.userPrincipalName),
             "PATCH", { accountEnabled: true });
-          return "accountEnabled = true";
+          const readback = await G.gfetch(A.graphV1+"/users/"+encodeURIComponent(target.id)+"?$select=id,accountEnabled");
+          if(readback.id !== target.id || readback.accountEnabled !== true) throw Error("Re-enable request accepted but readback did not confirm enabled state");
+          return "Verified: accountEnabled = true";
         } }
     },
     {
@@ -330,6 +343,7 @@
   }
 
   function stepCard(s) {
+    if(s.key === "rules" && window.TriageWorkspace?.mailboxCard) return window.TriageWorkspace.mailboxCard();
     const stat = (st[s.key] && st[s.key].status) || (s.kind === "manual" || s.kind === "gate" ? "manual" : "pending");
     const flag = flagFor(s.key);
     let body = "";
@@ -374,7 +388,7 @@
       "<h2>" + esc(s.title) + "</h2>" +
       (flag ? '<span class="cs-flag" title="' + esc(flag) + '">flagged by triage</span>' : "") +
       '<span class="hspacer"></span><span class="cs-pill ' + stat + '">' +
-      ({ pending: "not done", done: "done", failed: "failed", skipped: "skipped", manual: "manual" }[stat] || stat) +
+      ({ pending: "verification pending", done: "done", failed: "failed", skipped: "skipped", manual: "manual" }[stat] || stat) +
       "</span></div>" +
       '<p class="muted cs-why">' + esc(s.why) + "</p>" +
       '<div class="cs-note mini"></div>' +
@@ -413,7 +427,7 @@
     const B = window.TriageBlast;
     if (!B) return "";
     const ualReady = B.ualAvailable({ demo: demo, evidence: ctx && ctx.evidence });
-    return '<div class="card"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">' +
+    return '<div class="card"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;flex-wrap:wrap">' +
       '<h2 style="margin:0">Blast radius — the fifteen checks</h2>' +
       '<span class="mini muted" id="blastDone">' + blastDoneCount() + " of 15 done</span>" +
       '<span class="hspacer" style="margin-left:auto"></span>' +
@@ -422,6 +436,7 @@
         return '<option value="' + d + '"' + (d === blastDays ? " selected" : "") + ">" + d + " days</option>";
       }).join("") + "</select></label>" +
       '<button class="btn small primary" data-act="blastAll">Run all checks</button>' +
+      '<button class="btn small" data-act="blastStop">Stop scanning</button>' +
       '<button class="btn small lemon" data-act="blastExportAll">Export all evidence</button></div>' +
       '<p class="muted mini">Containment without mapping is a false sense of security. Work the list to the ' +
       "end even when you are sure you found the persistence on item 4 — the second mechanism is usually a " +
@@ -450,7 +465,7 @@
         ? '<span class="mini muted">No API — check it in the portal.</span>'
         : '<button class="btn small" data-act="blastRun" data-key="' + c.key + '">' +
           (r ? "Re-run" : "Run check") + "</button>") +
-      (r && !r.failed ? '<button class="btn small lemon" data-act="blastExport" data-key="' + c.key +
+      (r && !r.failed && !r.running ? '<button class="btn small lemon" data-act="blastExport" data-key="' + c.key +
         '">Export</button>' : "") +
       (manual && c.ps ? '<button class="btn small" data-act="blastPs" data-key="' + c.key +
         '">Copy PowerShell</button>' : "") +
@@ -481,23 +496,35 @@
   async function blastRun(key, quiet) {
     const c = window.TriageBlast.checks.filter(function (x) { return x.key === key; })[0];
     if (!c || !c.run) return;
+    const version = epoch, requestedDays=blastDays;
     blastResults[key] = { running: true };
     refreshBlast();
     try {
       const res = await c.run(blastCtx());
+      if(version !== epoch || requestedDays !== blastDays) return;
       blastResults[key] = res;
       checks["blast-" + (c.n - 1)] = true;
       if (!quiet) logAdd("blast", "Ran blast-radius check " + c.n + " · " + c.title, "ok", res.summary);
     } catch (e) {
+      if(version !== epoch || requestedDays !== blastDays) return;
       blastResults[key] = { failed: true, summary: (e && e.message) || String(e) };
       logAdd("blast", "Blast-radius check " + c.n + " · " + c.title + " failed", "fail", (e && e.message) || String(e));
     }
     refreshBlast();
   }
+  function stopBlast(){
+    epoch++;const C=window.TriageCase, saved=C?.current;if(C){C.reset();C.current=saved;}
+    for(const key of Object.keys(blastResults))if(blastResults[key].running)blastResults[key]={failed:true,summary:'Stopped by analyst; this check is incomplete.'};
+    armed=false;previewOnly=true;
+    window.triageNative?.cancel().catch(()=>{});
+    logAdd('blast','Stopped scanning','note','Completed results retained. Reconnect before running more checks.');render();
+  }
   async function blastAll() {
     const list = window.TriageBlast.checks.filter(function (c) { return !!c.run; });
     logAdd("blast", "Running all blast-radius checks", "note", list.length + " automated checks over " + blastDays + " days");
-    for (const c of list) await blastRun(c.key, true);
+    const version = epoch;
+    for (const c of list) { if(version !== epoch) return; await blastRun(c.key, true); }
+    if(version !== epoch)return;
     const done = list.filter(function (c) { return blastResults[c.key] && !blastResults[c.key].failed; });
     const hot = done.filter(function (c) { return blastResults[c.key].alert; });
     logAdd("blast", "Blast-radius sweep complete", hot.length ? "ok" : "ok",
@@ -507,7 +534,7 @@
   function blastExport(key) {
     const c = window.TriageBlast.checks.filter(function (x) { return x.key === key; })[0];
     const r = blastResults[key];
-    if (!c || !r || r.failed) return;
+    if (!c || !r || r.failed || r.running) return;
     download("LimonContainment-blast" + c.n + "-" + c.key + "-" + (target.userPrincipalName || "user") +
       "-" + stamp() + ".json", "application/json", JSON.stringify({
         check: c.n, title: c.title, mailbox: target.userPrincipalName, windowDays: blastDays,
@@ -516,7 +543,7 @@
         summary: r.summary, caveat: r.caveat || "", count: r.count, detail: r.rows, raw: r.raw
       }, null, 1));
     logAdd("blast", "Exported evidence for check " + c.n + " · " + c.title, "ok", r.summary);
-    tickEvidence(c);
+    // A check export preserves only its subset, not the entire evidence category.
   }
   function blastExportAll() {
     const B = window.TriageBlast;
@@ -525,10 +552,10 @@
     B.checks.forEach(function (c) {
       const r = blastResults[c.key];
       bundle.checks.push({ check: c.n, title: c.title, mode: c.mode,
-        status: r ? (r.failed ? "failed" : "answered") : (c.run ? "not run" : "manual"),
+        status: r ? (r.running ? "running" : r.failed ? "failed" : "answered") : (c.run ? "not run" : "manual"),
         summary: r ? r.summary : "", caveat: (r && r.caveat) || "", count: r ? r.count : null,
         detail: r ? r.rows : null, raw: r ? r.raw : null });
-      if (r && !r.failed) tickEvidence(c, true);
+      // Preservation checklist remains an explicit analyst decision.
     });
     download("LimonContainment-blastradius-" + (target.userPrincipalName || "user") + "-" + stamp() + ".json",
       "application/json", JSON.stringify(bundle, null, 1));
@@ -580,13 +607,13 @@
   // ---- evidence + communication cards ------------------------------------
   function evidenceCard() {
     const auto = EVIDENCE.filter(function (e) { return e.checks; }).length;
-    return '<div class="card"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">' +
+    return '<div class="card"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;flex-wrap:wrap">' +
       '<h2 style="margin:0">Evidence to preserve</h2>' +
       '<span class="mini muted" id="evidDone"></span></div>' +
       '<p class="muted mini">The exports are what survive the remediation — this is what forensics, audit ' +
       "and, if it goes that far, the regulator will work from. " + auto + " of these " + EVIDENCE.length +
-      " are produced by the blast-radius checks above and tick themselves when you export the check that " +
-      "makes them; the rest you collect by hand.</p>" +
+      " may include records from the blast-radius checks above. Confirm the complete category was preserved " +
+      "before marking it; exporting one check does not mark the category complete.</p>" +
       '<div class="cl-grid">' + EVIDENCE.map(function (e) {
         const cid = "evid-" + e.id;
         const src = e.checks
@@ -602,7 +629,7 @@
       }).join("") + "</div></div>";
   }
   function commsCard() {
-    return '<div class="card"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">' +
+    return '<div class="card"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;flex-wrap:wrap">' +
       '<h2 style="margin:0">Communication</h2>' +
       '<span class="mini muted" id="commDone"></span>' +
       '<span class="hspacer" style="margin-left:auto"></span>' +
@@ -610,7 +637,7 @@
       '<p class="muted mini">Do not talk to the compromised user on the compromised channel. The IR engineer ' +
       "surfaces facts; the DPO, legal and leadership decide what is notifiable. Each template comes prefilled " +
       "with what this session already knows — the account, what you contained, what the checks flagged — with " +
-      "blanks where judgement is needed. Downloading one ticks it.</p>" +
+      "blanks where judgement is needed. Downloading does not send a message or mark communication complete.</p>" +
       '<div class="cl-grid">' + COMMS.map(function (c) {
         const cid = "comm-" + c.id;
         return '<div class="cl-item' + (checks[cid] ? " on" : "") + '">' +
@@ -632,7 +659,7 @@
     const top = ((ctx && ctx.findings) || []).filter(function (x) {
       return x.Severity === "Critical" || x.Severity === "High";
     }).slice(0, 8).map(function (x) { return x.Severity + ": " + x.Title; });
-    const name = (target.displayName || "").trim();
+    const name = (target?.displayName || "").trim();
     // Fall back to the mailbox local part, capitalised, so the call script
     // still addresses a person even when we only ever had a UPN string.
     const local = String(target.userPrincipalName || "").split("@")[0].split(/[._-]/)[0];
@@ -661,13 +688,7 @@
       EVIDENCE.filter(function (e) { return e.template === key; })[0];
     download("LimonContainment-" + key + "-" + (target.userPrincipalName || "user") + "-" + stamp() + ".md",
       "text/markdown;charset=utf-8", fn(templateFacts()));
-    const cid = (COMMS.indexOf(item) >= 0 ? "comm-" : "evid-") + item.id;
-    if (!checks[cid]) {
-      checks[cid] = true;
-      logAdd("checklist", "Ticked: " + item.title, "note", "template downloaded");
-    } else {
-      logAdd("checklist", "Downloaded template: " + item.title, "note", "");
-    }
+    logAdd("comms", "Downloaded template: " + item.title, "note", "Draft only; not sent. Record actual communication separately.");
     renderChecklistTicks();
   }
   function tmplAll() {
@@ -691,6 +712,7 @@
   // but for another tenant, or absent (in which case the mailbox step is
   // PowerShell). Nobody should have to guess mid-incident.
   function backendLine() {
+    if(window.TriageWorkspace) return '<p class="mini muted" style="margin:8px 0 0">Mailbox collection uses the local app. Exchange changes currently require the reviewed PowerShell steps in the mailbox card.</p>';
     const B = window.TriageBackend;
     if (demo) return '<p class="mini muted" style="margin:8px 0 0">Exchange backend: simulated for the demo - ' +
       "inbox rules, forwarding and delegates are staged, not real.</p>";
@@ -713,7 +735,7 @@
 
   function render() {
     const u = target || {};
-    $("containHead").innerHTML =
+    $("containHead").innerHTML = embedded ? "" :
       '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">' +
       "<div><h1>Containment · " + esc(u.userPrincipalName || "") + "</h1>" +
       '<span class="mini muted">' + esc(u.displayName || "") +
@@ -736,13 +758,14 @@
         ? "This tab holds delegated write permissions for " + esc(u.userPrincipalName || "this account") +
           ". Actions below take effect immediately in your tenant."
         : (demo ? "Demo tenant - arm it to walk the runbook with simulated results."
+                : previewOnly ? "Viewing preserved evidence. Connect account checks before requesting response permissions."
                 : "Triage signed you in read-only. Arming requests the containment scopes " +
                   "(revoke sessions, user read/write, authentication methods, delegated permission grants). " +
                   "An administrator consents once per tenant.")) + "</span></div>" +
       '<span class="hspacer" style="margin-left:auto"></span>' +
       (armed ? '<span class="cs-pill done">write access held</span>'
              : '<button class="btn primary" data-act="arm">Arm containment</button>') +
-      "</div>" + backendLine() + "</div>";
+      "</div>" + (!demo && !armed ? '<label class="mini"><input type="checkbox" id="journalConsent"> Store an action journal on this device before sending changes. No passwords or tokens are stored. Export it before deleting device copies.</label>' : '') + backendLine() + "</div>";
 
     // --- triage context
     if (ctx && ctx.findings) {
@@ -757,7 +780,7 @@
         (top.length ? "<ul class=\"helplist mini\">" + top.map(function (f) {
           return "<li><b>" + esc(f.Severity) + "</b> — " + esc(f.Title) + "</li>";
         }).join("") + "</ul>" : '<p class="mini muted">No critical or high findings - contain anyway if you have another reason to.</p>') +
-        '<button class="btn small" data-act="backReport">Back to the report</button></div>';
+        (embedded ? "" : '<button class="btn small" data-act="backReport">Back to the report</button>') + "</div>";
     }
 
     // --- the runbook
@@ -777,8 +800,9 @@
 
     h += commsCard();
 
-    h += '<div class="card"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0">Action log</h2>' +
+    h += '<div class="card"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px"><h2 style="margin:0">Action log</h2>' +
       '<span class="mini muted" id="clogCount"></span><span class="hspacer" style="margin-left:auto"></span>' +
+      '<button class="btn small" data-act="dlJournal">Device journal JSON</button>' +
       '<button class="btn small" data-act="dlLogCsv">CSV</button>' +
       '<button class="btn small" data-act="dlLogMd">Markdown</button></div>' +
       '<p class="mini muted">Every executed action and every box ticked, timestamped in UTC and stamped with the ' +
@@ -793,6 +817,7 @@
     STEPS.forEach(function (s) {
       if (st[s.key]) setStatus(s.key, st[s.key].status, st[s.key].note);
     });
+    document.dispatchEvent(new CustomEvent("triage:response-rendered"));
   }
 
   // ====================================================================
@@ -856,6 +881,8 @@
   }
 
   function onAct(act, key, el) {
+    if(previewOnly && ["arm","run","extra","load","blastRun","blastAll","loadUal","delmethod","delgrant","delrule","disrule","clearfwd","deldeleg"].includes(act)){window.TriageWorkspace?.connect();return;}
+    if(act==='dlJournal') return window.TriageJournal.history(caseIdentity.caseId).then(rows=>download('triage-action-journal-'+caseIdentity.caseId+'.json','application/json',JSON.stringify({case:caseIdentity,records:rows},null,2))).catch(e=>alert(e.message));
     const step = STEPS.filter(function (s) { return s.key === key; })[0];
     if (act === "arm") return arm();
     if (act === "newSearch") return window.TriageApp.containSearch();
@@ -877,6 +904,7 @@
     if (act === "deldeleg") return delDelegate(el.getAttribute("data-id"));
     if (act === "dlrules") return exportMailboxEvidence();
     if (act === "blastRun") return blastRun(key);
+    if (act === "blastStop") return stopBlast();
     if (act === "blastAll") return blastAll();
     if (act === "blastExport") return blastExport(key);
     if (act === "blastExportAll") return blastExportAll();
@@ -893,6 +921,7 @@
   // seconds. Never implicit: the analyst asks for it, and gets a status while
   // it runs.
   async function loadUalNow() {
+    const version = epoch;
     const s = $("ualStatus");
     if (s) s.textContent = " · starting…";
     logAdd("blast", "Started a Unified Audit Log query", "note", "window " + blastDays + " days");
@@ -905,12 +934,15 @@
       if (b) b.remove();
       for (const k of ["mailitems", "spo", "teams"]) await blastRun(k, true);
     } catch (e) {
+      if(version !== epoch) return;
       if (s) s.textContent = " · failed: " + ((e && e.message) || e);
       logAdd("blast", "Unified Audit Log query failed", "fail", (e && e.message) || String(e));
     }
   }
 
   async function arm() {
+    const version = epoch;
+    if(!demo && (!target?.id || !G.account?.tenantId || (caseIdentity?.tenantId && caseIdentity.tenantId !== G.account.tenantId))) { alert("Resolve the account in the signed-in tenant before arming."); return; }
     if (demo) {
       armed = true;
       logAdd("arm", "Containment armed (demo tenant)", "note", "no real permissions requested");
@@ -918,7 +950,19 @@
       return;
     }
     try {
+      if (!$("journalConsent")?.checked) throw Error("Select the action-journal checkbox before arming.");
+      let reason='';
+      if(!checks.preserve){reason=prompt('Evidence preservation has not been confirmed. Enter the incident-authorized reason to contain now, or cancel and preserve evidence first.');if(!reason?.trim())return;}
+      preservation={confirmed:!!checks.preserve,exceptionReason:reason.trim().slice(0,500),approvedBy:who(),approvedAt:nowIso()};
+      const decisionIdentity={...caseIdentity};
+      await window.TriageJournal.enable();
+      if(version !== epoch)return;
+      await window.TriageJournal.append({...decisionIdentity,state:'preservation-decision',preservation});
+      if(version !== epoch)return;
+      logAdd('preserve',checks.preserve?'Preservation confirmed':'Emergency containment before preservation','note',reason || 'Analyst marked evidence preserved');
+      if(version !== epoch) return;
       await G.elevate();
+      if(version !== epoch) return;
       armed = true;
       logAdd("arm", "Containment armed", "ok", "write scopes granted to this tab: " + A.containScopes.join(", "));
       // Separate consent for the Exchange backend, so arming Graph containment
@@ -954,15 +998,18 @@
               esc((G.account && G.account.username || "").split("@")[1] || "your tenant") + ".</b></p>"),
       isExtra ? spec.label : (step.btn || "Run"),
       async function () {
+        const version = epoch;
         setStatus(step.key, "running");
         const btns = document.querySelectorAll('#cs-' + step.key + ' [data-act="run"],#cs-' + step.key + ' [data-act="extra"]');
         btns.forEach(function (b) { b.disabled = true; });
         try {
           const note = await spec.run();
-          setStatus(step.key, isExtra ? "pending" : "done", note);
-          logAdd(step.key, (isExtra ? spec.label : step.title), "ok", note);
+          if(version !== epoch) return;
+          setStatus(step.key, isExtra ? "pending" : demo || note.startsWith("Verified:") ? "done" : "pending", note + (demo ? '' : ' Request accepted; verify effective state.'));
+          logAdd(step.key, (isExtra ? spec.label : step.title), demo ? "simulated" : note.startsWith("Verified:") ? "verified" : "verification-pending", note);
           if (step.key === "password") showPassword();
         } catch (e) {
+          if(version !== epoch) return;
           const msg = (e && e.message) || String(e);
           setStatus(step.key, "failed", msg);
           logAdd(step.key, (isExtra ? spec.label : step.title), "fail", msg);
@@ -1003,6 +1050,7 @@
   }
 
   async function loadMethods() {
+    const version = epoch;
     const out = $("out-methods");
     out.innerHTML = '<p class="mini muted">Loading…</p>';
     try {
@@ -1015,9 +1063,11 @@
           encodeURIComponent(target.id || target.userPrincipalName) + "/authentication/methods");
         methods = (b && b.value) || [];
       }
+      if(version !== epoch) return;
       renderMethods(methods);
       logAdd("methods", "Listed authentication methods", "ok", methods.length + " method(s)");
     } catch (e) {
+      if(version !== epoch) return;
       out.innerHTML = '<p class="mini" style="color:var(--sev-critical)">' + esc(e.message || String(e)) + "</p>";
       logAdd("methods", "Listing authentication methods failed", "fail", e.message || String(e));
     }
@@ -1054,14 +1104,17 @@
     confirmAction("Remove authentication method", "<p>Remove <b>" + esc(label) + "</b> from " +
       esc(target.userPrincipalName) + "?</p><p class=\"mini muted\">Screenshot it first if it is attacker-added " +
       "evidence — this cannot be undone.</p>", "Remove method", async function () {
+        const version=epoch;
       try {
         if (demo) { await sleep(350); demoDropMethod(id); }
         else await G.gwrite(A.graphV1 + "/users/" + encodeURIComponent(target.id || target.userPrincipalName) +
           "/authentication/" + path + "/" + encodeURIComponent(id), "DELETE");
+        if(version !== epoch) return;
         logAdd("methods", "Removed authentication method", "ok", label);
-        setStatus("methods", "done", "method removed");
+        setStatus("methods", demo ? "done" : "pending", "Removal accepted; verify the refreshed method list");
         loadMethods();
       } catch (e) {
+        if(version !== epoch) return;
         logAdd("methods", "Removing authentication method failed", "fail", label + " — " + (e.message || e));
         alert("Could not remove the method: " + (e.message || e));
       }
@@ -1075,26 +1128,27 @@
   let mailbox = null;   // { rules, forwarding, delegates }
 
   async function loadMailbox() {
+    const version = epoch;
     const out = $("out-rules");
     out.innerHTML = '<p class="mini muted">Asking the Exchange backend…</p>';
     try {
       if (demo) {
         await sleep(600);
+        if(version !== epoch) return;
         mailbox = demoMailbox();
       } else {
         const B = window.TriageBackend;
-        const [r, f, d] = await Promise.all([
-          B.rulesList(target.userPrincipalName),
-          B.forwardingGet(target.userPrincipalName),
-          B.delegatesList(target.userPrincipalName)
-        ]);
-        mailbox = { rules: r.rules || [], forwarding: f, delegates: d.delegates || [] };
+        const snapshot=await B.mailboxSnapshot(target.userPrincipalName);
+        if(version !== epoch) return;
+        if(!Array.isArray(snapshot.rules) || !Array.isArray(snapshot.delegates) || !snapshot.forwarding)throw Error('Invalid mailbox snapshot response');
+        mailbox=snapshot;
       }
       renderMailbox();
       logAdd("rules", "Read mailbox rules, forwarding and delegates", "ok",
         mailbox.rules.length + " rule(s), " + mailbox.delegates.length + " delegate(s)" +
         (fwdActive() ? ", forwarding ACTIVE" : ", no forwarding"));
     } catch (e) {
+      if(version !== epoch) return;
       out.innerHTML = '<p class="mini" style="color:var(--sev-critical)">' + esc(e.message || String(e)) +
         '</p><p class="mini muted">Use the PowerShell below instead - the commands are prefilled with this mailbox.</p>';
       logAdd("rules", "Reading mailbox settings failed", "fail", e.message || String(e));
@@ -1195,12 +1249,15 @@
       (demo ? '<p class="mini muted">Demo tenant: nothing is actually changed.</p>'
             : '<p class="mini"><b>This changes the mailbox immediately.</b> Export the evidence JSON first if you have not.</p>'),
       okLabel, async function () {
+        const version=epoch;
         try {
           const note = await fn();
+          if(version !== epoch) return;
           logAdd("rules", logLabel, "ok", note || "");
-          setStatus("rules", "done", note || "");
+          setStatus("rules", demo ? "done" : "pending", "Request accepted; verify the refreshed mailbox state");
           loadMailbox();
         } catch (e) {
+        if(version !== epoch) return;
           logAdd("rules", logLabel + " failed", "fail", e.message || String(e));
           alert("Exchange refused the change: " + (e.message || e));
         }
@@ -1256,6 +1313,7 @@
 
   // ------------------------------------------------------------ OAuth grants --
   async function loadGrants() {
+    const version = epoch;
     const out = $("out-oauth");
     out.innerHTML = '<p class="mini muted">Loading…</p>';
     try {
@@ -1271,12 +1329,15 @@
             const sp = await G.gfetch(A.graphV1 + "/servicePrincipals/" + g.clientId + "?$select=displayName,appId,verifiedPublisher");
             g.appName = sp.displayName;
             g.publisher = (sp.verifiedPublisher && sp.verifiedPublisher.displayName) || "";
-          } catch (e) { g.appName = g.clientId; }
+          } catch (e) {
+      if(version !== epoch) return; g.appName = g.clientId; }
         }
       }
+      if(version !== epoch) return;
       renderGrants(grants);
       logAdd("oauth", "Listed OAuth permission grants", "ok", grants.length + " grant(s)");
     } catch (e) {
+      if(version !== epoch) return;
       out.innerHTML = '<p class="mini" style="color:var(--sev-critical)">' + esc(e.message || String(e)) + "</p>";
       logAdd("oauth", "Listing OAuth grants failed", "fail", e.message || String(e));
     }
@@ -1319,13 +1380,16 @@
       '<p class="mini muted">Export the grant detail first (app ID, scopes, consent timestamp) — it is ' +
       "evidence. If this is a tenant-wide grant it affects every user of that application.</p>",
       "Revoke grant", async function () {
+        const version=epoch;
         try {
           if (demo) { await sleep(350); demoDropGrant(id); }
           else await G.gwrite(A.graphV1 + "/oauth2PermissionGrants/" + encodeURIComponent(id), "DELETE");
+          if(version !== epoch) return;
           logAdd("oauth", "Revoked OAuth permission grant", "ok", label);
-          setStatus("oauth", "done", "grant revoked");
+          setStatus("oauth", demo ? "done" : "pending", "Revocation accepted; verify the refreshed grants");
           loadGrants();
         } catch (e) {
+        if(version !== epoch) return;
           logAdd("oauth", "Revoking OAuth grant failed", "fail", label + " — " + (e.message || e));
           alert("Could not revoke the grant: " + (e.message || e));
         }
@@ -1379,12 +1443,12 @@
   function demoMailbox() { return demoM2(); }
 
   // --------------------------------------------------------------- exports --
-  function exportEvidence() {
+  async function exportEvidence() {
     if (!ctx) return;
     const copy = Object.assign({}, ctx.evidence, { findings: ctx.findings,
       generated: nowIso(), tool: "Limon-IT M365 Triage build " + window.TRIAGE_BUILD });
     download("LimonTriage-evidence-" + (target.userPrincipalName || "user") + "-" + stamp() + ".json",
-      "application/json", JSON.stringify(copy, null, 1));
+      "application/json", JSON.stringify(await window.TriageCase.bundle({...copy,actionHistory:log}), null, 1));
     checks.preserve = true;
     logAdd("preserve", "Exported triage evidence JSON", "ok", "");
     const cb = document.querySelector('[data-tick="preserve"]');
@@ -1395,7 +1459,7 @@
     const lines = [cols.join(",")];
     log.forEach(function (e) {
       lines.push(cols.map(function (c) {
-        return '"' + String(e[c] == null ? "" : e[c]).replace(/"/g, '""') + '"';
+        return '"' + String(e[c] == null ? "" : e[c]).replace(/^[=+@\-\t\r]/, "'$&").replace(/"/g, '""') + '"';
       }).join(","));
     });
     download("LimonContainment-" + (target.userPrincipalName || "user") + "-" + stamp() + ".csv",
@@ -1457,12 +1521,16 @@
   function start(user, opts) {
     opts = opts || {};
     // Probe once per session; render again if the answer changes the screen.
-    if (window.TriageBackend && !opts.demo) {
+    if (window.TriageBackend && !opts.demo && !opts.preview) {
       window.TriageBackend.probe().then(function () {
         if ($("screen-contain").classList.contains("active")) render();
       });
     }
-    const same = target && user && target.userPrincipalName === user.userPrincipalName;
+    const nextIdentity = {tenantId: opts.context?.evidence?.tenantId || (opts.demo ? 'demo' : G.account?.tenantId),objectId:user?.id || (opts.demo ? user?.userPrincipalName : ''),caseId:opts.context?.evidence?.caseId || crypto.randomUUID()};
+    const same = window.TriageCase.same(caseIdentity,nextIdentity) && demo === !!opts.demo;
+    if(!same) { epoch++; window.TriageCase.reset(); closeConfirm(false); }
+    caseIdentity = nextIdentity;
+    if(window.TriageBackend) window.TriageBackend.bindCase(nextIdentity);
     if (!same) {
       log = []; st = {}; checks = {}; tempPwd = "";
       demoM = null; demoG = null; demoMB = null; mailbox = null;
@@ -1474,6 +1542,9 @@
     target = user;
     demo = !!opts.demo;
     ctx = opts.context || null;
+    previewOnly = !!opts.preview;
+    embedded = !!opts.embedded;
+    window.TriageCase.current = ctx?.evidence || {...caseIdentity,user:target,upn:target.userPrincipalName,subject:{upn:target.userPrincipalName,objectId:target.id}};
     armed = armed && same && (demo || G.elevated);
     if (!same) logAdd("start", "Containment opened for " + user.userPrincipalName, "note",
       ctx ? "triage evidence in context" : "no triage evidence in this session");
@@ -1488,5 +1559,7 @@
     if (e.target.id === "confirmModal") closeConfirm(false);
   });
 
-  window.TriageContain = { start: start, get target() { return target; } };
+  function reset() { preservation=null;window.TriageJournal?.disable(); epoch++; armed=false; target=null; ctx=null; caseIdentity=null; log=[]; st={}; checks={}; tempPwd=''; mailbox=null; blastResults={}; closeConfirm(false); window.TriageBlast?.reset(); if($('containBody')) $('containBody').replaceChildren(); }
+  document.addEventListener('keydown',e=>{if(!$('confirmModal').classList.contains('open'))return;if(e.key==='Escape')closeConfirm(false);if(e.key==='Tab'){const buttons=[$('cfCancel'),$('cfOk')];e.preventDefault();buttons[document.activeElement===buttons[0]?1:0].focus();}});
+  window.TriageContain = { start, reset, mailboxPowerShell:()=>psFor(STEPS.find(s=>s.key==="rules")), get preview(){return previewOnly;}, disarm(){epoch++;armed=false;closeConfirm(false);if(target)render();}, get target() { return target; }, get history(){return log.slice();}, get identity(){return caseIdentity;}, get armed(){return armed;},get preservation(){return preservation;} };
 })();

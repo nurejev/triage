@@ -1,9 +1,9 @@
 // Unit test for the BETA MAS engine + import, run against the demo tenant.
 import { readFileSync } from "fs";
-const R = "/sessions/funny-brave-bohr/mnt/triage/BETA";
+const R = new URL(".", import.meta.url).pathname;
 const win = {};
 global.window = win;
-for (const f of ["js/blacklists.js", "js/analyzers.js", "js/demo.js", "js/import.js"]) {
+for (const f of ["js/evidence.js", "js/blacklists.js", "js/exchange-analysis.js", "js/analyzers.js", "js/demo.js", "js/import.js"]) {
   new Function("window", readFileSync(R + "/" + f, "utf8"))(win);
 }
 let fails = 0;
@@ -36,7 +36,7 @@ ok(res.users.length >= 3, "multiple accounts implicated");
 // sign-in analyzer
 ok(has(/AiTM phishing pattern/i), "OfficeHome AiTM fingerprint detected");
 ok(has(/different IPs within 30 seconds/i), "30-second AiTM relay pair detected");
-ok(F.some(f => f.Severity === "Critical" && /30 seconds/.test(f.Title)), "AiTM relay is Critical");
+ok(F.some(f => f.Severity === "Medium" && /30 seconds/.test(f.Title)), "rapid IP changes require review and are not asserted as confirmed AiTM");
 ok(has(/Authenticated SMTP/i), "legacy SMTP detected");
 ok(has(/error 50126/i), "password-spray error code detected");
 ok(has(/Device-code authentication to Microsoft Authentication Broker/i), "device-code-to-broker detected");
@@ -50,7 +50,7 @@ ok(F.some(f => /federation/i.test(f.Title) && f.Severity === "Critical"), "feder
 
 // UAL analyzer
 ok(has(/Suspicious inbox rule/i), "malicious inbox rule detected");
-ok(has(/forwards\/redirects externally/i), "external forward in inbox rule flagged");
+ok(has(/forwards\/redirects mail/i), "forwarding in inbox rule flagged without assuming destination is external");
 ok(has(/Mailbox forwarding configured/i), "Set-Mailbox forwarding detected");
 ok(has(/Mass HardDelete/i), "mass hard-delete volumetric rule fired");
 ok(has(/whole-folder mailbox sync/i) || has(/MailItemsAccessed .* Sync/i), "MailItemsAccessed sync detected");
@@ -77,6 +77,95 @@ ok(F.some(f => /no second factor/i.test(f.Title) && f.Severity === "High"), "adm
 const jan = res.users.find(u => /jan.devries/.test(u.user));
 ok(jan && jan.total >= 3, "rollup attributes multiple findings to jan.devries");
 ok(res.users[0].Critical + res.users[0].High > 0, "worst account sorts to the top");
+
+ok(has(/Session ID reused/i), "session replay across IPs detected from sessionId");
+ok(F.some(f => /AiTM phishing pattern/i.test(f.Title) && f.Severity === "High"), "AiTM fingerprint is High only with the second signal");
+
+// ---- quiet tenant: real Graph-shaped records, no incident. Must produce nothing above Info. ----
+const E = win.BETA_Evidence;
+function quietTenant() {
+  const q = E.create({ scope: "tenant", tenantId: "11111111-1111-4111-8111-111111111111" });
+  const users = [
+    { id: "u1", userPrincipalName: "anna@quiet.nl", displayName: "Anna", accountEnabled: true, createdDateTime: "2024-01-10T00:00:00Z", lastPasswordChangeDateTime: "2026-08-01T00:00:00Z", signInActivity: { lastSignInDateTime: "2026-09-14T08:00:00Z" } },
+    { id: "u2", userPrincipalName: "bram@quiet.nl", displayName: "Bram", accountEnabled: true, createdDateTime: "2024-01-10T00:00:00Z", lastPasswordChangeDateTime: "2026-08-01T00:00:00Z", signInActivity: { lastSignInDateTime: "2026-09-14T08:00:00Z" } },
+  ];
+  const sps = [{ id: "sp-teams", appId: "1fec8e78-bce4-4aaf-ab1b-5451cc387264", displayName: "Microsoft Teams" }, { id: "sp-crm", appId: "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa", displayName: "Contoso CRM" }];
+  const si = (upn, t, ip, asn, extra) => Object.assign({
+    id: t + ip + upn, userPrincipalName: upn, userId: upn === "anna@quiet.nl" ? "u1" : "u2", createdDateTime: t, ipAddress: ip,
+    appDisplayName: "OfficeHome", appId: "4765445b-32c6-49b0-83e6-1d93765276ca", clientAppUsed: "Browser", status: { errorCode: 0 },
+    location: { countryOrRegion: "NL", city: "Utrecht" }, autonomousSystemNumber: asn, userType: "member",
+    deviceDetail: { deviceId: "", operatingSystem: "Windows 11", browser: "Edge 128" }, signInEventTypes: ["interactiveUser"], isInteractive: true, sessionId: "s-" + upn + "-" + asn,
+  }, extra || {});
+  const interactive = [], nonInteractive = [];
+  for (let d = 1; d <= 14; d++) {
+    interactive.push(si("anna@quiet.nl", "2026-09-" + String(d).padStart(2, "0") + "T07:30:00Z", "84.83.10.25", 1136));      // KPN
+    interactive.push(si("bram@quiet.nl", "2026-09-" + String(d).padStart(2, "0") + "T08:05:00Z", "77.161.4.9", 33915));      // Ziggo
+    // phone + laptop token refreshes seconds apart, different IPs
+    nonInteractive.push(si("anna@quiet.nl", "2026-09-" + String(d).padStart(2, "0") + "T09:00:00Z", "84.83.10.25", 1136, { signInEventTypes: ["nonInteractiveUser"], isInteractive: false, appDisplayName: "Microsoft Teams", appId: "1fec8e78-bce4-4aaf-ab1b-5451cc387264" }));
+    nonInteractive.push(si("anna@quiet.nl", "2026-09-" + String(d).padStart(2, "0") + "T09:00:09Z", "31.20.55.7", 1136, { signInEventTypes: ["nonInteractiveUser"], isInteractive: false, appDisplayName: "Outlook Mobile", appId: "27922004-5251-4030-b22d-91ecd9a37ea4" }));
+    // US colleague on Comcast
+    interactive.push(si("bram@quiet.nl", "2026-09-" + String(d).padStart(2, "0") + "T15:00:00Z", "73.55.1.20", 7922, { location: { countryOrRegion: "US", city: "Denver" } }));
+  }
+  E.setSource(q, "interactive", interactive, { state: "complete" });
+  E.setSource(q, "nonInteractive", nonInteractive, { state: "complete" });
+  E.setSource(q, "users", users, { state: "complete" });
+  E.setSource(q, "servicePrincipals", sps, { state: "complete" });
+  E.setSource(q, "oauth", [
+    { id: "g1", clientId: "sp-teams", consentType: "AllPrincipals", principalId: null, resourceId: "r", scope: "openid profile User.Read offline_access" },
+    { id: "g2", clientId: "sp-crm", consentType: "Principal", principalId: "u1", resourceId: "r", scope: "User.Read email profile" },
+  ], { state: "complete" });
+  E.setSource(q, "admins", [{ id: "ra1", principalId: "u1", roleDefinitionId: "62e90394-69f5-4237-9190-012177145e10", roleDefinition: { displayName: "Global Administrator" } }], { state: "complete" });
+  E.setSource(q, "mfa", [
+    { id: "u1", userPrincipalName: "anna@quiet.nl", isMfaRegistered: true, isAdmin: true, methodsRegistered: ["microsoftAuthenticatorPush", "mobilePhone"] },
+    { id: "u2", userPrincipalName: "bram@quiet.nl", isMfaRegistered: true, isAdmin: false, methodsRegistered: ["passKeyDeviceBound"] },
+  ], { state: "complete" });
+  E.setSource(q, "riskyUsers", [{ id: "u2", userPrincipalName: "bram@quiet.nl", riskLevel: "none", riskState: "confirmedSafe" }], { state: "complete" });
+  E.setSource(q, "audits", [{ id: "a1", activityDisplayName: "Update user", category: "UserManagement", loggedByService: "Core Directory", result: "success", initiatedBy: { user: { userPrincipalName: "anna@quiet.nl" } }, activityDateTime: "2026-09-10T10:00:00Z", targetResources: [{ modifiedProperties: [{ displayName: "JobTitle", newValue: "\"Lead\"" }] }] }], { state: "complete" });
+  E.setSource(q, "ual", [
+    { id: "ual1", operation: "UserLoggedIn", userPrincipalName: "anna@quiet.nl", createdDateTime: "2026-09-10T07:30:00Z", auditData: { Operation: "UserLoggedIn", ClientIP: "84.83.10.25", ExtendedProperties: [{ Name: "UserAgent", Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Edg/128.0" }] } },
+    { id: "ual2", operation: "MailItemsAccessed", userPrincipalName: "anna@quiet.nl", createdDateTime: "2026-09-10T07:31:00Z", auditData: { Operation: "MailItemsAccessed", ClientIP: "84.83.10.25", ClientInfoString: "Client=OWA;Action=ViaProxy", OperationProperties: [{ Name: "MailAccessType", Value: "Bind" }], Folders: [{ Path: "\\Inbox", FolderItems: [{ Id: "x" }] }] } },
+  ], { state: "complete" });
+  return q;
+}
+const quiet = win.BETA_Analyzers.analyze(quietTenant());
+const noisy = quiet.findings.filter(f => f.Severity !== "Info");
+noisy.forEach(f => console.log("  quiet-tenant noise: " + f.Severity + " " + f.Title));
+ok(noisy.length === 0, "quiet tenant with real Graph-shaped records produces nothing above Info (" + quiet.findings.length + " info)");
+ok(!quiet.findings.some(f => /risky delegated permissions/i.test(f.Title)), "baseline sign-in scopes are not risky permissions");
+ok(!quiet.findings.some(f => /Blacklisted application/i.test(f.Title)), "first-party OfficeHome is not a blacklisted application");
+ok(!quiet.findings.some(f => /30 seconds/.test(f.Title)), "non-interactive token refreshes do not trigger the 30-second rule");
+ok(!quiet.findings.some(f => /Risky user/.test(f.Title)), "confirmedSafe risky user is not reported");
+
+// ---- targeted rule fixtures on real shapes ----
+function withUal(rows) { const q = quietTenant(); E.setSource(q, "ual", rows, { state: "complete" }); return win.BETA_Analyzers.analyze(q).findings; }
+const outlookRule = withUal([{ id: "r1", operation: "UpdateInboxRules", userPrincipalName: "anna@quiet.nl", createdDateTime: "2026-09-11T06:00:00Z", auditData: { Operation: "UpdateInboxRules", ClientIP: "154.16.10.88", OperationProperties: [
+  { Name: "RuleOperation", Value: "AddMailboxRule" }, { Name: "RuleName", Value: "." },
+  { Name: "RuleActions", Value: JSON.stringify([{ ActionType: "Forward", Recipients: ["attacker@evil.top"] }, { ActionType: "Delete" }]) } ] } }]);
+ok(outlookRule.some(f => /Suspicious inbox rule/.test(f.Title) && /forwards\/redirects/.test(f.Title) && /attacker@evil.top/.test(f.Detail)), "Outlook/EWS UpdateInboxRules with OperationProperties is parsed for forwarding");
+const permAdd = withUal([{ id: "p1", operation: "Add-MailboxPermission", userPrincipalName: "adm@quiet.nl", createdDateTime: "2026-09-11T06:00:00Z", auditData: { Operation: "Add-MailboxPermission" } },
+  { id: "p2", operation: "TeamsImpersonationDetected", userPrincipalName: "bram@quiet.nl", createdDateTime: "2026-09-11T06:00:00Z", auditData: { Operation: "TeamsImpersonationDetected" } }]);
+ok(permAdd.some(f => /Add-MailboxPermission/.test(f.Title)) && permAdd.some(f => /TeamsImpersonationDetected/i.test(f.Title)), "curated and upstream UAL operation blacklists both fire");
+const scripted = withUal([{ id: "m1", operation: "MailItemsAccessed", userPrincipalName: "anna@quiet.nl", createdDateTime: "2026-09-11T06:00:00Z", auditData: { Operation: "MailItemsAccessed", ClientIP: "5.5.5.5", ClientInfoString: "Client=REST;python-requests/2.31", OperationProperties: [{ Name: "MailAccessType", Value: "Bind" }] } }]);
+ok(scripted.some(f => /scripting or blacklisted client/i.test(f.Title)), "MailItemsAccessed by a scripting client is flagged");
+{
+  const q = quietTenant();
+  E.setSource(q, "interactive", [
+    Object.assign({}, q.raw.interactive[0], { id: "x1", sessionId: "replayed", ipAddress: "84.83.10.25", autonomousSystemNumber: 1136 }),
+    Object.assign({}, q.raw.interactive[0], { id: "x2", sessionId: "replayed", ipAddress: "154.16.10.88", autonomousSystemNumber: 328543, createdDateTime: "2026-09-01T07:40:00Z", location: { countryOrRegion: "NG" } }),
+  ], { state: "complete" });
+  const f = win.BETA_Analyzers.analyze(q).findings;
+  ok(f.some(x => /Session ID reused/.test(x.Title) && x.Severity === "High"), "same sessionId from NL and NG ASNs is High session replay");
+  E.setSource(q, "mfa", [{ id: "u1", userPrincipalName: "anna@quiet.nl", isMfaRegistered: true, isAdmin: true, methodsRegistered: ["mobilePhone"] }], { state: "complete" });
+  const f2 = win.BETA_Analyzers.analyze(q).findings;
+  ok(f2.some(x => /SMS\/voice as their only second factor/.test(x.Title) && x.Severity === "High"), "admin with phone-only MFA is High");
+  E.setSource(q, "audits", [{ id: "a2", activityDisplayName: "Add eligible member to role", category: "RoleManagement", loggedByService: "PIM", result: "success", initiatedBy: { user: { userPrincipalName: "anna@quiet.nl" } }, activityDateTime: "2026-09-10T10:00:00Z", targetResources: [] }], { state: "complete" });
+  ok(win.BETA_Analyzers.analyze(q).findings.some(x => /Directory role assigned/.test(x.Title)), "PIM eligible assignment audit is flagged");
+  E.setSource(q, "exchange", [{ schema: "limon.triage.exchange", upn: "anna@quiet.nl", capturedAt: "2026-09-11T06:00:00Z", sources: [
+    { key: "mailbox", state: "complete", records: [{ UserPrincipalName: "anna@quiet.nl", ForwardingSmtpAddress: "smtp:attacker@evil.top", AuditEnabled: true }] },
+    { key: "rules", state: "complete", records: [{ Name: "..", Enabled: true, ForwardTo: ["evil"], Identity: "x" }] } ] }], { state: "complete" });
+  const f3 = win.BETA_Analyzers.analyze(q).findings;
+  ok(f3.some(x => x.Analyzer === "ExchangeSnapshot" && /forwarding is configured/i.test(x.Title)) && f3.some(x => /Inbox rule forwards/i.test(x.Title)), "Exchange snapshot analyzer runs inside the engine");
+}
 
 // ---- import path: round-trip UAL CSV + sign-in JSON ----
 const ualCsv = 'CreationDate,UserIds,Operations,RecordType,AuditData\n' +

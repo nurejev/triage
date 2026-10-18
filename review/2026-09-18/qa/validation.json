@@ -1,0 +1,133 @@
+{
+  "scope": "Local static prototype only; no tenant connections or production tests",
+  "checks": [
+    {
+      "name": "Review opens by default",
+      "result": "passed"
+    },
+    {
+      "name": "Exactly one primary action in Review",
+      "result": "passed"
+    },
+    {
+      "name": "Saved decision updates progress",
+      "result": "passed"
+    },
+    {
+      "name": "Incomplete review has no completion tick",
+      "result": "passed"
+    },
+    {
+      "name": "Selecting a finding changes its evidence reference",
+      "result": "passed"
+    },
+    {
+      "name": "Partial collection states stay explicit",
+      "result": "passed"
+    },
+    {
+      "name": "Unsaved review draft survives navigation",
+      "result": "passed"
+    },
+    {
+      "name": "Plan does not imply execution",
+      "result": "passed"
+    },
+    {
+      "name": "Prepared package does not mark handover complete",
+      "result": "passed"
+    },
+    {
+      "name": "Handover records an explicit owner",
+      "result": "passed"
+    },
+    {
+      "name": "Host state persistence receives interaction state",
+      "result": "passed"
+    },
+    {
+      "name": "No document overflow at 1024px",
+      "result": "passed"
+    },
+    {
+      "name": "No document overflow at 736px",
+      "result": "passed"
+    },
+    {
+      "name": "No document overflow at 390px",
+      "result": "passed"
+    },
+    {
+      "name": "Mobile step menu exposes all seven states",
+      "result": "passed"
+    },
+    {
+      "name": "Mobile selection opens collection details",
+      "result": "passed"
+    },
+    {
+      "name": "No document overflow at 320px",
+      "result": "passed"
+    },
+    {
+      "name": "flat navigation is selectable",
+      "result": "passed"
+    },
+    {
+      "name": "flat navigation fits desktop",
+      "result": "passed"
+    },
+    {
+      "name": "grouped navigation is selectable",
+      "result": "passed"
+    },
+    {
+      "name": "grouped navigation fits desktop",
+      "result": "passed"
+    },
+    {
+      "name": "top navigation is selectable",
+      "result": "passed"
+    },
+    {
+      "name": "top navigation fits desktop",
+      "result": "passed"
+    },
+    {
+      "name": "Inspector placement control works",
+      "result": "passed"
+    },
+    {
+      "name": "No external requests",
+      "result": "passed"
+    },
+    {
+      "name": "No browser JavaScript errors",
+      "result": "passed"
+    }
+  ],
+  "responsive": [
+    {
+      "viewport": 1024,
+      "document": 1011,
+      "root": 1011
+    },
+    {
+      "viewport": 736,
+      "document": 723,
+      "root": 723
+    },
+    {
+      "viewport": 390,
+      "document": 377,
+      "root": 377
+    },
+    {
+      "viewport": 320,
+      "document": 307,
+      "root": 307
+    }
+  ],
+  "errors": [],
+  "external": []
+}

@@ -1,0 +1,167 @@
+{
+  "date": "2026-09-14",
+  "commit": "8fb921c",
+  "purpose": "Reproduce existing issues; reproduced=true means defect observed, not a passing product test",
+  "results": [
+    {
+      "name": "Success BEFORE failures is called an attack followed by success",
+      "reproduced": true,
+      "detail": [
+        "Password attack followed by successful sign-in (IP 192.0.2.1)"
+      ]
+    },
+    {
+      "name": "Hidden risk is scored as risky",
+      "reproduced": true,
+      "detail": [
+        "Sign-ins flagged as risky by Identity Protection"
+      ]
+    },
+    {
+      "name": "Mixed-user sign-ins become Alice Critical finding",
+      "reproduced": true,
+      "detail": [
+        {
+          "user": "alice@example.test",
+          "title": "Password attack followed by successful sign-in (IP 192.0.2.1)"
+        }
+      ]
+    },
+    {
+      "name": "Directory audit evidence is not analyzed in main engine",
+      "reproduced": true,
+      "detail": {
+        "findings": 0
+      }
+    },
+    {
+      "name": "Removing forwarding is called Critical forwarding configured",
+      "reproduced": true,
+      "detail": [
+        "Mailbox-level forwarding configured (Set-Mailbox)"
+      ]
+    },
+    {
+      "name": "MailItemsAccessed returns zero without ever loading UAL",
+      "reproduced": true,
+      "detail": {
+        "ualAvailable": false,
+        "result": {
+          "count": 0,
+          "raw": [],
+          "alert": false,
+          "summary": "0 MailItemsAccessed events (0 bind, 0 sync)",
+          "caveat": "",
+          "rows": [
+            [
+              "Bind (individual messages)",
+              0
+            ],
+            [
+              "Sync (whole folder)",
+              0
+            ],
+            [
+              "Distinct client IPs",
+              "0"
+            ],
+            [
+              "First",
+              "—"
+            ],
+            [
+              "Last",
+              "—"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "name": "Flattened CSV drops subject and converts Failure to success",
+      "reproduced": true,
+      "detail": {
+        "createdDateTime": "2026-09-01",
+        "ipAddress": "192.0.2.1",
+        "location": {
+          "countryOrRegion": "",
+          "city": ""
+        },
+        "status": {
+          "errorCode": 0
+        },
+        "appDisplayName": "",
+        "clientAppUsed": "",
+        "conditionalAccessStatus": "",
+        "riskLevelDuringSignIn": "none",
+        "deviceDetail": {
+          "operatingSystem": ""
+        }
+      }
+    },
+    {
+      "name": "Page cap returns ordinary array with no partial status",
+      "reproduced": true,
+      "detail": {
+        "keys": [
+          "0"
+        ],
+        "rows": 1
+      }
+    },
+    {
+      "name": "Beta mailbox permissions misclassified as OAuth",
+      "reproduced": true,
+      "detail": [
+        {
+          "file": "MailboxPermissions.csv",
+          "kind": "oauth",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "name": "Native MFA array causes beta import error",
+      "reproduced": true,
+      "detail": [
+        {
+          "file": "MFA.json",
+          "kind": "error",
+          "rows": 0,
+          "error": "(r.MethodsRegistered || r.methodsRegistered || \"\").split is not a function"
+        }
+      ]
+    },
+    {
+      "name": "Beta own evidence export is unrecognized",
+      "reproduced": true,
+      "detail": [
+        {
+          "file": "MAS-web-evidence.json",
+          "kind": "unknown",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "name": "Third simultaneous mailbox request is rejected",
+      "reproduced": true,
+      "detail": {
+        "status": 503,
+        "message": "backend busy, retry shortly"
+      }
+    },
+    {
+      "name": "Backend defaults include Security and Privileged Role Administrators",
+      "reproduced": true,
+      "detail": {
+        "roleIds": [
+          "62e90394-69f5-4237-9190-012177145e10",
+          "29232cdf-9323-42fd-ade2-1d097af3e4de",
+          "194ae4cb-b126-40b2-bd5b-6091b380977d",
+          "e8611ab8-c189-46e8-94e1-60213ab1f814"
+        ]
+      }
+    }
+  ]
+}

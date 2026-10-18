@@ -10,16 +10,11 @@
 #  profile - the tool works without it, just with the inbox-rules step as
 #  copy-paste PowerShell instead of buttons.
 # ======================================================================
-FROM mcr.microsoft.com/powershell:lts-debian-12
-
-# Node for the API. Debian 12 ships Node 18, which has everything we use.
-RUN apt-get update \
- && apt-get install -y --no-install-recommends nodejs ca-certificates \
- && rm -rf /var/lib/apt/lists/*
-
-SHELL ["pwsh", "-Command"]
-RUN Set-PSRepository PSGallery -InstallationPolicy Trusted; \
-    Install-Module ExchangeOnlineManagement -Scope AllUsers -Force
+FROM node:24-bookworm-slim@sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553 AS node
+FROM mcr.microsoft.com/powershell:7.5-ubuntu-24.04@sha256:042240d57ec9e47e511033b92625a8d95875ee5860af3015992c248b58a8be81
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+SHELL ["pwsh", "-NoLogo", "-NoProfile", "-Command"]
+RUN Set-PSRepository PSGallery -InstallationPolicy Trusted; Install-Module ExchangeOnlineManagement -RequiredVersion 3.9.2 -Scope AllUsers -Force -ErrorAction Stop
 SHELL ["/bin/sh", "-c"]
 
 WORKDIR /opt/triage
@@ -38,3 +33,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||8081)+'/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 CMD ["node", "/opt/triage/server.js"]
+
+COPY backend/policy.js /opt/triage/policy.js
+COPY backend/collector/auth.js /opt/triage/collector/auth.js

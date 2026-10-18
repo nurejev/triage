@@ -1,9 +1,7 @@
 # ======================================================================
 #  Limon-IT M365 Triage - web container
 #
-#  Serves the static SPA with nginx. On every container start it pulls the
-#  latest main from GitHub and serves that; if the clone fails (offline,
-#  rate-limited) it falls back to the copy baked in at build time.
+#  Serves the baked-in static SPA with nginx. Git updates are opt-in.
 #
 #  Build straight from GitHub (no checkout needed):
 #      docker build -t m365-triage https://github.com/nurejev/triage.git
@@ -16,11 +14,11 @@
 #  app registration, so sign-in and consent work out of the box.
 #
 #  Env:
-#    GIT_SYNC=off   serve only the baked-in copy (no network at start)
+#    GIT_SYNC=off   default: serve the baked-in copy (no network at start)
 #    GIT_REPO=...   pull from a fork instead (default: this repo)
 #    GIT_REF=...    branch or tag to pull (default: main)
 # ======================================================================
-FROM nginx:alpine
+FROM nginx:alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3
 
 RUN apk add --no-cache git gettext
 
@@ -30,11 +28,21 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && rm -f /etc/nginx/conf.d/default.conf
 
 # Baked-in fallback copy of the site (kept current by the GHCR workflow).
-COPY . /usr/share/nginx/html/
-RUN rm -rf /usr/share/nginx/html/.git /usr/share/nginx/html/docker \
-    /usr/share/nginx/html/backend /usr/share/nginx/html/certs \
-    /usr/share/nginx/html/Dockerfile* /usr/share/nginx/html/docker-compose.yml \
-    /usr/share/nginx/html/*.env
+COPY index.html /usr/share/nginx/html/index.html
+COPY js/ /usr/share/nginx/html/js/
+COPY css/ /usr/share/nginx/html/css/
+COPY assets/ /usr/share/nginx/html/assets/
+COPY vendor/ /usr/share/nginx/html/vendor/
+COPY BETA/index.html /usr/share/nginx/html/BETA/index.html
+COPY BETA/tenant.html /usr/share/nginx/html/BETA/tenant.html
+COPY BETA/js/ /usr/share/nginx/html/BETA/js/
+COPY BETA/css/ /usr/share/nginx/html/BETA/css/
+COPY BETA/assets/ /usr/share/nginx/html/BETA/assets/
+COPY BETA/vendor/ /usr/share/nginx/html/BETA/vendor/
+COPY BETA/docs/ /usr/share/nginx/html/BETA/docs/
+
+RUN find /usr/share/nginx/html -type d -exec chmod 755 {} \; \
+ && find /usr/share/nginx/html -type f -exec chmod 644 {} \;
 
 EXPOSE 80
 ENTRYPOINT ["/entrypoint.sh"]
